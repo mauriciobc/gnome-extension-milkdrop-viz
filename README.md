@@ -149,4 +149,4 @@ This project targets Wayland sessions. X11 support is out of scope.
 
 ## License
 
-Add a project license file before publication if not already present.
+This project is licensed under the MIT License. See `LICENSE`.
