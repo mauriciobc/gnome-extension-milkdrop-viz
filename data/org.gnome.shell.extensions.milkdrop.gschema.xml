@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.milkdrop" path="/org/gnome/shell/extensions/milkdrop/">
+    <key name="enabled" type="b">
+      <default>false</default>
+      <summary>Enable the visualizer renderer</summary>
+      <description>When true, the extension will spawn and supervise the milkdrop renderer process.</description>
+    </key>
+
+    <key name="monitor" type="i">
+      <default>0</default>
+      <summary>Monitor index</summary>
+      <description>Target monitor index passed to the renderer at startup.</description>
+    </key>
+
+    <key name="opacity" type="d">
+      <default>1.0</default>
+      <range min="0.0" max="1.0"/>
+      <summary>Renderer opacity</summary>
+      <description>Opacity forwarded to the renderer, from transparent to fully opaque.</description>
+    </key>
+
+    <key name="preset-dir" type="s">
+      <default>''</default>
+      <summary>Preset directory</summary>
+      <description>Directory containing .milk presets.</description>
+    </key>
+
+    <key name="shuffle" type="b">
+      <default>false</default>
+      <summary>Shuffle presets</summary>
+      <description>If true, preset selection should use random ordering when supported.</description>
+    </key>
+
+    <key name="overlay" type="b">
+      <default>false</default>
+      <summary>Overlay mode</summary>
+      <description>Passes --overlay to the renderer at startup and updates the control socket when changed. State is reflected in the control status command; additional visual behavior may be added later.</description>
+    </key>
+  </schema>
+</schemalist>

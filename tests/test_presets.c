@@ -1,0 +1,65 @@
+#include <glib.h>
+#include <glib/gstdio.h>
+
+#include "presets.h"
+
+static gchar*
+make_temp_dir(void)
+{
+    gchar* path = g_strdup_printf("%s/milkdrop-presets-%u", g_get_tmp_dir(), g_random_int());
+    g_assert_cmpint(g_mkdir(path, 0700), ==, 0);
+    return path;
+}
+
+static void
+test_presets_reload_filters_and_sorts(void)
+{
+    AppData app_data = {0};
+    g_autofree gchar* dir = make_temp_dir();
+    g_autofree gchar* p1 = g_build_filename(dir, "zeta.milk", NULL);
+    g_autofree gchar* p2 = g_build_filename(dir, "alpha.milk", NULL);
+    g_autofree gchar* p3 = g_build_filename(dir, "ignore.txt", NULL);
+
+    g_assert_true(g_file_set_contents(p1, "", 0, NULL));
+    g_assert_true(g_file_set_contents(p2, "", 0, NULL));
+    g_assert_true(g_file_set_contents(p3, "", 0, NULL));
+
+    app_data.preset_dir = g_strdup(dir);
+    g_assert_true(presets_reload(&app_data));
+    g_assert_cmpint(app_data.preset_count, ==, 2);
+    g_assert_cmpstr(app_data.presets[0], ==, p2);
+    g_assert_cmpstr(app_data.presets[1], ==, p1);
+    g_assert_cmpstr(presets_current(&app_data), ==, p2);
+
+    presets_clear(&app_data);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+
+    g_unlink(p1);
+    g_unlink(p2);
+    g_unlink(p3);
+    g_rmdir(dir);
+}
+
+static void
+test_presets_reload_handles_missing_directory(void)
+{
+    AppData app_data = {0};
+    app_data.preset_dir = g_strdup("/tmp/milkdrop-no-such-presets-dir");
+
+    g_assert_false(presets_reload(&app_data));
+    g_assert_null(app_data.presets);
+    g_assert_cmpint(app_data.preset_count, ==, 0);
+
+    g_clear_pointer(&app_data.preset_dir, g_free);
+}
+
+int
+main(int argc, char** argv)
+{
+    g_test_init(&argc, &argv, NULL);
+
+    g_test_add_func("/presets/reload-filters-and-sorts", test_presets_reload_filters_and_sorts);
+    g_test_add_func("/presets/reload-missing-dir", test_presets_reload_handles_missing_directory);
+
+    return g_test_run();
+}

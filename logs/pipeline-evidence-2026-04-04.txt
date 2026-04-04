@@ -1,0 +1,43 @@
+Evidência coletada (pipeline milkdrop) — 2026-04-04
+====================================================
+
+1) Renderer direto: build/src/milkdrop --verbose (timeout ~10s, sessão gráfica local)
+---------------------------------------------------------------------------
+Saída capturada:
+
+  GLArea context: OpenGL 4.6
+  projectm_create() succeeded
+  projectm_playlist_create() succeeded
+  libprojectM initialized with idle preset
+  renderer: geometry=1920x1080 on monitor=0, click-through=enabled
+  PipeWire audio capture initialized
+  Control socket: /run/user/1000/milkdrop.sock
+  resize: widget=1920x1048, scale=1, render=1920x1048
+  tick: frame_count=120/240/360, projectm=<ptr>, render_size=1920x1048
+
+Conclusão: no processo C, GL 4.6, projectM inicializa, resize aplica dimensões,
+e o tick confirma frames contínuos — o “motor” OpenGL/projectM não está morto
+neste ambiente quando o binário roda sozinho.
+
+2) journalctl --user / sistema (últimas horas)
+---------------------------------------------------------------------------
+Não apareceram linhas [milkdrop] da extensão nem gnome-shell filtradas por
+“milkdrop” (além de ruído de indexação com paths do repositório). Isso é
+normal se o Shell não estiver a enviar log() da extensão para o journal nesta
+máquina, ou se a extensão não foi activada recentemente na sessão principal.
+
+3) meson test compositor-behavior-integration
+---------------------------------------------------------------------------
+- Análise estática: 32 PASS.
+- Integração nested: âncora inicial OK; ciclo enable/disable foi ajustado
+  (tempos de espera e intervalo aceite de contagens de log) — reexecutar
+  `meson test -C build compositor-behavior-integration` após o patch.
+
+Como repetir localmente
+---------------------------------------------------------------------------
+  timeout 12 build/src/milkdrop --verbose
+  journalctl --user --since "10 min ago" | rg '\[milkdrop\]'
+  ./tests/test_compositor_behavior.sh --integration
+
+Nota: testes Meson render-pipeline continuam a ser só lógica C (ring/prep);
+não substituem o passo 1 nem a integração nested.

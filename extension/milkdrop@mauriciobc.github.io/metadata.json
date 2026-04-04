@@ -1,0 +1,8 @@
+{
+  "uuid": "milkdrop@mauriciobc.github.io",
+  "name": "Milkdrop",
+  "description": "Wayland wallpaper-layer MilkDrop visualizer renderer controller",
+  "version": 2,
+  "shell-version": ["47", "48", "49"],
+  "settings-schema": "org.gnome.shell.extensions.milkdrop"
+}

@@ -1,0 +1,20 @@
+option(
+  'projectm',
+  type: 'feature',
+  value: 'auto',
+  description: 'Enable libprojectM integration',
+)
+
+option(
+  'pipewire',
+  type: 'feature',
+  value: 'auto',
+  description: 'Enable PipeWire audio capture backend',
+)
+
+option(
+  'shell-integration-tests',
+  type: 'boolean',
+  value: false,
+  description: 'Register nested GNOME Shell integration test (requires extension and binary installed under ~/.local)',
+)
