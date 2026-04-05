@@ -14,6 +14,7 @@ import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extension
 
 import {RETRY_DELAYS_MS} from './constants.js';
 import {getMilkdropSocketPath, sendMilkdropControlCommand} from './controlClient.js';
+import {PausePolicy} from './pausePolicy.js';
 
 export default class MilkdropExtension extends Extension {
     constructor(metadata) {
@@ -46,6 +47,9 @@ export default class MilkdropExtension extends Extension {
 
         this._anchorRetrySourceIds = new Set();
         this._anchorPending = false;
+
+        this._pauseReasons = new Set();
+        this._pausePolicy = null;
     }
 
     enable() {
@@ -186,6 +190,11 @@ export default class MilkdropExtension extends Extension {
         if (key === 'overlay') {
             const enabled = this._settings.get_boolean('overlay');
             this._sendControlCommand(`overlay ${enabled ? 'on' : 'off'}`);
+            return;
+        }
+
+        if (key === 'pause-on-fullscreen' || key === 'pause-on-maximized') {
+            this._pausePolicy?.reEvaluate();
         }
     }
 
@@ -195,6 +204,44 @@ export default class MilkdropExtension extends Extension {
 
     _sendControlCommand(command) {
         sendMilkdropControlCommand(command);
+    }
+
+    /**
+     * Coordinate multiple pause reasons into a single socket command.
+     * The renderer stays paused as long as any reason is active.
+     */
+    _setPauseReason(reason, active) {
+        if (active)
+            this._pauseReasons.add(reason);
+        else
+            this._pauseReasons.delete(reason);
+
+        if (!this._subprocess)
+            return;
+
+        const shouldPause = this._pauseReasons.size > 0;
+        this._sendControlCommand(shouldPause ? 'pause on' : 'pause off');
+    }
+
+    _startPausePolicy() {
+        if (this._pausePolicy)
+            this._pausePolicy.disable();
+
+        const monitorIndex = this._settings?.get_int('monitor') ?? 0;
+        this._pausePolicy = new PausePolicy(
+            monitorIndex,
+            this._settings,
+            (reason, active) => this._setPauseReason(reason, active)
+        );
+        this._pausePolicy.enable();
+    }
+
+    _stopPausePolicy() {
+        if (this._pausePolicy) {
+            this._pausePolicy.disable();
+            this._pausePolicy = null;
+        }
+        this._pauseReasons.clear();
     }
 
     _spawnProcess() {
@@ -253,6 +300,7 @@ export default class MilkdropExtension extends Extension {
         }
 
         this._retryStep = 0;
+        this._startPausePolicy();
         this._stdoutCancellable = new Gio.Cancellable();
         this._stdoutStream = Gio.DataInputStream.new(this._subprocess.get_stdout_pipe());
         this._readRendererOutput();
@@ -374,6 +422,7 @@ export default class MilkdropExtension extends Extension {
 
     _stopProcess() {
         this._removeRetrySource();
+        this._stopPausePolicy();
 
         if (this._stdoutCancellable)
             this._stdoutCancellable.cancel();

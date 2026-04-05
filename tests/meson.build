@@ -145,6 +145,15 @@ presets_edge_test = executable(
 
 test('presets-edge-cases', presets_edge_test)
 
+pause_policy_test = executable(
+  'test-pause-policy',
+  ['test_pause_policy.c', '../src/control.c'],
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep, test_gtk_dep],
+)
+
+test('pause-policy', pause_policy_test)
+
 preset_quarantine_test = executable(
   'test-preset-quarantine',
   ['test_preset_quarantine.c', '../src/quarantine.c'],

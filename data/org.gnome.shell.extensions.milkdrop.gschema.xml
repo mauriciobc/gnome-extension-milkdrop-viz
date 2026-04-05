@@ -37,5 +37,17 @@
       <summary>Overlay mode</summary>
       <description>Passes --overlay to the renderer at startup and updates the control socket when changed. State is reflected in the control status command; additional visual behavior may be added later.</description>
     </key>
+
+    <key name="pause-on-fullscreen" type="b">
+      <default>true</default>
+      <summary>Pause when a fullscreen window is on the same monitor</summary>
+      <description>When true, the extension pauses the renderer whenever a fullscreen window covers the renderer's monitor.</description>
+    </key>
+
+    <key name="pause-on-maximized" type="b">
+      <default>false</default>
+      <summary>Pause when a maximized window is on the same monitor</summary>
+      <description>When true, the extension pauses the renderer whenever a maximized window covers the renderer's monitor.</description>
+    </key>
   </schema>
 </schemalist>

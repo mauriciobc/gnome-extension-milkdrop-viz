@@ -60,6 +60,8 @@ def main() -> int:
         "preset-dir": "s",
         "shuffle": "b",
         "overlay": "b",
+        "pause-on-fullscreen": "b",
+        "pause-on-maximized": "b",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 

@@ -51,6 +51,20 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         settings.bind('overlay', overlayRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(overlayRow);
 
+        const pauseFsRow = new Adw.SwitchRow({
+            title: 'Pause when fullscreen app is present',
+            subtitle: 'Reduces GPU usage when a fullscreen window covers the visualizer.',
+        });
+        settings.bind('pause-on-fullscreen', pauseFsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(pauseFsRow);
+
+        const pauseMaxRow = new Adw.SwitchRow({
+            title: 'Pause when maximized app is present',
+            subtitle: 'Pauses when any maximized (non-fullscreen) window is on the same monitor.',
+        });
+        settings.bind('pause-on-maximized', pauseMaxRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(pauseMaxRow);
+
         const presetGroup = new Adw.PreferencesGroup({title: 'Presets'});
         page.add(presetGroup);
 
