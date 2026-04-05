@@ -12,6 +12,7 @@ typedef enum {
 	CONTROL_CMD_PRESET_DIR,
 	CONTROL_CMD_NEXT_PRESET,
 	CONTROL_CMD_PREV_PRESET,
+	CONTROL_CMD_FPS,
 } ControlCommandType;
 
 typedef enum {
@@ -32,6 +33,7 @@ typedef struct {
 	float opacity;
 	bool pause_enabled;
 	bool bool_value;
+	int  int_value;
 	char text_value[MILKDROP_PATH_MAX];
 } ControlCommand;
 

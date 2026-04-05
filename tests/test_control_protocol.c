@@ -165,6 +165,35 @@ test_parse_previous_rejects_extra_args(void)
 }
 
 static void
+test_parse_fps_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("fps 30\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_FPS);
+    g_assert_cmpint(command.int_value, ==, 30);
+}
+
+static void
+test_parse_fps_out_of_range_low(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("fps 0\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_fps_out_of_range_high(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("fps 999\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
 test_parse_status_response_fps(void)
 {
     const char* response =
@@ -244,6 +273,9 @@ main(int argc, char** argv)
     g_test_add_func("/control/status-response-preset", test_parse_status_response_preset);
     g_test_add_func("/control/status-response-audio", test_parse_status_response_audio);
     g_test_add_func("/control/status-response-quarantine", test_parse_status_response_quarantine);
+    g_test_add_func("/control/parse-fps", test_parse_fps_command);
+    g_test_add_func("/control/parse-fps-low", test_parse_fps_out_of_range_low);
+    g_test_add_func("/control/parse-fps-high", test_parse_fps_out_of_range_high);
 
     return g_test_run();
 }

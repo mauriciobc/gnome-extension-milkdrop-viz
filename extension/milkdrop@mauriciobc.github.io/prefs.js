@@ -2,6 +2,7 @@ import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
+import Pango from 'gi://Pango';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 import {queryMilkdropStatus} from './controlClient.js';
@@ -16,42 +17,55 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         });
         window.add(page);
 
-        // --- Status group (live read-only view, polls every 2 s while window is open) ---
-        const statusGroup = new Adw.PreferencesGroup({title: 'Status'});
+        // ── Status ───────────────────────────────────────────────────────────
+        // Read-only live view, polled every 2 s while the window is mapped.
+        const statusGroup = new Adw.PreferencesGroup({
+            title: 'Status',
+            description: 'Live renderer information — updated every 2 seconds',
+        });
         page.add(statusGroup);
 
         const makeStatusRow = (title, initial) => {
-            const row = new Adw.ActionRow({title});
-            const label = new Gtk.Label({label: initial, xalign: 1.0, hexpand: true});
+            const row = new Adw.ActionRow({title, activatable: false});
+            const label = new Gtk.Label({
+                label: initial,
+                xalign: 1.0,
+                hexpand: true,
+                ellipsize: Pango.EllipsizeMode.MIDDLE,
+            });
             label.add_css_class('dim-label');
             row.add_suffix(label);
             statusGroup.add(row);
             return label;
         };
 
-        const fpsLabel = makeStatusRow('FPS', '—');
-        const presetLabel = makeStatusRow('Preset', '—');
-        const audioLabel = makeStatusRow('Audio', '—');
-        const quarantineLabel = makeStatusRow('Quarantined presets', '—');
-        const pausedLabel = makeStatusRow('Paused', '—');
+        const fpsStatusLabel      = makeStatusRow('FPS', '—');
+        const presetStatusLabel   = makeStatusRow('Current Preset', '—');
+        const audioStatusLabel    = makeStatusRow('Audio', '—');
+        const pausedStatusLabel   = makeStatusRow('Paused', '—');
+        const quarantineLabel     = makeStatusRow('Quarantined Presets', '—');
 
         let pollSourceId = 0;
 
         const refreshStatus = () => {
             queryMilkdropStatus().then(status => {
                 if (!status) {
-                    fpsLabel.set_label('—');
-                    presetLabel.set_label('—');
-                    audioLabel.set_label('—');
+                    fpsStatusLabel.set_label('—');
+                    presetStatusLabel.set_label('—');
+                    audioStatusLabel.set_label('—');
+                    pausedStatusLabel.set_label('—');
                     quarantineLabel.set_label('—');
-                    pausedLabel.set_label('—');
                     return;
                 }
-                fpsLabel.set_label(Number.isFinite(status.fps) ? status.fps.toFixed(1) : '—');
-                presetLabel.set_label(status.preset || '(none)');
-                audioLabel.set_label(status.audio ?? '—');
+                fpsStatusLabel.set_label(
+                    Number.isFinite(status.fps) && status.fps > 0
+                        ? status.fps.toFixed(1)
+                        : '—'
+                );
+                presetStatusLabel.set_label(status.preset || '(none)');
+                audioStatusLabel.set_label(status.audio ?? '—');
+                pausedStatusLabel.set_label(status.paused ? 'Yes' : 'No');
                 quarantineLabel.set_label(String(status.quarantine ?? 0));
-                pausedLabel.set_label(status.paused ? 'Yes' : 'No');
             }).catch(() => {});
         };
 
@@ -62,7 +76,6 @@ export default class MilkdropPreferences extends ExtensionPreferences {
                 return GLib.SOURCE_CONTINUE;
             });
         });
-
         window.connect('unmap', () => {
             if (pollSourceId > 0) {
                 GLib.source_remove(pollSourceId);
@@ -70,80 +83,176 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             }
         });
 
-        // --- Runtime group ---
+        // ── Runtime ──────────────────────────────────────────────────────────
         const runtimeGroup = new Adw.PreferencesGroup({title: 'Runtime'});
         page.add(runtimeGroup);
 
-        const enabledRow = new Adw.SwitchRow({title: 'Enabled'});
+        const enabledRow = new Adw.SwitchRow({
+            title: 'Enabled',
+            subtitle: 'Spawn and supervise the renderer process',
+        });
         settings.bind('enabled', enabledRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         runtimeGroup.add(enabledRow);
 
-        const monitorRow = new Adw.ActionRow({title: 'Monitor index'});
-        const monitorSpin = Gtk.SpinButton.new_with_range(0, 16, 1);
-        settings.bind('monitor', monitorSpin, 'value', Gio.SettingsBindFlags.DEFAULT);
-        monitorRow.add_suffix(monitorSpin);
-        monitorRow.activatable_widget = monitorSpin;
+        const monitorRow = new Adw.SpinRow({
+            title: 'Monitor Index',
+            subtitle: 'Zero-based index of the monitor to render on',
+            adjustment: new Gtk.Adjustment({
+                value: 0,
+                lower: 0,
+                upper: 16,
+                step_increment: 1,
+                page_increment: 1,
+            }),
+            digits: 0,
+        });
+        settings.bind('monitor', monitorRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         runtimeGroup.add(monitorRow);
 
         const allMonitorsRow = new Adw.SwitchRow({
-            title: 'All monitors',
-            subtitle: 'Show visualizer on every connected monitor simultaneously.',
+            title: 'All Monitors',
+            subtitle: 'Show visualizer on every connected monitor simultaneously',
         });
         settings.bind('all-monitors', allMonitorsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         runtimeGroup.add(allMonitorsRow);
 
-        const opacityRow = new Adw.ActionRow({title: 'Opacity'});
+        // Disable the monitor index row when all-monitors is active
+        const syncMonitorSensitivity = () => {
+            monitorRow.sensitive = !settings.get_boolean('all-monitors');
+        };
+        syncMonitorSensitivity();
+        settings.connect('changed::all-monitors', syncMonitorSensitivity);
+
+        const opacityRow = new Adw.ActionRow({
+            title: 'Opacity',
+            subtitle: 'Renderer window transparency',
+            activatable: false,
+        });
         const opacityScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01);
         opacityScale.set_hexpand(true);
         opacityScale.set_digits(2);
+        opacityScale.set_valign(Gtk.Align.CENTER);
         settings.bind('opacity', opacityScale, 'value', Gio.SettingsBindFlags.DEFAULT);
         opacityRow.add_suffix(opacityScale);
-        opacityRow.activatable_widget = opacityScale;
         runtimeGroup.add(opacityRow);
 
+        // ── Performance ──────────────────────────────────────────────────────
+        const perfGroup = new Adw.PreferencesGroup({title: 'Performance'});
+        page.add(perfGroup);
+
+        const fpsRow = new Adw.SpinRow({
+            title: 'Frame Rate',
+            subtitle: 'Target frames per second (applied live)',
+            adjustment: new Gtk.Adjustment({
+                value: 60,
+                lower: 10,
+                upper: 144,
+                step_increment: 1,
+                page_increment: 10,
+            }),
+            digits: 0,
+        });
+        settings.bind('fps', fpsRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        perfGroup.add(fpsRow);
+
+        // ── Behavior ─────────────────────────────────────────────────────────
         const behaviorGroup = new Adw.PreferencesGroup({title: 'Behavior'});
         page.add(behaviorGroup);
 
-        const shuffleRow = new Adw.SwitchRow({title: 'Shuffle presets'});
-        settings.bind('shuffle', shuffleRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        behaviorGroup.add(shuffleRow);
+        // Preset rotation: Sequential / Shuffle (replaces the old SwitchRow)
+        const rotationRow = new Adw.ComboRow({
+            title: 'Preset Rotation',
+            subtitle: 'Order in which presets are selected',
+            model: Gtk.StringList.new(['Sequential', 'Shuffle']),
+        });
+        rotationRow.selected = settings.get_boolean('shuffle') ? 1 : 0;
+        rotationRow.connect('notify::selected', () => {
+            settings.set_boolean('shuffle', rotationRow.selected === 1);
+        });
+        settings.connect('changed::shuffle', () => {
+            const expected = settings.get_boolean('shuffle') ? 1 : 0;
+            if (rotationRow.selected !== expected)
+                rotationRow.selected = expected;
+        });
+        behaviorGroup.add(rotationRow);
 
         const overlayRow = new Adw.SwitchRow({
-            title: 'Overlay mode',
-            subtitle: 'Renderer flag and control-socket state (see status); extra visuals may come later.',
+            title: 'Overlay Mode',
+            subtitle: 'Pass --overlay to the renderer; state is visible in the Status section',
         });
         settings.bind('overlay', overlayRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(overlayRow);
 
         const pauseFsRow = new Adw.SwitchRow({
-            title: 'Pause when fullscreen app is present',
-            subtitle: 'Reduces GPU usage when a fullscreen window covers the visualizer.',
+            title: 'Pause on Fullscreen',
+            subtitle: 'Pause when a fullscreen window is on the same monitor',
         });
         settings.bind('pause-on-fullscreen', pauseFsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(pauseFsRow);
 
         const pauseMaxRow = new Adw.SwitchRow({
-            title: 'Pause when maximized app is present',
-            subtitle: 'Pauses when any maximized (non-fullscreen) window is on the same monitor.',
+            title: 'Pause when Maximized',
+            subtitle: 'Pause when a maximized window is on the same monitor',
         });
         settings.bind('pause-on-maximized', pauseMaxRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(pauseMaxRow);
 
         const mediaAwareRow = new Adw.SwitchRow({
-            title: 'Media-aware mode',
-            subtitle: 'Pause when no MPRIS media player is playing.',
+            title: 'Media-Aware Mode',
+            subtitle: 'Pause when no MPRIS media player is playing',
         });
         settings.bind('media-aware', mediaAwareRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(mediaAwareRow);
 
+        // ── Presets ──────────────────────────────────────────────────────────
         const presetGroup = new Adw.PreferencesGroup({title: 'Presets'});
         page.add(presetGroup);
 
-        const presetRow = new Adw.ActionRow({title: 'Preset directory'});
-        const presetEntry = new Gtk.Entry({hexpand: true});
-        settings.bind('preset-dir', presetEntry, 'text', Gio.SettingsBindFlags.DEFAULT);
-        presetRow.add_suffix(presetEntry);
-        presetRow.activatable_widget = presetEntry;
-        presetGroup.add(presetRow);
+        const dirRow = new Adw.ActionRow({
+            title: 'Directory',
+            subtitle: 'Folder containing .milk preset files',
+            activatable: false,
+        });
+
+        const dirLabel = new Gtk.Label({
+            label: settings.get_string('preset-dir') || '(default)',
+            xalign: 0,
+            hexpand: true,
+            ellipsize: Pango.EllipsizeMode.START,
+            valign: Gtk.Align.CENTER,
+        });
+        dirLabel.add_css_class('dim-label');
+
+        settings.connect('changed::preset-dir', () => {
+            dirLabel.set_label(settings.get_string('preset-dir') || '(default)');
+        });
+
+        const browseBtn = new Gtk.Button({
+            label: 'Browse…',
+            valign: Gtk.Align.CENTER,
+        });
+        browseBtn.add_css_class('flat');
+        browseBtn.connect('clicked', () => {
+            const dialog = new Gtk.FileDialog({title: 'Select Preset Directory'});
+            const initialPath = settings.get_string('preset-dir');
+            if (initialPath) {
+                try {
+                    dialog.initial_folder = Gio.File.new_for_path(initialPath);
+                } catch (_e) { /* ignore */ }
+            }
+            dialog.select_folder(window, null, (_dialog, res) => {
+                try {
+                    const file = _dialog.select_folder_finish(res);
+                    if (file)
+                        settings.set_string('preset-dir', file.get_path());
+                } catch (_e) {
+                    // User cancelled — no action needed
+                }
+            });
+        });
+
+        dirRow.add_suffix(dirLabel);
+        dirRow.add_suffix(browseBtn);
+        presetGroup.add(dirRow);
     }
 }

@@ -80,8 +80,13 @@ typedef struct {
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
 
+    /* Target frame rate set via control socket (written by control thread, read by GL thread). */
+    _Atomic int fps_runtime;
     /* Last measured frame rate (written by GL thread, read by control thread). */
     _Atomic float fps_last;
+    /* GL-thread-only fields for FPS tracking and timer rescheduling. */
+    int    fps_applied;        /* last fps_runtime value used to set the timer */
+    gint64 fps_last_pulse_us;  /* g_get_monotonic_time() of the previous render pulse */
 
     /* Audio recovery state machine. */
 #define AUDIO_MAX_RESTARTS 5

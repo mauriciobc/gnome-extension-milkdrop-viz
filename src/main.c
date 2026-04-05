@@ -247,6 +247,36 @@ on_render_pulse(gpointer user_data)
 {
     AppData* app_data = user_data;
 
+    /* Dynamic FPS: if fps_runtime changed since the last pulse, reschedule
+     * the timer at the new interval and return SOURCE_REMOVE so the old
+     * timer is cancelled. The new timer will fire immediately at its first
+     * interval; this keeps the renderer responsive to FPS changes. */
+    {
+        int target_fps = atomic_load(&app_data->fps_runtime);
+        if (target_fps <= 0)
+            target_fps = 60;
+        if (target_fps != app_data->fps_applied) {
+            app_data->fps_applied = target_fps;
+            guint interval_ms = (guint)(1000u / (guint)target_fps);
+            if (interval_ms < 1)
+                interval_ms = 1;
+            app_data->render_pulse_source_id =
+                g_timeout_add(interval_ms, on_render_pulse, app_data);
+            return G_SOURCE_REMOVE;
+        }
+
+        /* Update measured FPS for the status command. */
+        gint64 now_us = g_get_monotonic_time();
+        if (app_data->fps_last_pulse_us > 0) {
+            gint64 delta_us = now_us - app_data->fps_last_pulse_us;
+            if (delta_us > 0) {
+                float measured = (float)(1000000.0 / (double)delta_us);
+                atomic_store(&app_data->fps_last, measured);
+            }
+        }
+        app_data->fps_last_pulse_us = now_us;
+    }
+
 #if !HAVE_PROJECTM
     if (atomic_exchange(&app_data->preset_dir_pending, false)) {
         char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
@@ -681,6 +711,10 @@ main(int argc, char** argv)
     atomic_store(&app_data.preset_dir_pending, false);
     atomic_store(&app_data.next_preset_pending, false);
     atomic_store(&app_data.prev_preset_pending, false);
+    atomic_store(&app_data.fps_runtime, 60);
+    atomic_store(&app_data.fps_last, 0.0f);
+    app_data.fps_applied = 60;
+    app_data.fps_last_pulse_us = 0;
     atomic_store(&app_data.control_thread_running, false);
     app_data.control_fd = -1;
     app_data.control_thread = NULL;

@@ -398,6 +398,12 @@ export default class MilkdropExtension extends Extension {
             return;
         }
 
+        if (key === 'fps') {
+            const fps = this._settings.get_int('fps');
+            this._broadcastCommand(`fps ${fps}`);
+            return;
+        }
+
         if (key === 'media-aware') {
             const enabled = this._settings.get_boolean('media-aware');
             if (enabled)

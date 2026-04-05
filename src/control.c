@@ -62,6 +62,10 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         atomic_store(&app_data->prev_preset_pending, true);
         g_strlcpy(response, "ok previous\n", response_size);
         return TRUE;
+    case CONTROL_CMD_FPS:
+        atomic_store(&app_data->fps_runtime, command->int_value);
+        g_strlcpy(response, "ok fps\n", response_size);
+        return TRUE;
     case CONTROL_CMD_NONE:
     default:
         g_strlcpy(response, "err invalid\n", response_size);
@@ -223,6 +227,18 @@ control_parse_command(const char* line, ControlCommand* out_command)
 
     if (g_strcmp0(argv[0], "previous") == 0 && argc == 1) {
         out_command->type = CONTROL_CMD_PREV_PRESET;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "fps") == 0 && argc == 2) {
+        char* endptr = NULL;
+        errno = 0;
+        long parsed = strtol(argv[1], &endptr, 10);
+        if (errno != 0 || !endptr || *endptr != '\0' || parsed < 10 || parsed > 144)
+            return CONTROL_PARSE_INVALID;
+
+        out_command->type = CONTROL_CMD_FPS;
+        out_command->int_value = (int)parsed;
         return CONTROL_PARSE_OK;
     }
 

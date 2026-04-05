@@ -67,6 +67,7 @@ def main() -> int:
         "pause-on-maximized": "b",
         "media-aware": "b",
         "all-monitors": "b",
+        "fps": "i",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 

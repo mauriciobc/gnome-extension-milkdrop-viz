@@ -56,6 +56,13 @@
       <description>When true, the extension pauses the renderer whenever no MPRIS media player reports a Playing state.</description>
     </key>
 
+    <key name="fps" type="i">
+      <default>60</default>
+      <range min="10" max="144"/>
+      <summary>Target frame rate</summary>
+      <description>Target frames per second for the renderer. Changes are applied live via the control socket.</description>
+    </key>
+
     <key name="all-monitors" type="b">
       <default>false</default>
       <summary>Show visualizer on all connected monitors</summary>
