@@ -12,7 +12,7 @@ import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {RETRY_DELAYS_MS, PAUSE_REASON_MPRIS} from './constants.js';
+import {RETRY_DELAYS_MS, PAUSE_REASON_MPRIS, FADE_DURATION_MS} from './constants.js';
 import {getMilkdropSocketPath, sendMilkdropControlCommand} from './controlClient.js';
 import {PausePolicy} from './pausePolicy.js';
 import {MprisWatcher} from './mprisWatcher.js';
@@ -52,6 +52,7 @@ export default class MilkdropExtension extends Extension {
         this._pauseReasons = new Set();
         this._pausePolicy = null;
         this._mprisWatcher = null;
+        this._renderingPaused = false;
     }
 
     enable() {
@@ -218,8 +219,9 @@ export default class MilkdropExtension extends Extension {
     }
 
     /**
-     * Coordinate multiple pause reasons into a single socket command.
+     * Coordinate multiple pause reasons into a single animated transition.
      * The renderer stays paused as long as any reason is active.
+     * Deduplicates: only acts when the desired state actually changes.
      */
     _setPauseReason(reason, active) {
         if (active)
@@ -231,7 +233,63 @@ export default class MilkdropExtension extends Extension {
             return;
 
         const shouldPause = this._pauseReasons.size > 0;
-        this._sendControlCommand(shouldPause ? 'pause on' : 'pause off');
+        if (shouldPause === this._renderingPaused)
+            return;
+
+        this._renderingPaused = shouldPause;
+
+        if (shouldPause)
+            this._fadeOutThenPause();
+        else
+            this._resumeThenFadeIn();
+    }
+
+    _getRendererActor() {
+        return this._anchoredWindow?.get_compositor_private() ?? null;
+    }
+
+    /**
+     * Fade the renderer actor to transparent, then send `pause on`.
+     * If a fade-in is in progress it is cancelled at its current opacity
+     * and the direction reverses.
+     */
+    _fadeOutThenPause() {
+        const actor = this._getRendererActor();
+        if (!actor) {
+            this._sendControlCommand('pause on');
+            return;
+        }
+
+        actor.remove_all_transitions();
+        actor.ease({
+            opacity: 0,
+            duration: FADE_DURATION_MS,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onComplete: () => {
+                // Guard: a rapid resume may have already cleared the pause reasons.
+                if (this._renderingPaused)
+                    this._sendControlCommand('pause on');
+            },
+        });
+    }
+
+    /**
+     * Send `pause off` immediately so the renderer starts producing frames,
+     * then fade the actor from its current opacity back to fully opaque.
+     */
+    _resumeThenFadeIn() {
+        this._sendControlCommand('pause off');
+
+        const actor = this._getRendererActor();
+        if (!actor)
+            return;
+
+        actor.remove_all_transitions();
+        actor.ease({
+            opacity: 255,
+            duration: FADE_DURATION_MS,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+        });
     }
 
     _startPausePolicy() {
@@ -457,6 +515,13 @@ export default class MilkdropExtension extends Extension {
         this._removeRetrySource();
         this._stopPausePolicy();
         this._stopMprisWatcher();
+        // Abort any in-progress fade and restore full opacity for the next spawn.
+        const actor = this._getRendererActor();
+        if (actor) {
+            actor.remove_all_transitions();
+            actor.opacity = 255;
+        }
+        this._renderingPaused = false;
 
         if (this._stdoutCancellable)
             this._stdoutCancellable.cancel();

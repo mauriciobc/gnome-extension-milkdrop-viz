@@ -90,6 +90,9 @@ def main() -> int:
     check("disable()" in extension_js, "disable() missing in extension")
     check("_spawnProcess()" in extension_js, "_spawnProcess() missing in extension")
 
+    constants_js = read_text(constants_path)
+    check("FADE_DURATION_MS" in constants_js, "constants.js must export FADE_DURATION_MS")
+
     prefs_js = read_text(prefs_path)
     check("ExtensionPreferences" in prefs_js, "prefs does not use ExtensionPreferences")
     check("fillPreferencesWindow(window)" in prefs_js, "fillPreferencesWindow missing")
