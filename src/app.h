@@ -80,6 +80,11 @@ typedef struct {
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
 
+    /* Audio recovery state machine. */
+#define AUDIO_MAX_RESTARTS 5
+    _Atomic int  audio_fail_count;
+    _Atomic bool audio_recovering;
+
     /* Preset quarantine — GL thread only (no atomics needed). */
 #define MAX_QUARANTINE 64
 #define QUARANTINE_FAILURE_THRESHOLD 5

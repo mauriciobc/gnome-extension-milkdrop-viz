@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "audio_recovery.h"
 
 size_t
 audio_align_stereo_float_count(size_t sample_count)
@@ -54,9 +55,75 @@ on_stream_process(void* userdata)
     pw_stream_queue_buffer(state->stream, pw_buffer);
 }
 
+static gboolean
+audio_reprobe_cb(gpointer user_data)
+{
+    AppData *d = user_data;
+    if (!d || atomic_load(&d->shutdown_requested))
+        return G_SOURCE_REMOVE;
+
+    g_message("milkdrop: audio reprobe attempt %d/%d",
+              atomic_load(&d->audio_fail_count), AUDIO_MAX_RESTARTS);
+
+    /* Full teardown then reinit — runs on the GLib main loop, not PipeWire thread. */
+    audio_cleanup(d);
+    audio_init(d);
+    return G_SOURCE_REMOVE;
+}
+
+static void
+on_stream_state_changed(void              *userdata,
+                        enum pw_stream_state old_state,
+                        enum pw_stream_state new_state,
+                        const char         *error)
+{
+    PipeWireState *pw = userdata;
+    if (!pw || !pw->app_data)
+        return;
+
+    AppData *d = pw->app_data;
+
+    switch (new_state) {
+    case PW_STREAM_STATE_ERROR:
+        g_warning("milkdrop: PipeWire stream error: %s", error ? error : "(unknown)");
+        /* fall through — treat error as an unrecoverable disconnect */
+        /* fall through */
+    case PW_STREAM_STATE_UNCONNECTED:
+        /* Ignore the initial UNCONNECTED state before any connection attempt. */
+        if (new_state == PW_STREAM_STATE_UNCONNECTED &&
+            old_state != PW_STREAM_STATE_PAUSED &&
+            old_state != PW_STREAM_STATE_STREAMING &&
+            old_state != PW_STREAM_STATE_ERROR)
+            break;
+
+        /* Only schedule one reprobe at a time. */
+        if (atomic_load(&d->audio_recovering))
+            break;
+
+        audio_record_failure(d);
+
+        if (audio_should_retry(d)) {
+            int delay_ms = audio_backoff_ms(atomic_load(&d->audio_fail_count));
+            g_timeout_add(delay_ms, audio_reprobe_cb, d);
+        } else {
+            g_warning("milkdrop: audio recovery budget exhausted after %d attempts",
+                      AUDIO_MAX_RESTARTS);
+        }
+        break;
+
+    case PW_STREAM_STATE_STREAMING:
+        audio_record_success(d);
+        break;
+
+    default:
+        break;
+    }
+}
+
 static const struct pw_stream_events stream_events = {
     PW_VERSION_STREAM_EVENTS,
-    .process = on_stream_process,
+    .process       = on_stream_process,
+    .state_changed = on_stream_state_changed,
 };
 
 static gboolean

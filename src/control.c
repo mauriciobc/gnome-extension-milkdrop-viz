@@ -12,16 +12,22 @@ static gboolean
 control_apply_command(AppData* app_data, const ControlCommand* command, gchar* response, gsize response_size)
 {
     switch (command->type) {
-    case CONTROL_CMD_STATUS:
+    case CONTROL_CMD_STATUS: {
+        int audio_fails = atomic_load(&app_data->audio_fail_count);
+        const char *audio_status = (audio_fails == 0)             ? "ok"
+                                   : (audio_fails < AUDIO_MAX_RESTARTS) ? "recovering"
+                                                                     : "failed";
         g_snprintf(response,
                    response_size,
-                   "ok paused=%d opacity=%.3f shuffle=%d overlay=%d quarantine=%d\n",
+                   "ok paused=%d opacity=%.3f shuffle=%d overlay=%d quarantine=%d audio=%s\n",
                    atomic_load(&app_data->pause_audio) ? 1 : 0,
                    atomic_load(&app_data->opacity),
                    atomic_load(&app_data->shuffle_runtime) ? 1 : 0,
                    atomic_load(&app_data->overlay_enabled) ? 1 : 0,
-                   app_data->quarantine_count);
+                   app_data->quarantine_count,
+                   audio_status);
         return TRUE;
+    }
     case CONTROL_CMD_OPACITY:
         atomic_store(&app_data->opacity, command->opacity);
         g_strlcpy(response, "ok opacity\n", response_size);

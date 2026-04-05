@@ -72,7 +72,7 @@ test(
 
 backend_test = executable(
   'test-backends',
-  ['test_backends.c', '../src/audio.c', '../src/control.c', '../src/renderer.c'],
+  ['test_backends.c', '../src/audio.c', '../src/audio_recovery.c', '../src/control.c', '../src/renderer.c'],
   include_directories: include_directories('..', '../src'),
   c_args: renderer_cargs,
   dependencies: test_src_link_deps,
@@ -100,7 +100,7 @@ test('presets', preset_scan_test)
 
 audio_alignment_test = executable(
   'test-audio-alignment',
-  ['test_audio_alignment.c', '../src/audio.c'],
+  ['test_audio_alignment.c', '../src/audio.c', '../src/audio_recovery.c'],
   include_directories: include_directories('..', '../src'),
   c_args: renderer_cargs,
   dependencies: test_src_link_deps,
@@ -144,6 +144,15 @@ presets_edge_test = executable(
 )
 
 test('presets-edge-cases', presets_edge_test)
+
+audio_recovery_test = executable(
+  'test-audio-recovery',
+  ['test_audio_recovery.c', '../src/audio_recovery.c'],
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep, test_gtk_dep],
+)
+
+test('audio-recovery', audio_recovery_test)
 
 pause_policy_test = executable(
   'test-pause-policy',
