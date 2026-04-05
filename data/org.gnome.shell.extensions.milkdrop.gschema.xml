@@ -49,5 +49,11 @@
       <summary>Pause when a maximized window is on the same monitor</summary>
       <description>When true, the extension pauses the renderer whenever a maximized window covers the renderer's monitor.</description>
     </key>
+
+    <key name="media-aware" type="b">
+      <default>false</default>
+      <summary>Pause when no media player is playing</summary>
+      <description>When true, the extension pauses the renderer whenever no MPRIS media player reports a Playing state.</description>
+    </key>
   </schema>
 </schemalist>

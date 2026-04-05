@@ -12,9 +12,10 @@ import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {RETRY_DELAYS_MS} from './constants.js';
+import {RETRY_DELAYS_MS, PAUSE_REASON_MPRIS} from './constants.js';
 import {getMilkdropSocketPath, sendMilkdropControlCommand} from './controlClient.js';
 import {PausePolicy} from './pausePolicy.js';
+import {MprisWatcher} from './mprisWatcher.js';
 
 export default class MilkdropExtension extends Extension {
     constructor(metadata) {
@@ -50,6 +51,7 @@ export default class MilkdropExtension extends Extension {
 
         this._pauseReasons = new Set();
         this._pausePolicy = null;
+        this._mprisWatcher = null;
     }
 
     enable() {
@@ -195,6 +197,15 @@ export default class MilkdropExtension extends Extension {
 
         if (key === 'pause-on-fullscreen' || key === 'pause-on-maximized') {
             this._pausePolicy?.reEvaluate();
+            return;
+        }
+
+        if (key === 'media-aware') {
+            const enabled = this._settings.get_boolean('media-aware');
+            if (enabled)
+                this._startMprisWatcher();
+            else
+                this._stopMprisWatcher();
         }
     }
 
@@ -242,6 +253,27 @@ export default class MilkdropExtension extends Extension {
             this._pausePolicy = null;
         }
         this._pauseReasons.clear();
+    }
+
+    _startMprisWatcher() {
+        if (!this._settings?.get_boolean('media-aware'))
+            return;
+        if (this._mprisWatcher)
+            return;
+
+        this._mprisWatcher = new MprisWatcher(isPlaying => {
+            this._setPauseReason(PAUSE_REASON_MPRIS, !isPlaying);
+        });
+        this._mprisWatcher.enable();
+    }
+
+    _stopMprisWatcher() {
+        if (this._mprisWatcher) {
+            this._mprisWatcher.disable();
+            this._mprisWatcher = null;
+        }
+        // Clear the MPRIS pause reason so the renderer is not left paused.
+        this._setPauseReason(PAUSE_REASON_MPRIS, false);
     }
 
     _spawnProcess() {
@@ -301,6 +333,7 @@ export default class MilkdropExtension extends Extension {
 
         this._retryStep = 0;
         this._startPausePolicy();
+        this._startMprisWatcher();
         this._stdoutCancellable = new Gio.Cancellable();
         this._stdoutStream = Gio.DataInputStream.new(this._subprocess.get_stdout_pipe());
         this._readRendererOutput();
@@ -423,6 +456,7 @@ export default class MilkdropExtension extends Extension {
     _stopProcess() {
         this._removeRetrySource();
         this._stopPausePolicy();
+        this._stopMprisWatcher();
 
         if (this._stdoutCancellable)
             this._stdoutCancellable.cancel();

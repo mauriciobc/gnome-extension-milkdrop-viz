@@ -65,6 +65,13 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         settings.bind('pause-on-maximized', pauseMaxRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(pauseMaxRow);
 
+        const mediaAwareRow = new Adw.SwitchRow({
+            title: 'Media-aware mode',
+            subtitle: 'Pause when no MPRIS media player is playing.',
+        });
+        settings.bind('media-aware', mediaAwareRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(mediaAwareRow);
+
         const presetGroup = new Adw.PreferencesGroup({title: 'Presets'});
         page.add(presetGroup);
 

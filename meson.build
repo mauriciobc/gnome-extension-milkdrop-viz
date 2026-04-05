@@ -69,3 +69,4 @@ install_data('extension/milkdrop@mauriciobc.github.io/prefs.js', install_dir: ex
 install_data('extension/milkdrop@mauriciobc.github.io/constants.js', install_dir: extension_dir)
 install_data('extension/milkdrop@mauriciobc.github.io/controlClient.js', install_dir: extension_dir)
 install_data('extension/milkdrop@mauriciobc.github.io/pausePolicy.js', install_dir: extension_dir)
+install_data('extension/milkdrop@mauriciobc.github.io/mprisWatcher.js', install_dir: extension_dir)

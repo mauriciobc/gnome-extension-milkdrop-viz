@@ -32,9 +32,12 @@ def main() -> int:
     prefs_path = os.path.join(root, "extension", "milkdrop@mauriciobc.github.io", "prefs.js")
     constants_path = os.path.join(root, "extension", "milkdrop@mauriciobc.github.io", "constants.js")
     control_client_path = os.path.join(root, "extension", "milkdrop@mauriciobc.github.io", "controlClient.js")
+    pause_policy_path = os.path.join(root, "extension", "milkdrop@mauriciobc.github.io", "pausePolicy.js")
+    mpris_watcher_path = os.path.join(root, "extension", "milkdrop@mauriciobc.github.io", "mprisWatcher.js")
     schema_path = os.path.join(root, "data", "org.gnome.shell.extensions.milkdrop.gschema.xml")
 
-    for path in [metadata_path, extension_path, prefs_path, constants_path, control_client_path, schema_path]:
+    for path in [metadata_path, extension_path, prefs_path, constants_path,
+                 control_client_path, pause_policy_path, mpris_watcher_path, schema_path]:
         check(os.path.exists(path), f"required file is missing: {path}")
 
     metadata = json.loads(read_text(metadata_path))
@@ -62,6 +65,7 @@ def main() -> int:
         "overlay": "b",
         "pause-on-fullscreen": "b",
         "pause-on-maximized": "b",
+        "media-aware": "b",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 
@@ -79,6 +83,8 @@ def main() -> int:
     extension_js = read_text(extension_path)
     check("from './constants.js'" in extension_js, "extension.js must import ./constants.js")
     check("from './controlClient.js'" in extension_js, "extension.js must import ./controlClient.js")
+    check("from './pausePolicy.js'" in extension_js, "extension.js must import ./pausePolicy.js")
+    check("from './mprisWatcher.js'" in extension_js, "extension.js must import ./mprisWatcher.js")
     check("export default class MilkdropExtension extends Extension" in extension_js, "extension class declaration missing")
     check("enable()" in extension_js, "enable() missing in extension")
     check("disable()" in extension_js, "disable() missing in extension")
