@@ -93,6 +93,9 @@ def main() -> int:
     constants_js = read_text(constants_path)
     check("FADE_DURATION_MS" in constants_js, "constants.js must export FADE_DURATION_MS")
 
+    control_client_js = read_text(control_client_path)
+    check("queryMilkdropStatus" in control_client_js, "controlClient.js must export queryMilkdropStatus")
+
     prefs_js = read_text(prefs_path)
     check("ExtensionPreferences" in prefs_js, "prefs does not use ExtensionPreferences")
     check("fillPreferencesWindow(window)" in prefs_js, "fillPreferencesWindow missing")

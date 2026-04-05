@@ -164,6 +164,61 @@ test_parse_previous_rejects_extra_args(void)
     g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
 }
 
+static void
+test_parse_status_response_fps(void)
+{
+    const char* response =
+        "fps=58.3\npaused=0\npreset=\naudio=ok\nquarantine=0\n\n";
+    StatusResponse sr = {0};
+
+    g_assert_true(status_response_parse(response, &sr));
+    g_assert_cmpfloat_with_epsilon(sr.fps, 58.3f, 0.01f);
+}
+
+static void
+test_parse_status_response_paused(void)
+{
+    const char* response =
+        "fps=0.0\npaused=1\npreset=\naudio=ok\nquarantine=0\n\n";
+    StatusResponse sr = {0};
+
+    g_assert_true(status_response_parse(response, &sr));
+    g_assert_true(sr.paused);
+}
+
+static void
+test_parse_status_response_preset(void)
+{
+    const char* response =
+        "fps=0.0\npaused=0\npreset=foo.milk\naudio=ok\nquarantine=0\n\n";
+    StatusResponse sr = {0};
+
+    g_assert_true(status_response_parse(response, &sr));
+    g_assert_cmpstr(sr.preset, ==, "foo.milk");
+}
+
+static void
+test_parse_status_response_audio(void)
+{
+    const char* response =
+        "fps=0.0\npaused=0\npreset=\naudio=recovering\nquarantine=0\n\n";
+    StatusResponse sr = {0};
+
+    g_assert_true(status_response_parse(response, &sr));
+    g_assert_cmpint(sr.audio, ==, CONTROL_AUDIO_RECOVERING);
+}
+
+static void
+test_parse_status_response_quarantine(void)
+{
+    const char* response =
+        "fps=0.0\npaused=0\npreset=\naudio=ok\nquarantine=2\n\n";
+    StatusResponse sr = {0};
+
+    g_assert_true(status_response_parse(response, &sr));
+    g_assert_cmpint(sr.quarantine_count, ==, 2);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -184,6 +239,11 @@ main(int argc, char** argv)
     g_test_add_func("/control/parse-previous", test_parse_previous_command);
     g_test_add_func("/control/parse-next-extra-args", test_parse_next_rejects_extra_args);
     g_test_add_func("/control/parse-previous-extra-args", test_parse_previous_rejects_extra_args);
+    g_test_add_func("/control/status-response-fps", test_parse_status_response_fps);
+    g_test_add_func("/control/status-response-paused", test_parse_status_response_paused);
+    g_test_add_func("/control/status-response-preset", test_parse_status_response_preset);
+    g_test_add_func("/control/status-response-audio", test_parse_status_response_audio);
+    g_test_add_func("/control/status-response-quarantine", test_parse_status_response_quarantine);
 
     return g_test_run();
 }

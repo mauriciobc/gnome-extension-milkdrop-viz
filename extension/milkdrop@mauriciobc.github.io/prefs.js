@@ -1,8 +1,10 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import {queryMilkdropStatus} from './controlClient.js';
 
 export default class MilkdropPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
@@ -14,6 +16,61 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         });
         window.add(page);
 
+        // --- Status group (live read-only view, polls every 2 s while window is open) ---
+        const statusGroup = new Adw.PreferencesGroup({title: 'Status'});
+        page.add(statusGroup);
+
+        const makeStatusRow = (title, initial) => {
+            const row = new Adw.ActionRow({title});
+            const label = new Gtk.Label({label: initial, xalign: 1.0, hexpand: true});
+            label.add_css_class('dim-label');
+            row.add_suffix(label);
+            statusGroup.add(row);
+            return label;
+        };
+
+        const fpsLabel = makeStatusRow('FPS', '—');
+        const presetLabel = makeStatusRow('Preset', '—');
+        const audioLabel = makeStatusRow('Audio', '—');
+        const quarantineLabel = makeStatusRow('Quarantined presets', '—');
+        const pausedLabel = makeStatusRow('Paused', '—');
+
+        let pollSourceId = 0;
+
+        const refreshStatus = () => {
+            queryMilkdropStatus().then(status => {
+                if (!status) {
+                    fpsLabel.set_label('—');
+                    presetLabel.set_label('—');
+                    audioLabel.set_label('—');
+                    quarantineLabel.set_label('—');
+                    pausedLabel.set_label('—');
+                    return;
+                }
+                fpsLabel.set_label(Number.isFinite(status.fps) ? status.fps.toFixed(1) : '—');
+                presetLabel.set_label(status.preset || '(none)');
+                audioLabel.set_label(status.audio ?? '—');
+                quarantineLabel.set_label(String(status.quarantine ?? 0));
+                pausedLabel.set_label(status.paused ? 'Yes' : 'No');
+            }).catch(() => {});
+        };
+
+        window.connect('map', () => {
+            refreshStatus();
+            pollSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+                refreshStatus();
+                return GLib.SOURCE_CONTINUE;
+            });
+        });
+
+        window.connect('unmap', () => {
+            if (pollSourceId > 0) {
+                GLib.source_remove(pollSourceId);
+                pollSourceId = 0;
+            }
+        });
+
+        // --- Runtime group ---
         const runtimeGroup = new Adw.PreferencesGroup({title: 'Runtime'});
         page.add(runtimeGroup);
 

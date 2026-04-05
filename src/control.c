@@ -4,6 +4,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <poll.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -14,18 +15,20 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
     switch (command->type) {
     case CONTROL_CMD_STATUS: {
         int audio_fails = atomic_load(&app_data->audio_fail_count);
-        const char *audio_status = (audio_fails == 0)             ? "ok"
+        const char *audio_status = (audio_fails == 0)                   ? "ok"
                                    : (audio_fails < AUDIO_MAX_RESTARTS) ? "recovering"
-                                                                     : "failed";
+                                                                         : "failed";
         g_snprintf(response,
                    response_size,
-                   "ok paused=%d opacity=%.3f shuffle=%d overlay=%d quarantine=%d audio=%s\n",
+                   "paused=%d\nopacity=%.3f\nshuffle=%d\noverlay=%d\nquarantine=%d\naudio=%s\nfps=%.1f\npreset=%s\n\n",
                    atomic_load(&app_data->pause_audio) ? 1 : 0,
                    atomic_load(&app_data->opacity),
                    atomic_load(&app_data->shuffle_runtime) ? 1 : 0,
                    atomic_load(&app_data->overlay_enabled) ? 1 : 0,
                    app_data->quarantine_count,
-                   audio_status);
+                   audio_status,
+                   atomic_load(&app_data->fps_last),
+                   app_data->last_good_preset);
         return TRUE;
     }
     case CONTROL_CMD_OPACITY:
@@ -92,7 +95,7 @@ control_handle_client(AppData* app_data, int client_fd)
 
     ControlCommand command = {0};
     ControlParseResult parse_result = control_parse_command(buffer, &command);
-    gchar response[256] = {0};
+    gchar response[MILKDROP_PATH_MAX + 256] = {0};
 
     if (parse_result == CONTROL_PARSE_OK)
         (void)control_apply_command(app_data, &command, response, sizeof(response));
@@ -224,6 +227,53 @@ control_parse_command(const char* line, ControlCommand* out_command)
     }
 
     return CONTROL_PARSE_INVALID;
+}
+
+bool
+status_response_parse(const char* response, StatusResponse* out)
+{
+    if (!response || !out)
+        return false;
+
+    *out = (StatusResponse){0};
+
+    g_auto(GStrv) lines = g_strsplit(response, "\n", -1);
+    for (int i = 0; lines[i] != NULL; i++) {
+        const char* line = lines[i];
+        if (line[0] == '\0')
+            break;
+
+        const char* eq = strchr(line, '=');
+        if (!eq)
+            continue;
+
+        char key[64] = {0};
+        size_t keylen = (size_t)(eq - line);
+        if (keylen >= sizeof(key))
+            continue;
+        memcpy(key, line, keylen);
+
+        const char* value = eq + 1;
+
+        if (strcmp(key, "fps") == 0) {
+            out->fps = (float)g_ascii_strtod(value, NULL);
+        } else if (strcmp(key, "paused") == 0) {
+            out->paused = value[0] == '1';
+        } else if (strcmp(key, "preset") == 0) {
+            g_strlcpy(out->preset, value, sizeof(out->preset));
+        } else if (strcmp(key, "audio") == 0) {
+            if (strcmp(value, "recovering") == 0)
+                out->audio = CONTROL_AUDIO_RECOVERING;
+            else if (strcmp(value, "failed") == 0)
+                out->audio = CONTROL_AUDIO_FAILED;
+            else
+                out->audio = CONTROL_AUDIO_OK;
+        } else if (strcmp(key, "quarantine") == 0) {
+            out->quarantine_count = (int)g_ascii_strtoll(value, NULL, 10);
+        }
+    }
+
+    return true;
 }
 
 bool

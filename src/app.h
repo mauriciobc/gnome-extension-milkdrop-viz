@@ -80,6 +80,9 @@ typedef struct {
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
 
+    /* Last measured frame rate (written by GL thread, read by control thread). */
+    _Atomic float fps_last;
+
     /* Audio recovery state machine. */
 #define AUDIO_MAX_RESTARTS 5
     _Atomic int  audio_fail_count;
