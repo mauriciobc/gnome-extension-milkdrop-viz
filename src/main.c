@@ -18,12 +18,81 @@
 #include <projectM-4/render_opengl.h>
 #include <projectM-4/audio.h>
 #include <projectM-4/playlist_playback.h>
+#include <projectM-4/playlist_callbacks.h>
 #include <projectM-4/playlist_core.h>
+#include <projectM-4/playlist_items.h>
 #include <projectM-4/playlist_types.h>
 
 static gboolean milkdrop_verbose_gl          = FALSE;
 static gboolean milkdrop_logged_render_fbo   = FALSE;
 static gint64   milkdrop_pm_mono_origin_us   = 0;
+
+static void
+milkdrop_configure_texture_search_paths(AppData* app_data)
+{
+    const char* texture_paths[1] = {0};
+    size_t count = 0;
+
+    if (!app_data || !app_data->projectm)
+        return;
+
+    if (app_data->preset_dir && app_data->preset_dir[0] != '\0' &&
+        g_file_test(app_data->preset_dir, G_FILE_TEST_IS_DIR)) {
+        texture_paths[0] = app_data->preset_dir;
+        count = 1;
+    }
+
+    projectm_set_texture_search_paths(app_data->projectm,
+                                      count > 0 ? texture_paths : NULL,
+                                      count);
+}
+
+static void
+milkdrop_on_preset_switch_failed(const char* preset_filename,
+                                 const char* message,
+                                 void*       user_data)
+{
+    AppData* app_data = user_data;
+
+    if (!app_data)
+        return;
+
+    g_warning("Preset switch failed for %s: %s",
+              preset_filename ? preset_filename : "(unknown)",
+              message ? message : "(no message)");
+}
+
+static void
+milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
+{
+    if (!app_data || !app_data->projectm || !app_data->projectm_playlist)
+        return;
+
+    milkdrop_configure_texture_search_paths(app_data);
+
+    projectm_playlist_clear(app_data->projectm_playlist);
+
+    uint32_t added = 0;
+    if (app_data->preset_dir && app_data->preset_dir[0] != '\0')
+        added = projectm_playlist_add_path(app_data->projectm_playlist,
+                                           app_data->preset_dir,
+                                           true,
+                                           false);
+
+    projectm_playlist_set_shuffle(app_data->projectm_playlist,
+                                  atomic_load(&app_data->shuffle_runtime));
+
+    if (added > 0) {
+        projectm_playlist_set_position(app_data->projectm_playlist, 0u, true);
+        if (app_data->verbose)
+            g_message("playlist loaded %u presets from %s", added, app_data->preset_dir);
+    } else {
+        projectm_load_preset_file(app_data->projectm, "idle://", false);
+        if (app_data->verbose)
+            g_message("playlist empty for %s, using idle preset",
+                      app_data->preset_dir ? app_data->preset_dir : "(none)");
+    }
+}
 
 G_GNUC_UNUSED static void*
 gl_load_proc(const char* name, void* user_data)
@@ -106,26 +175,16 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
     if (app_data->verbose)
         g_message("projectm_playlist_create() succeeded");
 
+    projectm_playlist_set_preset_switch_failed_event_callback(app_data->projectm_playlist,
+                                                              milkdrop_on_preset_switch_failed,
+                                                              app_data);
+
     if (app_data->render_width > 0 && app_data->render_height > 0)
         projectm_set_window_size(app_data->projectm,
                                  (size_t)app_data->render_width,
                                  (size_t)app_data->render_height);
 
-    const char* current = presets_current(app_data);
-    bool user_preset_loaded = false;
-
-    if (current && g_file_test(current, G_FILE_TEST_IS_REGULAR)) {
-        projectm_load_preset_file(app_data->projectm, current, false);
-        user_preset_loaded = true;
-        if (app_data->verbose)
-            g_message("libprojectM initialized with preset %s", current);
-    }
-
-    if (!user_preset_loaded) {
-        projectm_load_preset_file(app_data->projectm, "idle://", false);
-        if (app_data->verbose)
-            g_message("libprojectM initialized with idle preset");
-    }
+    milkdrop_sync_playlist_from_preset_dir(app_data);
 
     return TRUE;
 }
@@ -160,6 +219,7 @@ on_render_pulse(gpointer user_data)
 {
     AppData* app_data = user_data;
 
+#if !HAVE_PROJECTM
     if (atomic_exchange(&app_data->preset_dir_pending, false)) {
         char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
         g_mutex_lock(&app_data->preset_dir_lock);
@@ -170,13 +230,8 @@ on_render_pulse(gpointer user_data)
         app_data->preset_dir = g_strdup(next_dir);
         if (!presets_reload(app_data))
             g_warning("Failed to reload presets from %s", next_dir);
-
-#if HAVE_PROJECTM
-        const char* current = presets_current(app_data);
-        if (app_data->projectm && current)
-            projectm_load_preset_file(app_data->projectm, current, false);
-#endif
     }
+#endif
 
     if (app_data->window) {
         static float last_opacity = -1.0f;
@@ -296,6 +351,30 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     if (!app_data->projectm && !milkdrop_try_init_projectm(area, app_data))
         return TRUE;
 
+    if (atomic_exchange(&app_data->preset_dir_pending, false)) {
+        char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
+
+        g_mutex_lock(&app_data->preset_dir_lock);
+        g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
+        g_mutex_unlock(&app_data->preset_dir_lock);
+
+        g_clear_pointer(&app_data->preset_dir, g_free);
+        app_data->preset_dir = g_strdup(next_dir);
+        milkdrop_sync_playlist_from_preset_dir(app_data);
+    }
+
+    if (app_data->projectm && app_data->projectm_playlist) {
+        bool do_next = atomic_exchange(&app_data->next_preset_pending, false);
+        bool do_prev = atomic_exchange(&app_data->prev_preset_pending, false);
+
+        /* projectM preset loading must happen with a current GL context. */
+        if (do_next) {
+            projectm_playlist_play_next(app_data->projectm_playlist, true);
+        } else if (do_prev) {
+            projectm_playlist_play_previous(app_data->projectm_playlist, true);
+        }
+    }
+
     /* F2: skip rendering until on_resize() has supplied real dimensions.  GTK
      * guarantees on_resize fires before the first on_render, so render_width
      * should always be non-zero in steady state; the guard protects against
@@ -324,8 +403,15 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                                        prep.stereo_frames,
                                        PROJECTM_STEREO);
 
-            projectm_playlist_set_shuffle(app_data->projectm_playlist,
-                                          atomic_load(&app_data->shuffle_runtime));
+            {
+                static bool last_shuffle = false;
+                bool current_shuffle = atomic_load(&app_data->shuffle_runtime);
+                if (current_shuffle != last_shuffle) {
+                    projectm_playlist_set_shuffle(app_data->projectm_playlist,
+                                                  current_shuffle);
+                    last_shuffle = current_shuffle;
+                }
+            }
 
             GLint draw_fbo = 0;
             glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
@@ -565,6 +651,8 @@ main(int argc, char** argv)
     atomic_store(&app_data.overlay_enabled, overlay);
     atomic_store(&app_data.shuffle_runtime, app_data.shuffle);
     atomic_store(&app_data.preset_dir_pending, false);
+    atomic_store(&app_data.next_preset_pending, false);
+    atomic_store(&app_data.prev_preset_pending, false);
     atomic_store(&app_data.control_thread_running, false);
     app_data.control_fd = -1;
     app_data.control_thread = NULL;

@@ -126,6 +126,44 @@ test_parse_preset_dir_path_too_long(void)
     g_assert_cmpint(result, ==, CONTROL_PARSE_PATH_TOO_LONG);
 }
 
+static void
+test_parse_next_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("next\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_NEXT_PRESET);
+}
+
+static void
+test_parse_previous_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("previous\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_PREV_PRESET);
+}
+
+static void
+test_parse_next_rejects_extra_args(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("next now\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_previous_rejects_extra_args(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("previous now\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -142,6 +180,10 @@ main(int argc, char** argv)
     g_test_add_func("/control/parse-preset-dir", test_parse_preset_dir_command);
     g_test_add_func("/control/parse-preset-dir-max-len", test_parse_preset_dir_max_length);
     g_test_add_func("/control/parse-preset-dir-too-long", test_parse_preset_dir_path_too_long);
+    g_test_add_func("/control/parse-next", test_parse_next_command);
+    g_test_add_func("/control/parse-previous", test_parse_previous_command);
+    g_test_add_func("/control/parse-next-extra-args", test_parse_next_rejects_extra_args);
+    g_test_add_func("/control/parse-previous-extra-args", test_parse_previous_rejects_extra_args);
 
     return g_test_run();
 }

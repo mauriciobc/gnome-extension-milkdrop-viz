@@ -10,13 +10,14 @@ The command protocol should remain binary, compact, and versioned by convention.
 
 A stable command set for v2 includes:
 
-- Load preset by path.
-- Next preset.
-- Previous preset.
-- Pause.
-- Resume.
-- Set opacity.
-- Get status.
+- `preset-dir <absolute-path>`
+- `next`
+- `previous`
+- `pause <on|off>`
+- `shuffle <on|off>`
+- `overlay <on|off>`
+- `opacity <0.0-1.0>`
+- `status`
 
 ## Threading rule
 

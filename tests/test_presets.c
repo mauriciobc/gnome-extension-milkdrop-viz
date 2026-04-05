@@ -41,6 +41,40 @@ test_presets_reload_filters_and_sorts(void)
 }
 
 static void
+test_presets_reload_scans_subdirectories(void)
+{
+    AppData app_data = {0};
+    g_autofree gchar* dir = make_temp_dir();
+    g_autofree gchar* nested = g_build_filename(dir, "pack", "set-a", NULL);
+    g_autofree gchar* top_level = g_build_filename(dir, "root.milk", NULL);
+    g_autofree gchar* nested_milk = g_build_filename(nested, "deep.MILK", NULL);
+    g_autofree gchar* nested_txt = g_build_filename(nested, "ignore.txt", NULL);
+
+    g_assert_cmpint(g_mkdir_with_parents(nested, 0700), ==, 0);
+    g_assert_true(g_file_set_contents(top_level, "", 0, NULL));
+    g_assert_true(g_file_set_contents(nested_milk, "", 0, NULL));
+    g_assert_true(g_file_set_contents(nested_txt, "", 0, NULL));
+
+    app_data.preset_dir = g_strdup(dir);
+    g_assert_true(presets_reload(&app_data));
+
+    g_assert_cmpint(app_data.preset_count, ==, 2);
+    g_assert_true(g_strv_contains((const gchar* const*)app_data.presets, top_level));
+    g_assert_true(g_strv_contains((const gchar* const*)app_data.presets, nested_milk));
+
+    presets_clear(&app_data);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+
+    g_unlink(top_level);
+    g_unlink(nested_milk);
+    g_unlink(nested_txt);
+    g_rmdir(nested);
+    g_autofree gchar* nested_parent = g_build_filename(dir, "pack", NULL);
+    g_rmdir(nested_parent);
+    g_rmdir(dir);
+}
+
+static void
 test_presets_reload_handles_missing_directory(void)
 {
     AppData app_data = {0};
@@ -59,6 +93,7 @@ main(int argc, char** argv)
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/presets/reload-filters-and-sorts", test_presets_reload_filters_and_sorts);
+    g_test_add_func("/presets/reload-scans-subdirectories", test_presets_reload_scans_subdirectories);
     g_test_add_func("/presets/reload-missing-dir", test_presets_reload_handles_missing_directory);
 
     return g_test_run();

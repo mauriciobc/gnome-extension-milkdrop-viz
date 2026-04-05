@@ -119,10 +119,12 @@ The renderer exposes a Unix domain control socket with line commands:
 
 - `status`
 - `opacity <0.0-1.0>`
-- `pause <0|1>`
-- `shuffle <0|1>`
-- `overlay <0|1>`
+- `pause <on|off>`
+- `shuffle <on|off>`
+- `overlay <on|off>`
 - `preset-dir <absolute-path>`
+- `next`
+- `previous`
 
 ## GSettings
 

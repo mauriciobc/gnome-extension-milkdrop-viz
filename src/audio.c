@@ -177,8 +177,6 @@ audio_cleanup(AppData* app_data)
         state->stream = NULL;
     }
 
-    spa_hook_remove(&state->stream_listener);
-
     if (state->core) {
         pw_core_disconnect(state->core);
         state->core = NULL;

@@ -44,6 +44,14 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         atomic_store(&app_data->preset_dir_pending, true);
         g_strlcpy(response, "ok preset-dir\n", response_size);
         return TRUE;
+    case CONTROL_CMD_NEXT_PRESET:
+        atomic_store(&app_data->next_preset_pending, true);
+        g_strlcpy(response, "ok next\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_PREV_PRESET:
+        atomic_store(&app_data->prev_preset_pending, true);
+        g_strlcpy(response, "ok previous\n", response_size);
+        return TRUE;
     case CONTROL_CMD_NONE:
     default:
         g_strlcpy(response, "err invalid\n", response_size);
@@ -195,6 +203,16 @@ control_parse_command(const char* line, ControlCommand* out_command)
 
         out_command->type = CONTROL_CMD_PRESET_DIR;
         g_strlcpy(out_command->text_value, argv[1], sizeof(out_command->text_value));
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "next") == 0 && argc == 1) {
+        out_command->type = CONTROL_CMD_NEXT_PRESET;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "previous") == 0 && argc == 1) {
+        out_command->type = CONTROL_CMD_PREV_PRESET;
         return CONTROL_PARSE_OK;
     }
 

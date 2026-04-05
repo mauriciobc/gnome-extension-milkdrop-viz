@@ -24,6 +24,7 @@
 #include <projectM-4/render_opengl.h>
 #include <projectM-4/audio.h>
 #include <projectM-4/playlist_core.h>
+#include <projectM-4/playlist_items.h>
 #include <projectM-4/playlist_playback.h>
 
 #include <math.h>
@@ -76,6 +77,66 @@ on_unrealize_pm(GtkGLArea* area, gpointer user_data)
     pm_ctx_cleanup(ctx);
 }
 
+static gboolean
+validate_playlist_rotation_api(PmCtx* ctx, const char* preset_path)
+{
+    if (!ctx || !ctx->playlist)
+        return FALSE;
+
+    if (!preset_path || !preset_path[0] || !g_file_test(preset_path, G_FILE_TEST_IS_REGULAR))
+        return TRUE;
+
+    projectm_playlist_clear(ctx->playlist);
+    projectm_playlist_set_shuffle(ctx->playlist, FALSE);
+
+    if (!projectm_playlist_add_preset(ctx->playlist, preset_path, true))
+        return FALSE;
+    if (!projectm_playlist_add_preset(ctx->playlist, preset_path, true))
+        return FALSE;
+
+    uint32_t size = projectm_playlist_size(ctx->playlist);
+    if (size < 2u)
+        return FALSE;
+
+    uint32_t start_pos = projectm_playlist_set_position(ctx->playlist, 0u, true);
+    if (start_pos != 0u)
+        return FALSE;
+
+    uint32_t next_pos = projectm_playlist_play_next(ctx->playlist, true);
+    if (next_pos >= size)
+        return FALSE;
+
+    if (next_pos == start_pos)
+        return FALSE;
+
+    return projectm_playlist_get_position(ctx->playlist) == next_pos;
+}
+
+static gboolean
+load_test_preset_via_playlist(PmCtx* ctx, const char* preset_path)
+{
+    if (!ctx || !ctx->playlist)
+        return FALSE;
+
+    if (!preset_path || !preset_path[0] || !g_file_test(preset_path, G_FILE_TEST_IS_REGULAR)) {
+        projectm_load_preset_file(ctx->pm, "idle://", false);
+        return TRUE;
+    }
+
+    g_autofree gchar* preset_dir = g_path_get_dirname(preset_path);
+    const char* tex_paths[] = {preset_dir};
+
+    projectm_set_texture_search_paths(ctx->pm, tex_paths, 1u);
+
+    projectm_playlist_clear(ctx->playlist);
+    projectm_playlist_set_shuffle(ctx->playlist, FALSE);
+
+    if (!projectm_playlist_add_preset(ctx->playlist, preset_path, true))
+        return FALSE;
+
+    return projectm_playlist_set_position(ctx->playlist, 0u, true) == 0u;
+}
+
 static void
 on_realize_pm(GtkGLArea* area, gpointer user_data)
 {
@@ -125,13 +186,22 @@ on_realize_pm(GtkGLArea* area, gpointer user_data)
     }
 
     const char* preset = g_getenv("MILKDROP_PM_TEST_PRESET");
-    if (preset && *preset && g_file_test(preset, G_FILE_TEST_IS_REGULAR)) {
-        g_autofree gchar* preset_dir = g_path_get_dirname(preset);
-        const char* tex_paths[] = { preset_dir };
-        projectm_set_texture_search_paths(ctx->pm, tex_paths, 1u);
-        projectm_load_preset_file(ctx->pm, preset, false);
-    } else
-        projectm_load_preset_file(ctx->pm, "idle://", false);
+
+    if (!validate_playlist_rotation_api(ctx, preset)) {
+        g_warning("projectM playlist rotation API validation failed");
+        pm_ctx_cleanup(ctx);
+        ctx->init_ok = FALSE;
+        ctx->realize_finished = TRUE;
+        return;
+    }
+
+    if (!load_test_preset_via_playlist(ctx, preset)) {
+        g_warning("projectM playlist-backed preset load failed");
+        pm_ctx_cleanup(ctx);
+        ctx->init_ok = FALSE;
+        ctx->realize_finished = TRUE;
+        return;
+    }
 
     ctx->init_ok = TRUE;
     ctx->realize_finished = TRUE;

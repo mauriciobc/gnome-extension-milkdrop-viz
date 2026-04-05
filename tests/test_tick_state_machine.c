@@ -144,6 +144,36 @@ test_concurrent_pending_flag_no_race(void)
     g_mutex_clear(&app_data.preset_dir_lock);
 }
 
+static void
+test_next_previous_pending_atomic_exchange(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.next_preset_pending, true);
+    atomic_store(&app_data.prev_preset_pending, true);
+
+    gboolean next_was_pending = atomic_exchange(&app_data.next_preset_pending, false);
+    gboolean prev_was_pending = atomic_exchange(&app_data.prev_preset_pending, false);
+
+    g_assert_true(next_was_pending);
+    g_assert_true(prev_was_pending);
+    g_assert_false(atomic_load(&app_data.next_preset_pending));
+    g_assert_false(atomic_load(&app_data.prev_preset_pending));
+}
+
+static void
+test_next_previous_pending_second_exchange_cleared(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.next_preset_pending, true);
+    atomic_store(&app_data.prev_preset_pending, true);
+
+    g_assert_true(atomic_exchange(&app_data.next_preset_pending, false));
+    g_assert_true(atomic_exchange(&app_data.prev_preset_pending, false));
+
+    g_assert_false(atomic_exchange(&app_data.next_preset_pending, false));
+    g_assert_false(atomic_exchange(&app_data.prev_preset_pending, false));
+}
+
 int
 main(int argc, char** argv)
 {
@@ -155,6 +185,8 @@ main(int argc, char** argv)
     g_test_add_func("/tick/preset-reload-failure-state", test_preset_reload_failure_preserves_state);
     g_test_add_func("/tick/render-queue-continue", test_tick_queues_render_unconditionally);
     g_test_add_func("/tick/concurrent-pending-no-race", test_concurrent_pending_flag_no_race);
+    g_test_add_func("/tick/next-previous-pending-exchange", test_next_previous_pending_atomic_exchange);
+    g_test_add_func("/tick/next-previous-pending-second-exchange", test_next_previous_pending_second_exchange_cleared);
 
     return g_test_run();
 }

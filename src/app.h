@@ -61,6 +61,8 @@ typedef struct {
     _Atomic bool overlay_enabled;
     _Atomic bool shuffle_runtime;
     _Atomic bool preset_dir_pending;
+    _Atomic bool next_preset_pending;
+    _Atomic bool prev_preset_pending;
 
     int render_width;
     int render_height;

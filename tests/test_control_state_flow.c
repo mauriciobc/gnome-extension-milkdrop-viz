@@ -132,6 +132,42 @@ test_preset_dir_command_sets_pending(void)
 }
 
 static void
+test_next_command_sets_pending(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.next_preset_pending, false);
+    atomic_store(&app_data.prev_preset_pending, false);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "next\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_true(atomic_load(&app_data.next_preset_pending));
+    g_assert_false(atomic_load(&app_data.prev_preset_pending));
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
+test_previous_command_sets_pending(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.next_preset_pending, false);
+    atomic_store(&app_data.prev_preset_pending, false);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "previous\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_true(atomic_load(&app_data.prev_preset_pending));
+    g_assert_false(atomic_load(&app_data.next_preset_pending));
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
 test_status_command_reflects_current_state(void)
 {
     AppData app_data = {0};
@@ -238,6 +274,8 @@ main(int argc, char** argv)
     g_test_add_func("/control-state/shuffle", test_shuffle_command_updates_atomic);
     g_test_add_func("/control-state/overlay", test_overlay_command_updates_atomic);
     g_test_add_func("/control-state/preset-dir-pending", test_preset_dir_command_sets_pending);
+    g_test_add_func("/control-state/next-preset-pending", test_next_command_sets_pending);
+    g_test_add_func("/control-state/previous-preset-pending", test_previous_command_sets_pending);
     g_test_add_func("/control-state/status-reflects-state", test_status_command_reflects_current_state);
     g_test_add_func("/control-state/invalid-command", test_invalid_command_returns_error);
     g_test_add_func("/control-state/parse-and-apply-cycle", test_full_parse_and_apply_cycle);

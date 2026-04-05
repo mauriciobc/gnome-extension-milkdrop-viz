@@ -10,6 +10,19 @@ compare_paths(gconstpointer a, gconstpointer b)
     return g_strcmp0(lhs, rhs);
 }
 
+static bool
+has_milk_extension(const char* name)
+{
+    if (!name)
+        return false;
+
+    gsize length = strlen(name);
+    if (length < 5)
+        return false;
+
+    return g_ascii_strcasecmp(name + (length - 5), ".milk") == 0;
+}
+
 void
 presets_clear(AppData* app_data)
 {
@@ -36,7 +49,7 @@ collect_presets(const char* dir_path, GPtrArray* entries)
         if (g_file_test(full_path, G_FILE_TEST_IS_DIR)) {
             collect_presets(full_path, entries);
             g_free(full_path);
-        } else if (g_str_has_suffix(name, ".milk")) {
+        } else if (has_milk_extension(name)) {
             g_ptr_array_add(entries, full_path);
         } else {
             g_free(full_path);
