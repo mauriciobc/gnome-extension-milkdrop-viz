@@ -276,20 +276,23 @@ status_response_parse(const char* response, StatusResponse* out)
     return true;
 }
 
+gchar*
+control_socket_path_for_monitor(int monitor_index)
+{
+    const char* runtime_dir = g_get_user_runtime_dir();
+    if (!runtime_dir)
+        return g_strdup_printf("/tmp/milkdrop-%d.sock", monitor_index);
+    return g_strdup_printf("%s/milkdrop-%d.sock", runtime_dir, monitor_index);
+}
+
 bool
 control_init(AppData* app_data)
 {
     if (!app_data)
         return false;
 
-    if (!app_data->socket_path) {
-        const char* runtime_dir = g_get_user_runtime_dir();
-        if (!runtime_dir) {
-            g_warning("No user runtime directory (set XDG_RUNTIME_DIR or pass --socket-path)");
-            return false;
-        }
-        app_data->socket_path = g_build_filename(runtime_dir, "milkdrop.sock", NULL);
-    }
+    if (!app_data->socket_path)
+        app_data->socket_path = control_socket_path_for_monitor(app_data->monitor_index);
 
     g_unlink(app_data->socket_path);
 

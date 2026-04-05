@@ -66,6 +66,7 @@ def main() -> int:
         "pause-on-fullscreen": "b",
         "pause-on-maximized": "b",
         "media-aware": "b",
+        "all-monitors": "b",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 
@@ -89,6 +90,7 @@ def main() -> int:
     check("enable()" in extension_js, "enable() missing in extension")
     check("disable()" in extension_js, "disable() missing in extension")
     check("_spawnProcess()" in extension_js, "_spawnProcess() missing in extension")
+    check("_syncMonitors()" in extension_js, "_syncMonitors() missing in extension")
 
     constants_js = read_text(constants_path)
     check("FADE_DURATION_MS" in constants_js, "constants.js must export FADE_DURATION_MS")

@@ -4,17 +4,17 @@ import GLib from 'gi://GLib';
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
 
-export function getMilkdropSocketPath() {
+export function getMilkdropSocketPath(monitorIndex = 0) {
     const runtimeDir = GLib.get_user_runtime_dir();
     if (!runtimeDir)
-        return '/tmp/milkdrop.sock';
-    return `${runtimeDir}/milkdrop.sock`;
+        return `/tmp/milkdrop-${monitorIndex}.sock`;
+    return `${runtimeDir}/milkdrop-${monitorIndex}.sock`;
 }
 
-export function sendMilkdropControlCommand(command) {
-    const socketPath = getMilkdropSocketPath();
+export function sendMilkdropControlCommand(command, socketPath = null) {
+    const path = socketPath ?? getMilkdropSocketPath(0);
     const socketClient = new Gio.SocketClient();
-    const socketAddress = Gio.UnixSocketAddress.new(socketPath);
+    const socketAddress = Gio.UnixSocketAddress.new(path);
     const data = TEXT_ENCODER.encode(`${command}\n`);
 
     socketClient.connect_async(socketAddress, null, (client, connectRes) => {
@@ -51,11 +51,11 @@ export function sendMilkdropControlCommand(command) {
  *   fps (number), paused (bool), preset (string), audio (string), quarantine (number)
  * or null if the renderer is not running / connection failed.
  */
-export function queryMilkdropStatus() {
+export function queryMilkdropStatus(socketPath = null) {
     return new Promise(resolve => {
-        const socketPath = getMilkdropSocketPath();
+        const socketPath_ = socketPath ?? getMilkdropSocketPath(0);
         const socketClient = new Gio.SocketClient();
-        const socketAddress = Gio.UnixSocketAddress.new(socketPath);
+        const socketAddress = Gio.UnixSocketAddress.new(socketPath_);
         const request = TEXT_ENCODER.encode('status\n');
 
         socketClient.connect_async(socketAddress, null, (client, connectRes) => {

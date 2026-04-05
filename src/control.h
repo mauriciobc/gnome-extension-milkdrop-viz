@@ -46,5 +46,11 @@ typedef struct {
 ControlParseResult control_parse_command(const char* line, ControlCommand* out_command);
 bool               status_response_parse(const char* response, StatusResponse* out);
 
+/**
+ * Returns a heap-allocated socket path for the given monitor index,
+ * e.g. /run/user/1000/milkdrop-0.sock. Caller must g_free() the result.
+ */
+gchar* control_socket_path_for_monitor(int monitor_index);
+
 bool control_init(AppData* app_data);
 void control_cleanup(AppData* app_data);

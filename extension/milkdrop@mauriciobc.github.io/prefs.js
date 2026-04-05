@@ -85,6 +85,13 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         monitorRow.activatable_widget = monitorSpin;
         runtimeGroup.add(monitorRow);
 
+        const allMonitorsRow = new Adw.SwitchRow({
+            title: 'All monitors',
+            subtitle: 'Show visualizer on every connected monitor simultaneously.',
+        });
+        settings.bind('all-monitors', allMonitorsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        runtimeGroup.add(allMonitorsRow);
+
         const opacityRow = new Adw.ActionRow({title: 'Opacity'});
         const opacityScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01);
         opacityScale.set_hexpand(true);

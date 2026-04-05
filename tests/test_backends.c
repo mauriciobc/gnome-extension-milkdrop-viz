@@ -51,7 +51,8 @@ test_control_init_creates_socket_path(void)
 
     g_assert_true(control_init(&app_data));
     g_assert_nonnull(app_data.socket_path);
-    g_assert_true(g_str_has_suffix(app_data.socket_path, "milkdrop.sock"));
+    /* Path now includes monitor index: milkdrop-N.sock */
+    g_assert_nonnull(strstr(app_data.socket_path, "milkdrop-"));
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
@@ -119,6 +120,31 @@ test_control_commands_update_runtime_state(void)
 }
 
 static void
+test_socket_path_per_monitor(void)
+{
+    g_autofree gchar* path0 = control_socket_path_for_monitor(0);
+    g_autofree gchar* path1 = control_socket_path_for_monitor(1);
+    g_autofree gchar* path2 = control_socket_path_for_monitor(2);
+
+    g_assert_nonnull(path0);
+    g_assert_nonnull(path1);
+    g_assert_nonnull(path2);
+
+    g_assert_cmpstr(path0, !=, path1);
+    g_assert_cmpstr(path1, !=, path2);
+    g_assert_cmpstr(path0, !=, path2);
+}
+
+static void
+test_socket_paths_include_monitor_index(void)
+{
+    g_autofree gchar* path3 = control_socket_path_for_monitor(3);
+
+    g_assert_nonnull(path3);
+    g_assert_nonnull(strstr(path3, "3"));
+}
+
+static void
 test_on_resize_sets_render_dimensions(void)
 {
     AppData app_data = {0};
@@ -157,6 +183,8 @@ main(int argc, char** argv)
     g_test_add_func("/backends/control-commands", test_control_commands_update_runtime_state);
     g_test_add_func("/renderer/resize-sets-dimensions", test_on_resize_sets_render_dimensions);
     g_test_add_func("/renderer/resize-hidpi-scale", test_render_skipped_when_size_is_zero);
+    g_test_add_func("/backends/socket-path-per-monitor", test_socket_path_per_monitor);
+    g_test_add_func("/backends/socket-path-includes-index", test_socket_paths_include_monitor_index);
 
     return g_test_run();
 }

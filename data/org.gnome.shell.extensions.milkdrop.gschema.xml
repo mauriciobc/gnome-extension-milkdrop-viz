@@ -55,5 +55,11 @@
       <summary>Pause when no media player is playing</summary>
       <description>When true, the extension pauses the renderer whenever no MPRIS media player reports a Playing state.</description>
     </key>
+
+    <key name="all-monitors" type="b">
+      <default>false</default>
+      <summary>Show visualizer on all connected monitors</summary>
+      <description>When true, the extension spawns one renderer instance per connected monitor instead of only the selected monitor.</description>
+    </key>
   </schema>
 </schemalist>
