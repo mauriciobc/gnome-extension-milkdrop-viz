@@ -4,6 +4,7 @@
 #include "audio.h"
 #include "control.h"
 #include "presets.h"
+#include "quarantine.h"
 #include "renderer.h"
 
 #include <string.h>
@@ -21,6 +22,7 @@
 #include <projectM-4/playlist_callbacks.h>
 #include <projectM-4/playlist_core.h>
 #include <projectM-4/playlist_items.h>
+#include <projectM-4/playlist_memory.h>
 #include <projectM-4/playlist_types.h>
 
 static gboolean milkdrop_verbose_gl          = FALSE;
@@ -60,6 +62,29 @@ milkdrop_on_preset_switch_failed(const char* preset_filename,
     g_warning("Preset switch failed for %s: %s",
               preset_filename ? preset_filename : "(unknown)",
               message ? message : "(no message)");
+
+    quarantine_record_failure(app_data, preset_filename);
+
+    if (atomic_load(&app_data->quarantine_all_failed))
+        g_warning("milkdrop: %d consecutive preset failures — stopping auto-advance",
+                  app_data->consecutive_failures);
+}
+
+static void
+milkdrop_on_preset_switched(bool         is_hard_cut,
+                             unsigned int index,
+                             void*        user_data)
+{
+    (void)is_hard_cut;
+    AppData* app_data = user_data;
+
+    if (!app_data || !app_data->projectm_playlist)
+        return;
+
+    char* filename = projectm_playlist_item(app_data->projectm_playlist, index);
+    quarantine_record_success(app_data, filename);
+    if (filename)
+        projectm_playlist_free_string(filename);
 }
 
 static void
@@ -178,6 +203,9 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
     projectm_playlist_set_preset_switch_failed_event_callback(app_data->projectm_playlist,
                                                               milkdrop_on_preset_switch_failed,
                                                               app_data);
+    projectm_playlist_set_preset_switched_event_callback(app_data->projectm_playlist,
+                                                         milkdrop_on_preset_switched,
+                                                         app_data);
 
     if (app_data->render_width > 0 && app_data->render_height > 0)
         projectm_set_window_size(app_data->projectm,

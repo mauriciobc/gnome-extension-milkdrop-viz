@@ -79,6 +79,15 @@ typedef struct {
 
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
+
+    /* Preset quarantine — GL thread only (no atomics needed). */
+#define MAX_QUARANTINE 64
+#define QUARANTINE_FAILURE_THRESHOLD 5
+    char quarantine_list[MAX_QUARANTINE][MILKDROP_PATH_MAX];
+    int  quarantine_count;
+    int  consecutive_failures;
+    char last_good_preset[MILKDROP_PATH_MAX];
+    _Atomic bool quarantine_all_failed;
 } AppData;
 
 static inline void

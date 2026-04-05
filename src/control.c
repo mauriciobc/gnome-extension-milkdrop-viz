@@ -15,11 +15,12 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
     case CONTROL_CMD_STATUS:
         g_snprintf(response,
                    response_size,
-                   "ok paused=%d opacity=%.3f shuffle=%d overlay=%d\n",
+                   "ok paused=%d opacity=%.3f shuffle=%d overlay=%d quarantine=%d\n",
                    atomic_load(&app_data->pause_audio) ? 1 : 0,
                    atomic_load(&app_data->opacity),
                    atomic_load(&app_data->shuffle_runtime) ? 1 : 0,
-                   atomic_load(&app_data->overlay_enabled) ? 1 : 0);
+                   atomic_load(&app_data->overlay_enabled) ? 1 : 0,
+                   app_data->quarantine_count);
         return TRUE;
     case CONTROL_CMD_OPACITY:
         atomic_store(&app_data->opacity, command->opacity);

@@ -145,6 +145,15 @@ presets_edge_test = executable(
 
 test('presets-edge-cases', presets_edge_test)
 
+preset_quarantine_test = executable(
+  'test-preset-quarantine',
+  ['test_preset_quarantine.c', '../src/quarantine.c'],
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep, test_gtk_dep],
+)
+
+test('preset-quarantine', preset_quarantine_test)
+
 python3 = find_program('python3')
 test(
   'scaffold-validation',
