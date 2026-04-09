@@ -1,14 +1,20 @@
 import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
-import {queryMilkdropStatus} from './controlClient.js';
+import {queryMilkdropStatus, queryAllMilkdropStatus} from './controlClient.js';
 
 export default class MilkdropPreferences extends ExtensionPreferences {
-    fillPreferencesWindow(window) {
+    /**
+     * Fill the preferences window with settings UI.
+     * Declared async for GNOME 47+ compatibility where fillPreferencesWindow is awaited.
+     * @param {Adw.PreferencesWindow} window
+     */
+    async fillPreferencesWindow(window) {
         const settings = this.getSettings();
 
         const page = new Adw.PreferencesPage({
@@ -24,6 +30,13 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             description: 'Live renderer information — updated every 2 seconds',
         });
         page.add(statusGroup);
+
+        // Adaptive layout for narrow windows
+        const breakpoint = new Adw.Breakpoint({
+            condition: Adw.BreakpointCondition.parse('max-width: 450px'),
+        });
+        breakpoint.add_setter(statusGroup, 'description', '');
+        window.add_breakpoint(breakpoint);
 
         const makeStatusRow = (title, initial) => {
             const row = new Adw.ActionRow({title, activatable: false});
@@ -48,8 +61,11 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         let pollSourceId = 0;
 
         const refreshStatus = () => {
-            queryMilkdropStatus().then(status => {
-                if (!status) {
+            const display = Gdk.Display.get_default();
+            const numMonitors = display ? display.get_monitors().get_n_items() : 1;
+            queryAllMilkdropStatus(numMonitors).then(results => {
+                const active = results.filter(r => r.status !== null);
+                if (active.length === 0) {
                     fpsStatusLabel.set_label('—');
                     presetStatusLabel.set_label('—');
                     audioStatusLabel.set_label('—');
@@ -57,15 +73,38 @@ export default class MilkdropPreferences extends ExtensionPreferences {
                     quarantineLabel.set_label('—');
                     return;
                 }
-                fpsStatusLabel.set_label(
-                    Number.isFinite(status.fps) && status.fps > 0
-                        ? status.fps.toFixed(1)
-                        : '—'
-                );
-                presetStatusLabel.set_label(status.preset || '(none)');
-                audioStatusLabel.set_label(status.audio ?? '—');
-                pausedStatusLabel.set_label(status.paused ? 'Yes' : 'No');
-                quarantineLabel.set_label(String(status.quarantine ?? 0));
+
+                // Show aggregate: FPS from first active, combined info for multiple monitors.
+                const first = active[0].status;
+                if (active.length === 1) {
+                    fpsStatusLabel.set_label(
+                        Number.isFinite(first.fps) && first.fps > 0
+                            ? first.fps.toFixed(1)
+                            : '—'
+                    );
+                    presetStatusLabel.set_label(first.preset || '(none)');
+                    audioStatusLabel.set_label(first.audio ?? '—');
+                    pausedStatusLabel.set_label(first.paused ? 'Yes' : 'No');
+                    quarantineLabel.set_label(String(first.quarantine ?? 0));
+                } else {
+                    const fpsValues = active.map(r => r.status.fps).filter(f => Number.isFinite(f) && f > 0);
+                    fpsStatusLabel.set_label(
+                        fpsValues.length > 0
+                            ? `${fpsValues.map(f => f.toFixed(1)).join(', ')}`
+                            : '—'
+                    );
+                    const pausedAny = active.some(r => r.status.paused);
+                    const audioWorst = active.some(r => r.status.audio === 'failed')
+                        ? 'failed'
+                        : active.some(r => r.status.audio === 'recovering')
+                            ? 'recovering'
+                            : 'ok';
+                    const totalQuarantine = active.reduce((sum, r) => sum + (r.status.quarantine ?? 0), 0);
+                    presetStatusLabel.set_label(`${active.length} monitors active`);
+                    audioStatusLabel.set_label(audioWorst);
+                    pausedStatusLabel.set_label(pausedAny ? 'Some' : 'No');
+                    quarantineLabel.set_label(String(totalQuarantine));
+                }
             }).catch(() => {});
         };
 
@@ -121,7 +160,13 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             monitorRow.sensitive = !settings.get_boolean('all-monitors');
         };
         syncMonitorSensitivity();
-        settings.connect('changed::all-monitors', syncMonitorSensitivity);
+        const allMonitorsSignalId = settings.connect('changed::all-monitors', syncMonitorSensitivity);
+
+        // Cleanup on window destroy
+        window.connect('destroy', () => {
+            if (allMonitorsSignalId)
+                settings.disconnect(allMonitorsSignalId);
+        });
 
         const opacityRow = new Adw.ActionRow({
             title: 'Opacity',
@@ -175,6 +220,21 @@ export default class MilkdropPreferences extends ExtensionPreferences {
                 rotationRow.selected = expected;
         });
         behaviorGroup.add(rotationRow);
+
+        const rotationIntervalRow = new Adw.SpinRow({
+            title: 'Rotation Interval',
+            subtitle: 'Seconds before switching to the next preset',
+            adjustment: new Gtk.Adjustment({
+                value: 30,
+                lower: 5,
+                upper: 300,
+                step_increment: 5,
+                page_increment: 30,
+            }),
+            digits: 0,
+        });
+        settings.bind('preset-rotation-interval', rotationIntervalRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(rotationIntervalRow);
 
         const overlayRow = new Adw.SwitchRow({
             title: 'Overlay Mode',

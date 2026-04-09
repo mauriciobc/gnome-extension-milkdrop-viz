@@ -87,6 +87,35 @@ test_presets_reload_handles_missing_directory(void)
     g_clear_pointer(&app_data.preset_dir, g_free);
 }
 
+static void
+test_presets_reload_ignores_folders_starting_with_bang(void)
+{
+    AppData app_data = {0};
+    g_autofree gchar* dir = make_temp_dir();
+    g_autofree gchar* valid_preset = g_build_filename(dir, "valid.milk", NULL);
+    g_autofree gchar* bang_dir = g_build_filename(dir, "!Transitions", NULL);
+    g_autofree gchar* bang_preset = g_build_filename(bang_dir, "fade.milk", NULL);
+
+    g_assert_cmpint(g_mkdir(bang_dir, 0700), ==, 0);
+    g_assert_true(g_file_set_contents(valid_preset, "", 0, NULL));
+    g_assert_true(g_file_set_contents(bang_preset, "", 0, NULL));
+
+    app_data.preset_dir = g_strdup(dir);
+    g_assert_true(presets_reload(&app_data));
+
+    g_assert_cmpint(app_data.preset_count, ==, 1);
+    g_assert_true(g_strv_contains((const gchar* const*)app_data.presets, valid_preset));
+    g_assert_false(g_strv_contains((const gchar* const*)app_data.presets, bang_preset));
+
+    presets_clear(&app_data);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+
+    g_unlink(valid_preset);
+    g_unlink(bang_preset);
+    g_rmdir(bang_dir);
+    g_rmdir(dir);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -95,6 +124,7 @@ main(int argc, char** argv)
     g_test_add_func("/presets/reload-filters-and-sorts", test_presets_reload_filters_and_sorts);
     g_test_add_func("/presets/reload-scans-subdirectories", test_presets_reload_scans_subdirectories);
     g_test_add_func("/presets/reload-missing-dir", test_presets_reload_handles_missing_directory);
+    g_test_add_func("/presets/reload-ignores-bang-folders", test_presets_reload_ignores_folders_starting_with_bang);
 
     return g_test_run();
 }

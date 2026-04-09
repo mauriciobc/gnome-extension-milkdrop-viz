@@ -3,6 +3,6 @@
   "name": "Milkdrop",
   "description": "Wayland wallpaper-layer MilkDrop visualizer renderer controller",
   "version": 2,
-  "shell-version": ["47", "48", "49"],
+  "shell-version": ["47", "48", "49", "50"],
   "settings-schema": "org.gnome.shell.extensions.milkdrop"
 }

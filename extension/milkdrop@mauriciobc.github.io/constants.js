@@ -4,5 +4,13 @@ export const PAUSE_REASON_FULLSCREEN = 'fullscreen';
 export const PAUSE_REASON_MAXIMIZED = 'maximized';
 export const PAUSE_REASON_MPRIS = 'mpris';
 
-/** Duration in ms for the fade-out (pause) and fade-in (resume) animations. */
-export const FADE_DURATION_MS = 400;
+export const FADE_DURATION_MS = 1000;
+
+// Debounce delay for background reload after monitors-changed signal.
+// Prevents clone thrashing when multiple signals fire in rapid succession.
+export const RELOAD_BACKGROUNDS_DEBOUNCE_MS = 100;
+
+// Control socket retry settings for initial pause command.
+// The renderer needs time to initialize before the socket is available.
+export const CONTROL_SOCKET_RETRY_DELAY_MS = 200;
+export const CONTROL_SOCKET_MAX_RETRIES = 5;

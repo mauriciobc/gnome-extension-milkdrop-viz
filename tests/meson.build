@@ -172,6 +172,15 @@ preset_quarantine_test = executable(
 
 test('preset-quarantine', preset_quarantine_test)
 
+state_persistence_test = executable(
+  'test-state-persistence',
+  ['test_state_persistence.c', '../src/control.c'],
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep, test_gtk_dep],
+)
+
+test('state-persistence', state_persistence_test)
+
 python3 = find_program('python3')
 test(
   'scaffold-validation',

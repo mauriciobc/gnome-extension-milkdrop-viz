@@ -9,6 +9,57 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+static bool
+parse_on_off(const char* value, bool* out_enabled)
+{
+    if (!value || !out_enabled)
+        return false;
+
+    if (g_strcmp0(value, "on") == 0) {
+        *out_enabled = true;
+        return true;
+    }
+
+    if (g_strcmp0(value, "off") == 0) {
+        *out_enabled = false;
+        return true;
+    }
+
+    return false;
+}
+
+static bool
+parse_double_range(const char* value, double min, double max, double* out_parsed)
+{
+    if (!value || !out_parsed)
+        return false;
+
+    char* endptr = NULL;
+    errno = 0;
+    double parsed = g_ascii_strtod(value, &endptr);
+    if (errno != 0 || !endptr || *endptr != '\0' || parsed < min || parsed > max)
+        return false;
+
+    *out_parsed = parsed;
+    return true;
+}
+
+static bool
+parse_long_range(const char* value, long min, long max, long* out_parsed)
+{
+    if (!value || !out_parsed)
+        return false;
+
+    char* endptr = NULL;
+    errno = 0;
+    long parsed = strtol(value, &endptr, 10);
+    if (errno != 0 || !endptr || *endptr != '\0' || parsed < min || parsed > max)
+        return false;
+
+    *out_parsed = parsed;
+    return true;
+}
+
 static gboolean
 control_apply_command(AppData* app_data, const ControlCommand* command, gchar* response, gsize response_size)
 {
@@ -65,6 +116,26 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
     case CONTROL_CMD_FPS:
         atomic_store(&app_data->fps_runtime, command->int_value);
         g_strlcpy(response, "ok fps\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_ROTATION_INTERVAL:
+        atomic_store(&app_data->preset_rotation_interval, CLAMP(command->int_value, 5, 300));
+        g_strlcpy(response, "ok rotation-interval\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_SAVE_STATE: {
+        // Retorna estado atual como JSON para persistência
+        g_snprintf(response,
+                   response_size,
+                   "{\"preset\":\"%s\",\"paused\":%d,\"opacity\":%.3f,\"shuffle\":%d}\n",
+                   app_data->last_good_preset[0] != '\0' ? app_data->last_good_preset : "",
+                   atomic_load(&app_data->pause_audio) ? 1 : 0,
+                   atomic_load(&app_data->opacity),
+                   atomic_load(&app_data->shuffle_runtime) ? 1 : 0);
+        return TRUE;
+    }
+    case CONTROL_CMD_RESTORE_STATE:
+        // Aplica estado restaurado (preset, paused, etc)
+        // TODO: Implementar restauração completa de estado
+        g_strlcpy(response, "ok restore (partial)\n", response_size);
         return TRUE;
     case CONTROL_CMD_NONE:
     default:
@@ -165,10 +236,8 @@ control_parse_command(const char* line, ControlCommand* out_command)
     }
 
     if (g_strcmp0(argv[0], "opacity") == 0 && argc == 2) {
-        char* endptr = NULL;
-        errno = 0;
-        double parsed = g_ascii_strtod(argv[1], &endptr);
-        if (errno != 0 || !endptr || *endptr != '\0' || parsed < 0.0 || parsed > 1.0)
+        double parsed = 0.0;
+        if (!parse_double_range(argv[1], 0.0, 1.0, &parsed))
             return CONTROL_PARSE_INVALID;
 
         out_command->type = CONTROL_CMD_OPACITY;
@@ -177,32 +246,29 @@ control_parse_command(const char* line, ControlCommand* out_command)
     }
 
     if (g_strcmp0(argv[0], "pause") == 0 && argc == 2) {
-        if (g_strcmp0(argv[1], "on") == 0) {
+        bool enabled = false;
+        if (parse_on_off(argv[1], &enabled)) {
             out_command->type = CONTROL_CMD_PAUSE;
-            out_command->pause_enabled = true;
-            return CONTROL_PARSE_OK;
-        }
-
-        if (g_strcmp0(argv[1], "off") == 0) {
-            out_command->type = CONTROL_CMD_PAUSE;
-            out_command->pause_enabled = false;
+            out_command->pause_enabled = enabled;
             return CONTROL_PARSE_OK;
         }
     }
 
     if (g_strcmp0(argv[0], "shuffle") == 0 && argc == 2) {
-        if (g_strcmp0(argv[1], "on") == 0 || g_strcmp0(argv[1], "off") == 0) {
+        bool enabled = false;
+        if (parse_on_off(argv[1], &enabled)) {
             out_command->type = CONTROL_CMD_SHUFFLE;
-            out_command->bool_value = g_strcmp0(argv[1], "on") == 0;
+            out_command->bool_value = enabled;
             return CONTROL_PARSE_OK;
         }
         return CONTROL_PARSE_INVALID;
     }
 
     if (g_strcmp0(argv[0], "overlay") == 0 && argc == 2) {
-        if (g_strcmp0(argv[1], "on") == 0 || g_strcmp0(argv[1], "off") == 0) {
+        bool enabled = false;
+        if (parse_on_off(argv[1], &enabled)) {
             out_command->type = CONTROL_CMD_OVERLAY;
-            out_command->bool_value = g_strcmp0(argv[1], "on") == 0;
+            out_command->bool_value = enabled;
             return CONTROL_PARSE_OK;
         }
         return CONTROL_PARSE_INVALID;
@@ -231,14 +297,34 @@ control_parse_command(const char* line, ControlCommand* out_command)
     }
 
     if (g_strcmp0(argv[0], "fps") == 0 && argc == 2) {
-        char* endptr = NULL;
-        errno = 0;
-        long parsed = strtol(argv[1], &endptr, 10);
-        if (errno != 0 || !endptr || *endptr != '\0' || parsed < 10 || parsed > 144)
+        long parsed = 0;
+        if (!parse_long_range(argv[1], 10, 144, &parsed))
             return CONTROL_PARSE_INVALID;
 
         out_command->type = CONTROL_CMD_FPS;
         out_command->int_value = (int)parsed;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "rotation-interval") == 0 && argc == 2) {
+        long parsed = 0;
+        if (!parse_long_range(argv[1], 5, 300, &parsed))
+            return CONTROL_PARSE_INVALID;
+
+        out_command->type = CONTROL_CMD_ROTATION_INTERVAL;
+        out_command->int_value = (int)parsed;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "save-state") == 0 && argc == 1) {
+        out_command->type = CONTROL_CMD_SAVE_STATE;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "restore-state") == 0 && argc >= 1) {
+        out_command->type = CONTROL_CMD_RESTORE_STATE;
+        if (argc >= 2)
+            g_strlcpy(out_command->text_value, argv[1], sizeof(out_command->text_value));
         return CONTROL_PARSE_OK;
     }
 

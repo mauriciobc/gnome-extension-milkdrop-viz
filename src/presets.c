@@ -44,6 +44,9 @@ collect_presets(const char* dir_path, GPtrArray* entries)
 
     const char* name = NULL;
     while ((name = g_dir_read_name(dir)) != NULL) {
+        if (name[0] == '!')
+            continue;
+
         gchar* full_path = g_build_filename(dir_path, name, NULL);
 
         if (g_file_test(full_path, G_FILE_TEST_IS_DIR)) {

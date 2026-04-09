@@ -214,6 +214,9 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
 
     milkdrop_sync_playlist_from_preset_dir(app_data);
 
+    projectm_set_preset_duration(app_data->projectm,
+                                (double)atomic_load(&app_data->preset_rotation_interval));
+
     return TRUE;
 }
 #endif
@@ -471,6 +474,16 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                 }
             }
 
+            {
+                static int last_interval = 0;
+                int current_interval = atomic_load(&app_data->preset_rotation_interval);
+                if (current_interval != last_interval) {
+                    projectm_set_preset_duration(app_data->projectm,
+                                                (double)current_interval);
+                    last_interval = current_interval;
+                }
+            }
+
             GLint draw_fbo = 0;
             glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
             if (draw_fbo != 0) {
@@ -483,14 +496,11 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 
                 /* Verificar erros GL: alguns presets com GetBlur causam
                  * GL_INVALID_FRAMEBUFFER_OPERATION (0x506) ao renderizar em FBO externo.
-                 * Aprendizado do teste: fallback para render_frame() quando isso ocorre. */
+                 * O fallback para render_frame() produz branco - o último frame válido permanece. */
                 GLenum err = glGetError();
                 if (err == GL_INVALID_FRAMEBUFFER_OPERATION) {
                     if (app_data->verbose)
                         g_message("projectM FBO error 0x%x — frame dropped (GetBlur preset?)", err);
-                    /* Do NOT fall back to projectm_opengl_render_frame(): it targets FBO 0,
-                     * which is wrong inside GtkGLArea and produces blank/white output.
-                     * Dropping the frame leaves the last good frame visible. */
                 } else if (err != GL_NO_ERROR && app_data->verbose) {
                     g_message("projectM GL error: 0x%x", err);
                 }
@@ -523,6 +533,83 @@ on_close_request(GtkWidget* widget, gpointer user_data)
     return GDK_EVENT_STOP;
 }
 
+/**
+ * Define o título inicial da janela com estado codificado em JSON.
+ * Formato: @milkdrop!{"monitor":N,"overlay":B,"opacity":F}|N
+ * Imita o padrão Hanabi para comunicação de estado via título.
+ *
+ * Nota: Formata opacity manualmente para garantir ponto decimal (JSON válido)
+ * independente do locale (pt_BR usa vírgula, que quebraria o parsing).
+ */
+static void
+milkdrop_set_initial_title(GtkWindow* window,
+                           int        monitor,
+                           gboolean   overlay,
+                           double     opacity)
+{
+    char title[256];
+    // Formata opacity manualmente como inteiro de 0-100 para evitar locale issues
+    int opacity_percent = (int)(opacity * 100.0 + 0.5);
+    if (opacity_percent < 0)
+        opacity_percent = 0;
+    if (opacity_percent > 100)
+        opacity_percent = 100;
+
+    snprintf(title, sizeof(title),
+             "@milkdrop!{\"monitor\":%d,\"overlay\":%s,\"opacity\":%d}|%d",
+             monitor,
+             overlay ? "true" : "false",
+             opacity_percent,
+             monitor);
+    gtk_window_set_title(window, title);
+    g_message("Window title set: %s", title);
+}
+
+/**
+ * Signal handler for GtkGLArea::create-context to enable GL debug context.
+ * This is connected only when MILKDROP_GL_DEBUG environment variable is set.
+ * Enables synchronous GL error checking and KHR_debug messages if available.
+ */
+static GdkGLContext*
+on_create_context_with_debug(GtkGLArea* area, gpointer user_data)
+{
+    (void)user_data;
+    GError* error = NULL;
+    GdkGLContext* context = NULL;
+
+    GdkSurface* surface = gtk_native_get_surface(GTK_NATIVE(gtk_widget_get_root(GTK_WIDGET(area))));
+    if (!surface) {
+        g_warning("MILKDROP_GL_DEBUG: No surface available for GL context creation");
+        return NULL;
+    }
+
+    context = gdk_surface_create_gl_context(surface, &error);
+    if (!context) {
+        g_warning("MILKDROP_GL_DEBUG: Failed to create GL context: %s",
+                  error ? error->message : "unknown error");
+        if (error)
+            g_error_free(error);
+        return NULL;
+    }
+
+    /* Enable debug context - this enables synchronous error checking and
+     * allows GL debug callback registration via KHR_debug/ARB_debug_output. */
+    gdk_gl_context_set_debug_enabled(context, TRUE);
+    g_message("MILKDROP_GL_DEBUG: Debug context enabled");
+
+    /* Realize the context */
+    if (!gdk_gl_context_realize(context, &error)) {
+        g_warning("MILKDROP_GL_DEBUG: Failed to realize GL context: %s",
+                  error ? error->message : "unknown error");
+        if (error)
+            g_error_free(error);
+        g_object_unref(context);
+        return NULL;
+    }
+
+    return context;
+}
+
 static void
 build_window(AppData* app_data)
 {
@@ -532,7 +619,10 @@ build_window(AppData* app_data)
     app_data->window = GTK_WINDOW(window);
     app_data->gl_area = GTK_GL_AREA(gl_area);
 
-    gtk_window_set_title(app_data->window, "milkdrop");
+    milkdrop_set_initial_title(app_data->window,
+                               app_data->monitor_index,
+                               atomic_load(&app_data->overlay_enabled),
+                               (double)atomic_load(&app_data->opacity));
 
     // Avoid fullscreen/maximized state because dock/intellihide extensions may
     // treat the renderer as a normal fullscreen app and hide themselves.
@@ -585,6 +675,15 @@ build_window(AppData* app_data)
     if (g_getenv("MILKDROP_FORCE_GL_API"))
         gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_area), GDK_GL_API_GL);
 #endif
+
+    /* Enable GL debug context for troubleshooting driver/Mesa issues.
+     * Set MILKDROP_GL_DEBUG=1 in the environment to activate. This inserts
+     * synchronous GL error checks and enables KHR_debug messages if available. */
+    if (g_getenv("MILKDROP_GL_DEBUG")) {
+        g_signal_connect(gl_area, "create-context",
+                         G_CALLBACK(on_create_context_with_debug), app_data);
+        g_message("GL debug context enabled via MILKDROP_GL_DEBUG");
+    }
 
     g_signal_connect(app_data->gl_area, "realize", G_CALLBACK(on_realize), app_data);
     g_signal_connect(app_data->gl_area, "unrealize", G_CALLBACK(on_unrealize), app_data);
@@ -667,6 +766,7 @@ main(int argc, char** argv)
     gboolean verbose = FALSE;
     char* preset_dir = NULL;
     char* socket_path = NULL;
+    int preset_rotation_interval = 30;
 
     GOptionEntry entries[] = {
         {"monitor", 0, 0, G_OPTION_ARG_INT, &monitor_index, "Monitor index", "INDEX"},
@@ -676,6 +776,7 @@ main(int argc, char** argv)
         {"shuffle", 0, 0, G_OPTION_ARG_NONE, &shuffle, "Enable shuffle mode", NULL},
         {"overlay", 0, 0, G_OPTION_ARG_NONE, &overlay, "Enable overlay mode (state + control socket)", NULL},
         {"verbose", 0, 0, G_OPTION_ARG_NONE, &verbose, "Verbose logging", NULL},
+        {"preset-rotation-interval", 0, 0, G_OPTION_ARG_INT, &preset_rotation_interval, "Preset rotation interval in seconds", "SECONDS"},
         {NULL},
     };
 
@@ -715,6 +816,7 @@ main(int argc, char** argv)
     atomic_store(&app_data.fps_last, 0.0f);
     app_data.fps_applied = 60;
     app_data.fps_last_pulse_us = 0;
+    atomic_store(&app_data.preset_rotation_interval, CLAMP(preset_rotation_interval, 5, 300));
     atomic_store(&app_data.control_thread_running, false);
     app_data.control_fd = -1;
     app_data.control_thread = NULL;

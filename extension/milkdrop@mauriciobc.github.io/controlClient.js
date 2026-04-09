@@ -4,6 +4,42 @@ import GLib from 'gi://GLib';
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
 
+function _connectUnixSocket(path, callback) {
+    const socketClient = new Gio.SocketClient();
+    const socketAddress = Gio.UnixSocketAddress.new(path);
+    socketClient.connect_async(socketAddress, null, (client, connectRes) => {
+        let connection;
+        try {
+            connection = client.connect_finish(connectRes);
+        } catch (error) {
+            callback(null, error);
+            return;
+        }
+        callback(connection, null);
+    });
+}
+
+function _writeAllAndClose(connection, data, callback) {
+    const output = connection.get_output_stream();
+    output.write_all_async(data, GLib.PRIORITY_DEFAULT, null, (stream, writeRes) => {
+        let writeError = null;
+        try {
+            stream.write_all_finish(writeRes);
+        } catch (error) {
+            writeError = error;
+        }
+
+        connection.close_async(GLib.PRIORITY_DEFAULT, null, (_conn, closeRes) => {
+            try {
+                _conn.close_finish(closeRes);
+            } catch (_e) {
+                // Ignore close errors — command was already attempted.
+            }
+            callback(writeError);
+        });
+    });
+}
+
 export function getMilkdropSocketPath(monitorIndex = 0) {
     const runtimeDir = GLib.get_user_runtime_dir();
     if (!runtimeDir)
@@ -13,36 +49,64 @@ export function getMilkdropSocketPath(monitorIndex = 0) {
 
 export function sendMilkdropControlCommand(command, socketPath = null) {
     const path = socketPath ?? getMilkdropSocketPath(0);
-    const socketClient = new Gio.SocketClient();
-    const socketAddress = Gio.UnixSocketAddress.new(path);
     const data = TEXT_ENCODER.encode(`${command}\n`);
 
-    socketClient.connect_async(socketAddress, null, (client, connectRes) => {
-        let connection;
-        try {
-            connection = client.connect_finish(connectRes);
-        } catch (error) {
+    _connectUnixSocket(path, (connection, error) => {
+        if (error) {
             log(`[milkdrop] control connect failed (${command}): ${error.message}`);
             return;
         }
 
-        const output = connection.get_output_stream();
-        output.write_all_async(data, GLib.PRIORITY_DEFAULT, null, (stream, writeRes) => {
-            try {
-                stream.write_all_finish(writeRes);
-            } catch (error) {
-                log(`[milkdrop] control write failed (${command}): ${error.message}`);
-            }
-
-            connection.close_async(GLib.PRIORITY_DEFAULT, null, (_conn, closeRes) => {
-                try {
-                    _conn.close_finish(closeRes);
-                } catch (_e) {
-                    // Ignore close errors — the command was already written.
-                }
-            });
+        _writeAllAndClose(connection, data, writeError => {
+            if (writeError)
+                log(`[milkdrop] control write failed (${command}): ${writeError.message}`);
         });
     });
+}
+
+/**
+ * Send a control command with retry logic for socket initialization race.
+ * Silently retries on connect failure until maxRetries is reached.
+ * Only logs error on final failure.
+ *
+ * @param {string} command - The command to send
+ * @param {string|null} socketPath - Socket path or null for default
+ * @param {number} maxRetries - Maximum retry attempts (default 5)
+ * @param {number} retryDelayMs - Delay between retries in ms (default 200)
+ */
+export function sendMilkdropControlCommandWithRetry(
+    command,
+    socketPath = null,
+    maxRetries = 5,
+    retryDelayMs = 200
+) {
+    const path = socketPath ?? getMilkdropSocketPath(0);
+    const data = TEXT_ENCODER.encode(`${command}\n`);
+
+    const attemptSend = (attempt) => {
+        _connectUnixSocket(path, (connection, error) => {
+            if (error) {
+                if (attempt < maxRetries) {
+                    // Silent retry after delay
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, retryDelayMs, () => {
+                        attemptSend(attempt + 1);
+                        return GLib.SOURCE_REMOVE;
+                    });
+                } else {
+                    // Final failure - log the error
+                    log(`[milkdrop] control connect failed after ${maxRetries} retries (${command}): ${error.message}`);
+                }
+                return;
+            }
+
+            _writeAllAndClose(connection, data, writeError => {
+                if (writeError)
+                    log(`[milkdrop] control write failed (${command}): ${writeError.message}`);
+            });
+        });
+    };
+
+    attemptSend(1);
 }
 
 /**
@@ -54,15 +118,10 @@ export function sendMilkdropControlCommand(command, socketPath = null) {
 export function queryMilkdropStatus(socketPath = null) {
     return new Promise(resolve => {
         const socketPath_ = socketPath ?? getMilkdropSocketPath(0);
-        const socketClient = new Gio.SocketClient();
-        const socketAddress = Gio.UnixSocketAddress.new(socketPath_);
         const request = TEXT_ENCODER.encode('status\n');
 
-        socketClient.connect_async(socketAddress, null, (client, connectRes) => {
-            let connection;
-            try {
-                connection = client.connect_finish(connectRes);
-            } catch (_e) {
+        _connectUnixSocket(socketPath_, (connection, error) => {
+            if (error) {
                 resolve(null);
                 return;
             }
@@ -93,6 +152,15 @@ export function queryMilkdropStatus(socketPath = null) {
 
                     const text = TEXT_DECODER.decode(bytes.get_data());
                     const status = {};
+
+                    const parseByKey = {
+                        fps: v => { status.fps = parseFloat(v); },
+                        paused: v => { status.paused = v === '1'; },
+                        preset: v => { status.preset = v; },
+                        audio: v => { status.audio = v; },
+                        quarantine: v => { status.quarantine = parseInt(v, 10); },
+                    };
+
                     for (const line of text.split('\n')) {
                         if (line === '')
                             break;
@@ -101,17 +169,31 @@ export function queryMilkdropStatus(socketPath = null) {
                             continue;
                         const key = line.substring(0, eqIdx);
                         const value = line.substring(eqIdx + 1);
-                        switch (key) {
-                        case 'fps':        status.fps = parseFloat(value); break;
-                        case 'paused':     status.paused = value === '1'; break;
-                        case 'preset':     status.preset = value; break;
-                        case 'audio':      status.audio = value; break;
-                        case 'quarantine': status.quarantine = parseInt(value, 10); break;
-                        }
+                        const parse = parseByKey[key];
+                        if (parse)
+                            parse(value);
                     }
+
                     closeAndResolve(Object.keys(status).length > 0 ? status : null);
                 });
             });
         });
     });
+}
+
+/**
+ * Query status from all running renderer instances (one per monitor).
+ * Returns a Promise that resolves to an array of status objects,
+ * or an empty array if no renderers are running.
+ */
+export function queryAllMilkdropStatus(numMonitors) {
+    const promises = [];
+    for (let i = 0; i < numMonitors; i++) {
+        const socketPath = getMilkdropSocketPath(i);
+        promises.push(queryMilkdropStatus(socketPath).then(status => ({
+            monitorIndex: i,
+            status,
+        })));
+    }
+    return Promise.all(promises);
 }

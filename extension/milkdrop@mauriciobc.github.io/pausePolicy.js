@@ -76,6 +76,10 @@ export class PausePolicy {
             this._evaluateMaximized();
         }));
 
+        ids.push(win.connect('notify::maximized-horizontally', () => {
+            this._evaluateMaximized();
+        }));
+
         ids.push(win.connect('notify::minimized', () => {
             this._evaluateMaximized();
         }));
@@ -110,13 +114,26 @@ export class PausePolicy {
             return;
         }
 
-        const hasMaximized = [...global.get_window_actors(false)]
-            .map(a => a.meta_window)
-            .filter(w => w &&
-                w.get_monitor() === this._monitorIndex &&
-                !w.minimized &&
-                !w.fullscreen)
-            .some(w => w.maximized_vertically);
+        let hasMaximized = false;
+        for (const actor of global.get_window_actors(false)) {
+            const w = actor.meta_window;
+            if (!w)
+                continue;
+
+            if (typeof w.get_compositor_private !== 'function')
+                continue;
+            if (w.get_compositor_private() === null)
+                continue;
+            if (w.get_monitor() !== this._monitorIndex)
+                continue;
+            if (w.minimized || w.fullscreen)
+                continue;
+
+            if (w.maximized_vertically || w.maximized_horizontally) {
+                hasMaximized = true;
+                break;
+            }
+        }
 
         this._setPauseReason(PAUSE_REASON_MAXIMIZED, hasMaximized);
     }

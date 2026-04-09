@@ -45,7 +45,7 @@ def main() -> int:
     check(metadata.get("settings-schema") == "org.gnome.shell.extensions.milkdrop", "metadata settings-schema mismatch")
 
     shell_versions = metadata.get("shell-version", [])
-    for version in ["47", "48", "49"]:
+    for version in ["47", "48", "49", "50"]:
         check(version in shell_versions, f"metadata missing shell-version {version}")
 
     schema_tree = ET.parse(schema_path)
@@ -62,12 +62,15 @@ def main() -> int:
         "opacity": "d",
         "preset-dir": "s",
         "shuffle": "b",
+        "preset-rotation-interval": "i",
         "overlay": "b",
         "pause-on-fullscreen": "b",
         "pause-on-maximized": "b",
         "media-aware": "b",
         "all-monitors": "b",
         "fps": "i",
+        "last-preset": "s",
+        "was-paused": "b",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 
@@ -90,8 +93,8 @@ def main() -> int:
     check("export default class MilkdropExtension extends Extension" in extension_js, "extension class declaration missing")
     check("enable()" in extension_js, "enable() missing in extension")
     check("disable()" in extension_js, "disable() missing in extension")
-    check("_spawnProcess()" in extension_js, "_spawnProcess() missing in extension")
-    check("_syncMonitors()" in extension_js, "_syncMonitors() missing in extension")
+    check("_spawnProcess(" in extension_js, "_spawnProcess() missing in extension")
+    check("monitors-changed" in extension_js, "monitors-changed handling missing in extension")
 
     constants_js = read_text(constants_path)
     check("FADE_DURATION_MS" in constants_js, "constants.js must export FADE_DURATION_MS")

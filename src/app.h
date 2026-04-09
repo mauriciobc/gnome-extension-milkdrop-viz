@@ -84,6 +84,8 @@ typedef struct {
     _Atomic int fps_runtime;
     /* Last measured frame rate (written by GL thread, read by control thread). */
     _Atomic float fps_last;
+    /* Preset rotation interval in seconds (written by control thread, read by GL thread). */
+    _Atomic int preset_rotation_interval;
     /* GL-thread-only fields for FPS tracking and timer rescheduling. */
     int    fps_applied;        /* last fps_runtime value used to set the timer */
     gint64 fps_last_pulse_us;  /* g_get_monotonic_time() of the previous render pulse */

@@ -32,6 +32,13 @@
       <description>If true, preset selection should use random ordering when supported.</description>
     </key>
 
+    <key name="preset-rotation-interval" type="i">
+      <default>30</default>
+      <range min="5" max="300"/>
+      <summary>Preset rotation interval</summary>
+      <description>Seconds before automatically switching to the next preset. Applied live via the control socket.</description>
+    </key>
+
     <key name="overlay" type="b">
       <default>false</default>
       <summary>Overlay mode</summary>
@@ -67,6 +74,18 @@
       <default>false</default>
       <summary>Show visualizer on all connected monitors</summary>
       <description>When true, the extension spawns one renderer instance per connected monitor instead of only the selected monitor.</description>
+    </key>
+
+    <key name="last-preset" type="s">
+      <default>''</default>
+      <summary>Last played preset</summary>
+      <description>Path to the last preset that was playing when the extension was disabled. Used to restore state on next enable.</description>
+    </key>
+
+    <key name="was-paused" type="b">
+      <default>false</default>
+      <summary>Whether renderer was paused on exit</summary>
+      <description>True if the renderer was paused when the extension was disabled. Used to restore pause state on next enable.</description>
     </key>
   </schema>
 </schemalist>
