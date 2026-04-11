@@ -77,6 +77,13 @@ typedef struct {
 
     _Atomic bool idle_surface_queued;
 
+    /* Startup gating for hidden-until-ready renderer reveal. GL thread only. */
+    bool startup_hidden;
+    bool startup_warmup_drawn;
+    bool startup_deferred_preset_activation;
+    bool startup_final_content_active;
+    uint64_t render_frame_counter;
+
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
 

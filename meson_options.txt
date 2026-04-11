@@ -18,3 +18,11 @@ option(
   value: false,
   description: 'Register nested GNOME Shell integration test (requires extension and binary installed under ~/.local)',
 )
+
+# Kept for stale build dirs: Meson reapplies saved options; without this key, --reconfigure errors.
+option(
+  'bundle_projectm_build_dir',
+  type: 'string',
+  value: '',
+  description: 'Deprecated (ignored): legacy option so old build trees can reconfigure.',
+)

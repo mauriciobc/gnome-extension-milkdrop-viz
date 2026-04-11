@@ -382,6 +382,12 @@ gchar*
 control_socket_path_for_monitor(int monitor_index)
 {
     const char* runtime_dir = g_get_user_runtime_dir();
+    const char* base = runtime_dir ? runtime_dir : "/tmp";
+
+    /* Meson runs C test binaries in parallel; default paths would collide on milkdrop-0.sock. */
+    if (g_getenv("MILKDROP_TEST_ISOLATE_SOCKET") != NULL)
+        return g_strdup_printf("%s/milkdrop-%d-%d.sock", base, monitor_index, (int)getpid());
+
     if (!runtime_dir)
         return g_strdup_printf("/tmp/milkdrop-%d.sock", monitor_index);
     return g_strdup_printf("%s/milkdrop-%d.sock", runtime_dir, monitor_index);

@@ -12,6 +12,9 @@ if have_pipewire
   test_src_link_deps += [pw_dep, spa_dep]
 endif
 
+# Evita corrida entre binários de teste paralelos no mesmo milkdrop-0.sock (ver control_socket_path_for_monitor).
+control_socket_test_env = ['MILKDROP_TEST_ISOLATE_SOCKET=1']
+
 ring_buffer_test = executable(
   'test-ring-buffer',
   'test_ring_buffer.c',
@@ -78,7 +81,7 @@ backend_test = executable(
   dependencies: test_src_link_deps,
 )
 
-test('backends', backend_test)
+test('backends', backend_test, env: control_socket_test_env)
 
 control_protocol_test = executable(
   'test-control-protocol',
@@ -134,7 +137,7 @@ control_state_test = executable(
   dependencies: [test_glib_dep, test_gtk_dep],
 )
 
-test('control-state-flow', control_state_test)
+test('control-state-flow', control_state_test, env: control_socket_test_env)
 
 presets_edge_test = executable(
   'test-presets-edge-cases',
@@ -161,7 +164,7 @@ pause_policy_test = executable(
   dependencies: [test_glib_dep, test_gtk_dep],
 )
 
-test('pause-policy', pause_policy_test)
+test('pause-policy', pause_policy_test, env: control_socket_test_env)
 
 preset_quarantine_test = executable(
   'test-preset-quarantine',
@@ -179,7 +182,7 @@ state_persistence_test = executable(
   dependencies: [test_glib_dep, test_gtk_dep],
 )
 
-test('state-persistence', state_persistence_test)
+test('state-persistence', state_persistence_test, env: control_socket_test_env)
 
 python3 = find_program('python3')
 test(

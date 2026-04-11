@@ -1190,6 +1190,9 @@ export default class MilkdropExtension extends Extension {
         // Store the managed window
         this._managedWindows.set(monitorIndex, managed);
         log(`[milkdrop] renderer window anchored successfully on monitor ${monitorIndex} (using ManagedWindow)`);
+
+        // Trigger wallpaper injection after window is anchored
+        this._scheduleReloadBackgrounds();
     }
 
     _enforceWindowCoverage(window) {

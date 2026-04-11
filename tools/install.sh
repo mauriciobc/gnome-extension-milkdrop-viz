@@ -23,6 +23,7 @@ cp -f "${ROOT_DIR}/extension/${EXT_UUID}/constants.js" "${EXT_DIR}/constants.js"
 cp -f "${ROOT_DIR}/extension/${EXT_UUID}/controlClient.js" "${EXT_DIR}/controlClient.js"
 cp -f "${ROOT_DIR}/extension/${EXT_UUID}/pausePolicy.js" "${EXT_DIR}/pausePolicy.js"
 cp -f "${ROOT_DIR}/extension/${EXT_UUID}/mprisWatcher.js" "${EXT_DIR}/mprisWatcher.js"
+cp -f "${ROOT_DIR}/extension/${EXT_UUID}/managedWindow.js" "${EXT_DIR}/managedWindow.js"
 
 mkdir -p "${EXT_SCHEMA_DIR}"
 cp -f "${ROOT_DIR}/data/org.gnome.shell.extensions.milkdrop.gschema.xml" "${EXT_SCHEMA_DIR}/"
