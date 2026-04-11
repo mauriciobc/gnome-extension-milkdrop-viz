@@ -137,6 +137,12 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         // TODO: Implementar restauração completa de estado
         g_strlcpy(response, "ok restore (partial)\n", response_size);
         return TRUE;
+    case CONTROL_CMD_SCREENSHOT:
+        // Request screenshot on next render frame
+        g_strlcpy(app_data->screenshot_path, command->screenshot_path, sizeof(app_data->screenshot_path));
+        atomic_store(&app_data->screenshot_requested, true);
+        g_strlcpy(response, "ok screenshot queued\n", response_size);
+        return TRUE;
     case CONTROL_CMD_NONE:
     default:
         g_strlcpy(response, "err invalid\n", response_size);
@@ -325,6 +331,15 @@ control_parse_command(const char* line, ControlCommand* out_command)
         out_command->type = CONTROL_CMD_RESTORE_STATE;
         if (argc >= 2)
             g_strlcpy(out_command->text_value, argv[1], sizeof(out_command->text_value));
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "screenshot") == 0 && argc == 2) {
+        if (strlen(argv[1]) >= sizeof(out_command->screenshot_path))
+            return CONTROL_PARSE_PATH_TOO_LONG;
+
+        out_command->type = CONTROL_CMD_SCREENSHOT;
+        g_strlcpy(out_command->screenshot_path, argv[1], sizeof(out_command->screenshot_path));
         return CONTROL_PARSE_OK;
     }
 

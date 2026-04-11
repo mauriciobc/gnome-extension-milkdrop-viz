@@ -66,6 +66,8 @@ typedef struct {
 
     int render_width;
     int render_height;
+    int initial_width;
+    int initial_height;
 
     int control_fd;
     GThread* control_thread;
@@ -83,6 +85,7 @@ typedef struct {
     bool startup_deferred_preset_activation;
     bool startup_final_content_active;
     uint64_t render_frame_counter;
+    gint64 startup_init_time_us;  /* Timestamp when startup gate was set */
 
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
@@ -110,6 +113,10 @@ typedef struct {
     int  consecutive_failures;
     char last_good_preset[MILKDROP_PATH_MAX];
     _Atomic bool quarantine_all_failed;
+
+    /* Screenshot request - GL thread reads, control thread writes */
+    _Atomic bool screenshot_requested;
+    char screenshot_path[MILKDROP_PATH_MAX];
 } AppData;
 
 static inline void

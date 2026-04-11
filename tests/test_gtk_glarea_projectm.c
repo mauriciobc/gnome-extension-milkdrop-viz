@@ -168,9 +168,9 @@ load_test_preset_via_playlist(PmCtx* ctx, const char* preset_path)
     }
 
     g_autofree gchar* preset_dir = g_path_get_dirname(preset_path);
-    const char* tex_paths[] = {preset_dir};
+    const char* tex_paths[] = {preset_dir, "/usr/local/share/projectM/textures"};
 
-    projectm_set_texture_search_paths(ctx->pm, tex_paths, 1u);
+    projectm_set_texture_search_paths(ctx->pm, tex_paths, 2u);
 
     projectm_playlist_clear(ctx->playlist);
     projectm_playlist_set_shuffle(ctx->playlist, FALSE);

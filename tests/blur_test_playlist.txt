@@ -1,0 +1,15 @@
+# Blur validation test playlist
+# These presets are known to use heavy multi-pass blur effects
+
+# Liquid effects with heavy blur trails
+/usr/local/share/projectM/presets/cream-of-the-crop/Reaction/Liquid Windy/suksma - imbuing terror joy.milk
+/usr/local/share/projectM/presets/cream-of-the-crop/Reaction/Liquid Ripples/cope - strange attractor [flexis let it grow mix] (Jelly V5-5).milk
+/usr/local/share/projectM/presets/cream-of-the-crop/Reaction/Liquid Mirror/amandio c - the green machine 2 (Jelly Electro Pudding).milk
+
+# Explosion/particle effects with radial blur
+/usr/local/share/projectM/presets/cream-of-the-crop/Sparkle/Explosions/shifter - whiteopal glimmer - xenarch of the kovenand gate - tocksik liquid fear nz+ all reminder to not think (interruption theory).milk
+/usr/local/share/projectM/presets/cream-of-the-crop/Drawing/Explosions/shifter + Flexi - liquid circuitry from the pataoblivion everything for eternity, god damn it, i did it again.milk
+
+# Wire/geometric patterns with blur glow
+/usr/local/share/projectM/presets/cream-of-the-crop/Geometric/Wire Circles/Waltra - Neon Lines.milk
+/usr/local/share/projectM/presets/cream-of-the-crop/Waveform/Wire Tangle/suksma - Geiss - Cosmic Dust 2 - Trails 5b - mash0000 - lateral honeycomb spinal bias.milk

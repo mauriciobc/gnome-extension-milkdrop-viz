@@ -190,3 +190,15 @@ test(
   python3,
   args: [files('validate_scaffold.py'), meson.project_source_root()],
 )
+
+# Reference renderer for blur validation tests
+if have_projectm
+  m_dep = cc.find_library('m', required: true)
+  reference_renderer = executable(
+    'reference_renderer',
+    'reference_renderer.c',
+    dependencies: [glib_dep, gtk_dep, epoxy_dep, projectm_dep, projectm_playlist_dep, m_dep],
+    include_directories: include_directories('..', '../src'),
+    install: false
+  )
+endif

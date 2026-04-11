@@ -16,6 +16,7 @@ typedef enum {
 	CONTROL_CMD_ROTATION_INTERVAL,
 	CONTROL_CMD_SAVE_STATE,
 	CONTROL_CMD_RESTORE_STATE,
+	CONTROL_CMD_SCREENSHOT,
 } ControlCommandType;
 
 typedef enum {
@@ -38,6 +39,7 @@ typedef struct {
 	bool bool_value;
 	int  int_value;
 	char text_value[MILKDROP_PATH_MAX];
+	char screenshot_path[MILKDROP_PATH_MAX];
 } ControlCommand;
 
 typedef struct {
