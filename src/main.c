@@ -462,10 +462,9 @@ on_render_pulse(gpointer user_data)
         char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
-        g_mutex_unlock(&app_data->preset_dir_lock);
-
         g_clear_pointer(&app_data->preset_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
+        g_mutex_unlock(&app_data->preset_dir_lock);
         if (!presets_reload(app_data))
             g_warning("Failed to reload presets from %s", next_dir);
     }
@@ -633,10 +632,9 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
-        g_mutex_unlock(&app_data->preset_dir_lock);
-
         g_clear_pointer(&app_data->preset_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
+        g_mutex_unlock(&app_data->preset_dir_lock);
         milkdrop_sync_playlist_from_preset_dir(app_data);
     }
 

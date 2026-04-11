@@ -31,7 +31,10 @@ test-backed coverage:
 Test status:
 
 - Full Meson test suite passes, including new `control-protocol` and
-    `presets` targets.
+  `presets` targets.
+- `save-state` / `restore-state` line protocol documented in
+  `docs/research/09-control-socket-settings-and-state.md` with matching
+  `controlClient.js` helpers for snapshot round-trip per monitor.
 - Backend tests now validate socket listen/connect behavior and command
     roundtrip state updates.
 

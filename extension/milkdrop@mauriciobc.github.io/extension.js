@@ -407,6 +407,8 @@ export default class MilkdropExtension extends Extension {
         launcher.setenv('GSK_RENDERER', 'gl', true);
         /* GtkGLArea pode escolher GLES; projectM precisa de OpenGL desktop (GLSL 330). */
         launcher.setenv('MILKDROP_FORCE_GL_API', '1', true);
+        /* Force discrete GPU on hybrid graphics systems (NVIDIA Optimus, AMD switchable). */
+        launcher.setenv('DRI_PRIME', '1', true);
         this._launchers.set(monitorIndex, launcher);
 
         log(`[milkdrop] isWayland=${isWayland}, shellMajor=${shellMajor}`);

@@ -125,6 +125,10 @@ The renderer exposes a Unix domain control socket with line commands:
 - `preset-dir <absolute-path>`
 - `next`
 - `previous`
+- `save-state` — returns a one-line snapshot (see docs)
+- `restore-state [key=value ...]` — apply snapshot fields
+
+Canonical format, buffer limits, and extension notes: [`docs/research/09-control-socket-settings-and-state.md`](docs/research/09-control-socket-settings-and-state.md).
 
 ## GSettings
 

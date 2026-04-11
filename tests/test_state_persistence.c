@@ -4,9 +4,6 @@
 #include "app.h"
 #include "control.h"
 
-/**
- * Test save-state command parsing
- */
 static void
 test_parse_save_state_command(void)
 {
@@ -17,9 +14,6 @@ test_parse_save_state_command(void)
     g_assert_cmpint(command.type, ==, CONTROL_CMD_SAVE_STATE);
 }
 
-/**
- * Test restore-state command parsing
- */
 static void
 test_parse_restore_state_command(void)
 {
@@ -28,59 +22,74 @@ test_parse_restore_state_command(void)
 
     g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
     g_assert_cmpint(command.type, ==, CONTROL_CMD_RESTORE_STATE);
+    g_assert_false(command.restore_has_preset_dir);
+    g_assert_false(command.restore_has_pause);
+    g_assert_false(command.restore_has_opacity);
+    g_assert_false(command.restore_has_shuffle);
 }
 
-/**
- * Test restore-state with JSON argument
- */
 static void
-test_parse_restore_state_with_json(void)
+test_parse_restore_state_round_trip_payload(void)
 {
     ControlCommand command = {0};
-    const char *input = "restore-state {\"preset\":\"/path/to/preset.milk\",\"paused\":1}\n";
+    const char* input =
+        "restore-state preset-dir='/tmp/preset dir,comma:colon' paused=off opacity=0.500 shuffle=on\n";
     ControlParseResult result = control_parse_command(input, &command);
 
     g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
     g_assert_cmpint(command.type, ==, CONTROL_CMD_RESTORE_STATE);
-    g_assert_cmpstr(command.text_value, ==, "{preset:/path/to/preset.milk,paused:1}");
+    g_assert_true(command.restore_has_preset_dir);
+    g_assert_cmpstr(command.restore_preset_dir, ==, "/tmp/preset dir,comma:colon");
+    g_assert_true(command.restore_has_pause);
+    g_assert_false(command.restore_pause_enabled);
+    g_assert_true(command.restore_has_opacity);
+    g_assert_cmpfloat(command.restore_opacity, ==, 0.5f);
+    g_assert_true(command.restore_has_shuffle);
+    g_assert_true(command.restore_shuffle_enabled);
 }
 
-/**
- * Test title encoding format
- */
+static void
+test_parse_restore_state_without_preset_dir(void)
+{
+    ControlCommand command = {0};
+    const char* input = "restore-state paused=on opacity=0.125 shuffle=off\n";
+    ControlParseResult result = control_parse_command(input, &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_RESTORE_STATE);
+    g_assert_false(command.restore_has_preset_dir);
+    g_assert_true(command.restore_has_pause);
+    g_assert_true(command.restore_pause_enabled);
+    g_assert_true(command.restore_has_opacity);
+    g_assert_cmpfloat(command.restore_opacity, ==, 0.125f);
+    g_assert_true(command.restore_has_shuffle);
+    g_assert_false(command.restore_shuffle_enabled);
+}
+
 static void
 test_title_encoding_format(void)
 {
-    // Test that the expected title format is correct
-    // Format: @milkdrop!{"monitor":N,"overlay":B,"opacity":F}|N
+    const char* expected_format = "@milkdrop!{\"monitor\":0,\"overlay\":false,\"opacity\":1.00}|0";
 
-    const char *expected_format = "@milkdrop!{\"monitor\":0,\"overlay\":false,\"opacity\":1.00}|0";
-
-    // Verify structure
     g_assert_true(g_str_has_prefix(expected_format, "@milkdrop!"));
     g_assert_true(strstr(expected_format, "\"monitor\":") != NULL);
     g_assert_true(strstr(expected_format, "\"overlay\":") != NULL);
     g_assert_true(strstr(expected_format, "\"opacity\":") != NULL);
 
-    // Find the separator
-    const char *sep = strchr(expected_format, '|');
+    const char* sep = strchr(expected_format, '|');
     g_assert_nonnull(sep);
-
-    // Verify monitor index after separator
     g_assert_cmpint(atoi(sep + 1), ==, 0);
 }
 
-/**
- * Main test runner
- */
 int
-main(int argc, char *argv[])
+main(int argc, char* argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/state/save-state-parse", test_parse_save_state_command);
     g_test_add_func("/state/restore-state-parse", test_parse_restore_state_command);
-    g_test_add_func("/state/restore-state-with-json", test_parse_restore_state_with_json);
+    g_test_add_func("/state/restore-state-round-trip-payload", test_parse_restore_state_round_trip_payload);
+    g_test_add_func("/state/restore-state-without-preset-dir", test_parse_restore_state_without_preset_dir);
     g_test_add_func("/state/title-encoding-format", test_title_encoding_format);
 
     return g_test_run();

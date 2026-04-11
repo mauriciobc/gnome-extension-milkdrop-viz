@@ -101,6 +101,9 @@ def main() -> int:
 
     control_client_js = read_text(control_client_path)
     check("queryMilkdropStatus" in control_client_js, "controlClient.js must export queryMilkdropStatus")
+    check("queryMilkdropSaveState" in control_client_js, "controlClient.js must export queryMilkdropSaveState")
+    check("sendMilkdropRestoreState" in control_client_js, "controlClient.js must export sendMilkdropRestoreState")
+    check("queryAllMilkdropSaveState" in control_client_js, "controlClient.js must export queryAllMilkdropSaveState")
 
     prefs_js = read_text(prefs_path)
     check("ExtensionPreferences" in prefs_js, "prefs does not use ExtensionPreferences")

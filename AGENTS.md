@@ -15,7 +15,7 @@ src/                          # C renderer (GTK4 + GLArea + libprojectM)
   app.h                       # Shared types: AppData, AudioRing, inline ring buffer ops
   main.c                      # GTK app lifecycle, GLArea callbacks, window management
   audio.c                     # PipeWire audio capture (optional, feature-flagged)
-  control.c                   # Unix socket control protocol (opacity, shuffle, preset-dir)
+  control.c                   # Unix socket control protocol (opacity, shuffle, preset-dir, save-state, restore-state)
   presets.c                   # Preset directory scanning and cycling
 extension/milkdrop@mauriciobc.github.io/
   extension.js                # GNOME Shell extension (imports local ESM modules)
