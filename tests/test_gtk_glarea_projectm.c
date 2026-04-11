@@ -32,6 +32,8 @@
 #include <string.h>
 
 #define PM_VISUAL_PULSE_MS 16
+#define PM_STARTUP_MAX_FRAMES 180
+#define PM_STARTUP_REQUIRED_CONTENT_FRAMES 2
 
 typedef struct {
     GtkApplication*   app;
@@ -47,7 +49,44 @@ typedef struct {
     gboolean          realize_finished;
     gboolean          visual_mode;
     gboolean          printed_visual_sample;
+    guint             frames_with_content;
+    guint             consecutive_content_frames;
+    gboolean          startup_warmup_drawn;
+    gboolean          startup_deferred_preset_activation;
+    gboolean          startup_final_content_active;
 } PmCtx;
+
+static gboolean
+frame_has_visible_content(int width, int height)
+{
+    static const struct {
+        float x;
+        float y;
+    } points[] = {
+        {0.50f, 0.50f},
+        {0.33f, 0.33f},
+        {0.67f, 0.33f},
+        {0.33f, 0.67f},
+        {0.67f, 0.67f},
+    };
+
+    if (width <= 0 || height <= 0)
+        return FALSE;
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    for (size_t i = 0; i < G_N_ELEMENTS(points); i++) {
+        int px = CLAMP((int)(points[i].x * (float)(width - 1)), 0, width - 1);
+        int py = CLAMP((int)(points[i].y * (float)(height - 1)), 0, height - 1);
+        guint8 pixel[4] = {0};
+
+        glReadPixels(px, py, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+        if (pixel[0] > 0 || pixel[1] > 0 || pixel[2] > 0)
+            return TRUE;
+    }
+
+    return FALSE;
+}
 
 static void
 pm_ctx_cleanup(PmCtx* ctx)
@@ -118,8 +157,13 @@ load_test_preset_via_playlist(PmCtx* ctx, const char* preset_path)
     if (!ctx || !ctx->playlist)
         return FALSE;
 
+    ctx->startup_warmup_drawn = FALSE;
+    ctx->startup_deferred_preset_activation = FALSE;
+    ctx->startup_final_content_active = FALSE;
+
     if (!preset_path || !preset_path[0] || !g_file_test(preset_path, G_FILE_TEST_IS_REGULAR)) {
         projectm_load_preset_file(ctx->pm, "idle://", false);
+        ctx->startup_final_content_active = TRUE;
         return TRUE;
     }
 
@@ -134,7 +178,27 @@ load_test_preset_via_playlist(PmCtx* ctx, const char* preset_path)
     if (!projectm_playlist_add_preset(ctx->playlist, preset_path, true))
         return FALSE;
 
-    return projectm_playlist_set_position(ctx->playlist, 0u, true) == 0u;
+    projectm_load_preset_file(ctx->pm, "idle://", false);
+    ctx->startup_deferred_preset_activation = TRUE;
+    return TRUE;
+}
+
+static gboolean
+activate_test_preset_from_playlist(PmCtx* ctx)
+{
+    if (!ctx || !ctx->playlist || !ctx->startup_deferred_preset_activation)
+        return FALSE;
+
+    if (projectm_playlist_size(ctx->playlist) == 0u) {
+        ctx->startup_deferred_preset_activation = FALSE;
+        ctx->startup_final_content_active = TRUE;
+        return FALSE;
+    }
+
+    projectm_playlist_set_position(ctx->playlist, 0u, true);
+    ctx->startup_deferred_preset_activation = FALSE;
+    ctx->startup_final_content_active = TRUE;
+    return TRUE;
 }
 
 static void
@@ -323,6 +387,11 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     projectm_set_frame_time(ctx->pm,
                             (g_get_monotonic_time() - ctx->mono_origin_us) / 1000000.0);
 
+    if (ctx->startup_deferred_preset_activation && ctx->startup_warmup_drawn) {
+        if (activate_test_preset_from_playlist(ctx))
+            gtk_gl_area_attach_buffers(area);
+    }
+
     float pcm[512];
     feed_synthetic_pcm(ctx, pcm, G_N_ELEMENTS(pcm));
     projectm_pcm_add_float(ctx->pm, pcm, G_N_ELEMENTS(pcm) / 2u, PROJECTM_STEREO);
@@ -339,6 +408,9 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     else
         projectm_opengl_render_frame(ctx->pm);
 
+    /* Synchronize multi-pass blur rendering (matches production code in src/main.c) */
+    glFinish();
+
     /* Estado que o GTK valida apos o sinal render; projectM pode alterar. */
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -347,7 +419,8 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-    if (glGetError() != GL_NO_ERROR) {
+    GLenum gl_err = glGetError();
+    if (gl_err != GL_NO_ERROR) {
         if (!ctx->visual_mode) {
             ctx->pass      = FALSE;
             ctx->finished  = TRUE;
@@ -356,20 +429,28 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         }
     }
 
+    gboolean has_content = frame_has_visible_content(fb_w, fb_h);
+    if (!ctx->startup_final_content_active) {
+        ctx->startup_warmup_drawn = TRUE;
+        ctx->consecutive_content_frames = 0;
+    } else if (has_content) {
+        ctx->frames_with_content++;
+        ctx->consecutive_content_frames++;
+    } else {
+        ctx->consecutive_content_frames = 0;
+    }
+
     ctx->frame++;
 
-    /* Teste simplificado: renderizar N frames sem crash = sucesso.
-     * glReadPixels nao funciona com projectM (renderiza em FBOs internos).
-     */
-    if (!ctx->visual_mode && ctx->frame >= 30) {
-        ctx->pass     = TRUE;  /* Renderizou 30 frames sem crash */
+    if (!ctx->visual_mode && ctx->consecutive_content_frames >= PM_STARTUP_REQUIRED_CONTENT_FRAMES) {
+        ctx->pass     = TRUE;
         ctx->finished = TRUE;
         g_application_quit(G_APPLICATION(ctx->app));
         return TRUE;
     }
 
-    if (!ctx->visual_mode && ctx->frame > 100) {
-        ctx->pass     = FALSE;  /* Timeout - algo esta errado */
+    if (!ctx->visual_mode && ctx->frame >= PM_STARTUP_MAX_FRAMES) {
+        ctx->pass     = FALSE;
         ctx->finished = TRUE;
         g_application_quit(G_APPLICATION(ctx->app));
         return TRUE;
@@ -431,9 +512,12 @@ activate_pm_common(GtkApplication* app, PmCtx* ctx)
     gtk_window_present(GTK_WINDOW(win));
     gtk_gl_area_queue_render(GTK_GL_AREA(gl));
 
+    /* Content-based assertions need a steady render cadence; relying only on the
+     * render callback to queue the next frame can stall after a single frame on
+     * some backends. Match production/visual mode and drive ~60 Hz via timeout. */
+    ctx->visual_pulse_id = g_timeout_add(PM_VISUAL_PULSE_MS, on_visual_pulse, ctx);
+
     if (ctx->visual_mode) {
-        /* Igual ao milkdrop: GdkFrameClock pode não disparar com janela “parada”; timeout garante ~60 Hz. */
-        ctx->visual_pulse_id = g_timeout_add(PM_VISUAL_PULSE_MS, on_visual_pulse, ctx);
         g_print("Modo visual: ~60 Hz via g_timeout_add; feche a janela para sair. "
                 "Preset: MILKDROP_PM_TEST_PRESET ou idle://.\n");
     } else {
@@ -473,15 +557,19 @@ test_gtk_glarea_projectm_frames_differ(void)
     }
 
         if (!ctx.pass) {
-            g_test_message("estado: init_ok=%d finished=%d frame=%d",
+            g_test_message("estado: init_ok=%d finished=%d frame=%d frames_with_content=%u consecutive_content=%u",
                            (int)ctx.init_ok,
                            (int)ctx.finished,
-                           ctx.frame);
+                           ctx.frame,
+                           ctx.frames_with_content,
+                           ctx.consecutive_content_frames);
         }
 
     g_assert_true(ctx.finished);
     g_assert_true(ctx.pass);
-    g_test_message("Renderizou %d frames com sucesso", ctx.frame);
+    g_test_message("Renderizou %d frames com %u frames contendo imagem",
+                   ctx.frame,
+                   ctx.frames_with_content);
 }
 
 static int
