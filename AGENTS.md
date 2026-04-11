@@ -136,4 +136,52 @@ tools/reload.sh      # Restart GNOME Shell extension
 - Keep patches small and reviewable; preserve documented architecture invariants
 - For GNOME extension lifecycle, follow GNOME Shell extension development best practices
 - Consult `PRD.md` for product constraints and `docs/research/` for deep technical dives
+- **ProjectM integration**: Follow compliance requirements documented in `docs/research/13-projectm-integration-compliance.md` and `docs/research/06-gtk4-glarea-projectm-integration.md`
 - Copilot instructions (`.github/copilot-instructions.md`): prefer small reviewable patches; preserve two-process architecture boundaries; consult research docs for design decisions; validate assumptions against docs before introducing build scripts
+
+## ProjectM Integration Rules
+
+**Required reading**: `docs/research/13-projectm-integration-compliance.md` (comprehensive compliance audit), `docs/research/06-gtk4-glarea-projectm-integration.md` (GTK integration patterns)
+
+**Critical requirements** (violations will cause rendering bugs):
+
+1. **GPU Synchronization** (`src/main.c:659-677`):
+   - MUST call `glFinish()` immediately after `projectm_opengl_render_frame_fbo()`
+   - Reason: Multi-pass blur effects execute asynchronously on GPU; without sync, framebuffer reads capture intermediate state
+   - Evidence: `reference_codebases/projectm/src/libprojectM/MilkdropPreset/BlurTexture.cpp:156-264` shows horizontal + vertical blur passes
+
+2. **GL State Restoration** (`src/main.c:694-713`):
+   - MUST restore all GL state before returning from render callback:
+     ```c
+     glUseProgram(0);
+     glBindTexture(GL_TEXTURE_2D, 0);
+     glActiveTexture(GL_TEXTURE0);
+     glDisable(GL_BLEND);
+     glDisable(GL_DEPTH_TEST);
+     glDisable(GL_STENCIL_TEST);
+     glDisable(GL_SCISSOR_TEST);
+     ```
+   - Reason: GTK's GLArea validates state; projectM modifies blend modes, texture bindings, shader programs
+   - Evidence: `reference_codebases/projectm/src/libprojectM/Renderer/CopyTexture.cpp:272-275` shows partial cleanup
+
+3. **GL Context Ownership**:
+   - ALL projectM calls MUST happen on GL thread with active GL context
+   - Allowed locations: `on_realize`, `on_render`, `on_unrealize` callbacks
+   - NEVER call projectM functions from control thread or outside GLArea lifecycle
+
+4. **FBO Handling**:
+   - Use `gtk_gl_area_attach_buffers()` before rendering
+   - Query current FBO with `glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo)`
+   - Use `projectm_opengl_render_frame_fbo()` for non-zero FBOs (NOT `projectm_opengl_render_frame()`)
+
+5. **Frame Time**:
+   - Call `projectm_set_frame_time()` with monotonic seconds since first frame
+   - Use `g_get_monotonic_time()` for time source (NOT wall clock)
+
+6. **Audio Data**:
+   - `projectm_pcm_add_float()` count parameter = **frame count** (interleaved sample pairs / 2)
+   - NOT total float count
+
+**Verification**: All requirements verified against official SDL reference (`reference_codebases/projectm/src/sdl-test-ui/`) and internal implementation (`reference_codebases/projectm/src/libprojectM/`)
+
+**Audit status**: Last comprehensive compliance audit: 2025-04-11 (all issues resolved, production-ready)

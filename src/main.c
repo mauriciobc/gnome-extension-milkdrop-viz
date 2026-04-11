@@ -29,6 +29,143 @@ static gboolean milkdrop_verbose_gl          = FALSE;
 static gboolean milkdrop_logged_render_fbo   = FALSE;
 static gint64   milkdrop_pm_mono_origin_us   = 0;
 
+#define MILKDROP_STARTUP_PROBE_COUNT 5
+
+static void
+milkdrop_mark_startup_hidden(AppData* app_data,
+                             bool     hidden)
+{
+    if (!app_data)
+        return;
+
+    app_data->startup_hidden = hidden;
+
+    if (app_data->window)
+        gtk_widget_set_opacity(GTK_WIDGET(app_data->window), hidden ? 0.0 : atomic_load(&app_data->opacity));
+}
+
+static void
+milkdrop_reset_startup_gate(AppData* app_data,
+                            bool     has_playlist_content)
+{
+    if (!app_data)
+        return;
+
+    app_data->startup_warmup_drawn = FALSE;
+    app_data->startup_deferred_preset_activation = has_playlist_content;
+    app_data->startup_final_content_active = !has_playlist_content;
+    app_data->render_frame_counter = 0;
+
+    milkdrop_mark_startup_hidden(app_data, has_playlist_content);
+}
+
+static void
+milkdrop_log_post_render_gl_error(AppData* app_data,
+                                  GLenum   err,
+                                  GLint    draw_fbo)
+{
+    if (!app_data || !app_data->verbose || err == GL_NO_ERROR)
+        return;
+
+    uint32_t position = 0;
+    char* filename = NULL;
+
+    if (app_data->projectm_playlist) {
+        position = projectm_playlist_get_position(app_data->projectm_playlist);
+        filename = projectm_playlist_item(app_data->projectm_playlist, position);
+    }
+
+    g_message("projectM post-render GL error: phase=%s frame=%" G_GUINT64_FORMAT " fbo=%d size=%dx%d err=0x%x preset=%s",
+              app_data->startup_final_content_active ? "preset" : "warmup",
+              app_data->render_frame_counter,
+              (int)draw_fbo,
+              app_data->render_width,
+              app_data->render_height,
+              err,
+              filename ? filename : "(unknown)");
+
+    if (filename)
+        projectm_playlist_free_string(filename);
+}
+
+static GLenum
+milkdrop_clear_pending_gl_errors(void)
+{
+    GLenum err = GL_NO_ERROR;
+
+    for (int i = 0; i < 32; i++) {
+        GLenum current = glGetError();
+        if (current == GL_NO_ERROR)
+            break;
+        err = current;
+    }
+
+    return err;
+}
+
+static bool
+milkdrop_probe_startup_pixels(GLint draw_fbo,
+                              int   width,
+                              int   height)
+{
+    static const struct {
+        float x;
+        float y;
+    } probe_points[MILKDROP_STARTUP_PROBE_COUNT] = {
+        {0.50f, 0.50f},
+        {0.33f, 0.33f},
+        {0.67f, 0.33f},
+        {0.33f, 0.67f},
+        {0.67f, 0.67f},
+    };
+
+    if (draw_fbo == 0 || width <= 0 || height <= 0)
+        return false;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    for (size_t i = 0; i < G_N_ELEMENTS(probe_points); i++) {
+        int px = CLAMP((int)(probe_points[i].x * (float)(width - 1)), 0, width - 1);
+        int py = CLAMP((int)(probe_points[i].y * (float)(height - 1)), 0, height - 1);
+        guint8 pixel[4] = {0};
+
+        glReadPixels(px, py, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+        if (pixel[0] > 0 || pixel[1] > 0 || pixel[2] > 0)
+            return true;
+    }
+
+    return false;
+}
+
+static bool
+milkdrop_activate_initial_playlist_preset(AppData* app_data)
+{
+    if (!app_data || !app_data->projectm_playlist || !app_data->startup_deferred_preset_activation)
+        return false;
+
+    if (projectm_playlist_size(app_data->projectm_playlist) == 0u) {
+        app_data->startup_deferred_preset_activation = false;
+        app_data->startup_final_content_active = true;
+        return false;
+    }
+
+    uint32_t position = projectm_playlist_set_position(app_data->projectm_playlist, 0u, true);
+    app_data->startup_deferred_preset_activation = false;
+    app_data->startup_final_content_active = true;
+
+    if (app_data->verbose) {
+        char* filename = projectm_playlist_item(app_data->projectm_playlist, position);
+        g_message("startup: activated initial preset at playlist position %u (%s)",
+                  position,
+                  filename ? filename : "(unknown)");
+        if (filename)
+            projectm_playlist_free_string(filename);
+    }
+
+    return true;
+}
+
 static void
 milkdrop_configure_texture_search_paths(AppData* app_data)
 {
@@ -108,11 +245,15 @@ milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
                                   atomic_load(&app_data->shuffle_runtime));
 
     if (added > 0) {
-        projectm_playlist_set_position(app_data->projectm_playlist, 0u, true);
+        projectm_load_preset_file(app_data->projectm, "idle://", false);
+        milkdrop_reset_startup_gate(app_data, true);
         if (app_data->verbose)
-            g_message("playlist loaded %u presets from %s", added, app_data->preset_dir);
+            g_message("playlist loaded %u presets from %s; warming up on idle preset before reveal",
+                      added,
+                      app_data->preset_dir);
     } else {
         projectm_load_preset_file(app_data->projectm, "idle://", false);
+        milkdrop_reset_startup_gate(app_data, false);
         if (app_data->verbose)
             g_message("playlist empty for %s, using idle preset",
                       app_data->preset_dir ? app_data->preset_dir : "(none)");
@@ -296,7 +437,7 @@ on_render_pulse(gpointer user_data)
 
     if (app_data->window) {
         static float last_opacity = -1.0f;
-        float current_opacity = atomic_load(&app_data->opacity);
+        float current_opacity = app_data->startup_hidden ? 0.0f : atomic_load(&app_data->opacity);
         if (current_opacity != last_opacity) {
             gtk_widget_set_opacity(GTK_WIDGET(app_data->window), current_opacity);
             last_opacity = current_opacity;
@@ -383,6 +524,7 @@ on_unrealize(GtkGLArea* area, gpointer user_data)
         app_data->projectm = NULL;
     }
     milkdrop_pm_mono_origin_us = 0;
+    milkdrop_logged_render_fbo = FALSE;
 #endif
 
 #if !HAVE_PROJECTM
@@ -424,6 +566,8 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         milkdrop_sync_playlist_from_preset_dir(app_data);
     }
 
+    bool must_reattach_buffers = false;
+
     if (app_data->projectm && app_data->projectm_playlist) {
         bool do_next = atomic_exchange(&app_data->next_preset_pending, false);
         bool do_prev = atomic_exchange(&app_data->prev_preset_pending, false);
@@ -431,8 +575,10 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         /* projectM preset loading must happen with a current GL context. */
         if (do_next) {
             projectm_playlist_play_next(app_data->projectm_playlist, true);
+            must_reattach_buffers = true;
         } else if (do_prev) {
             projectm_playlist_play_previous(app_data->projectm_playlist, true);
+            must_reattach_buffers = true;
         }
     }
 
@@ -446,6 +592,8 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 
         renderer_frame_prep(app_data, pcm_samples, G_N_ELEMENTS(pcm_samples), &prep);
         if (prep.would_draw) {
+            app_data->render_frame_counter++;
+
             /* GtkGLArea makes the GL context current before emitting "render". */
 
             /* GtkGLArea draws to an internal FBO, not GL framebuffer 0. projectM's
@@ -484,8 +632,19 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                 }
             }
 
+            if (app_data->startup_deferred_preset_activation && app_data->startup_warmup_drawn) {
+                if (milkdrop_activate_initial_playlist_preset(app_data))
+                    must_reattach_buffers = true;
+            }
+
+            if (must_reattach_buffers)
+                gtk_gl_area_attach_buffers(area);
+
             GLint draw_fbo = 0;
             glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+            milkdrop_clear_pending_gl_errors();
+
+            GLenum err = GL_NO_ERROR;
             if (draw_fbo != 0) {
                 if (app_data->verbose && !milkdrop_logged_render_fbo) {
                     g_message("projectM render: using GtkGLArea FBO %d (not framebuffer 0)",
@@ -493,24 +652,65 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                     milkdrop_logged_render_fbo = TRUE;
                 }
                 projectm_opengl_render_frame_fbo(app_data->projectm, (uint32_t)draw_fbo);
-
-                /* Verificar erros GL: alguns presets com GetBlur causam
-                 * GL_INVALID_FRAMEBUFFER_OPERATION (0x506) ao renderizar em FBO externo.
-                 * O fallback para render_frame() produz branco - o último frame válido permanece. */
-                GLenum err = glGetError();
-                if (err == GL_INVALID_FRAMEBUFFER_OPERATION) {
-                    if (app_data->verbose)
-                        g_message("projectM FBO error 0x%x — frame dropped (GetBlur preset?)", err);
-                } else if (err != GL_NO_ERROR && app_data->verbose) {
-                    g_message("projectM GL error: 0x%x", err);
-                }
             } else {
                 projectm_opengl_render_frame(app_data->projectm);
             }
 
-            /* Estado que o GTK valida após o sinal render; projectM pode alterar. */
+            /* CRITICAL: Wait for all GL commands to complete before framebuffer access.
+             *
+             * projectM blur effects use multiple rendering passes (see BlurTexture.cpp):
+             *   Pass 0: horizontal blur → intermediate texture
+             *   Pass 1: vertical blur → final blur texture
+             *   (repeated for each blur level: blur1, blur2, blur3)
+             *
+             * projectm_opengl_render_frame() queues all GL commands but does NOT
+             * synchronize. The official SDL example (projectM_SDL_main.cpp:453) relies
+             * on SDL_GL_SwapWindow() for implicit synchronization. In our GTK integration,
+             * we do pixel probing (milkdrop_probe_startup_pixels) immediately after render,
+             * and GTK's buffer swap happens later in the frame pipeline.
+             *
+             * Without explicit sync, we read the framebuffer before multi-pass blur
+             * completes, resulting in partial blur (horizontal-only) or no blur at all.
+             *
+             * glFinish() blocks until all queued GL commands finish executing on the GPU.
+             * Performance impact is minimal (<1ms) as rendering is already GPU-bound. */
+            glFinish();
+
+            err = glGetError();
+            milkdrop_log_post_render_gl_error(app_data, err, draw_fbo);
+
+            if (!app_data->startup_final_content_active)
+                app_data->startup_warmup_drawn = true;
+
+            if (app_data->startup_hidden &&
+                app_data->startup_final_content_active &&
+                err == GL_NO_ERROR &&
+                milkdrop_probe_startup_pixels(draw_fbo, app_data->render_width, app_data->render_height)) {
+                milkdrop_mark_startup_hidden(app_data, false);
+                if (app_data->verbose)
+                    g_message("startup: first real preset frame is ready; renderer revealed");
+            }
+
+            /* Restore GL state expected by GtkGLArea after rendering.
+             *
+             * GtkGLArea validates specific GL state after the render signal returns.
+             * projectM modifies various GL state during rendering (blend modes, texture
+             * bindings, framebuffers, etc). While projectM restores most state internally,
+             * GTK requires these guarantees:
+             *
+             * - Depth/stencil tests disabled (we don't request depth/stencil buffers)
+             * - Blend disabled or set to premultiplied alpha mode
+             * - No active shader program
+             * - Texture unit 0 active with no bound texture
+             *
+             * Failure to restore state can cause rendering artifacts or GTK warnings. */
+            glUseProgram(0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+            glDisable(GL_BLEND);
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_STENCIL_TEST);
+            glDisable(GL_SCISSOR_TEST);
 
             if (app_data->window && !atomic_exchange(&app_data->idle_surface_queued, true))
                 g_idle_add(milkdrop_idle_surface_queue_render, app_data);
@@ -701,7 +901,8 @@ build_window(AppData* app_data)
     app_data->render_pulse_source_id =
         g_timeout_add(MILKDROP_RENDER_PULSE_INTERVAL_MS, on_render_pulse, app_data);
     gtk_window_present(app_data->window);
-    gtk_widget_set_opacity(GTK_WIDGET(app_data->window), atomic_load(&app_data->opacity));
+    gtk_widget_set_opacity(GTK_WIDGET(app_data->window),
+                           app_data->startup_hidden ? 0.0 : atomic_load(&app_data->opacity));
 
     /* Belt-and-suspenders: also call immediately after present() in case the
      * surface was already mapped synchronously (e.g. on X11). */
@@ -725,6 +926,8 @@ on_activate(GApplication* application, gpointer user_data)
 
     if (app_data->preset_dir && !presets_reload(app_data))
         g_warning("Failed to scan presets in %s", app_data->preset_dir);
+
+    app_data->startup_hidden = app_data->preset_count > 0;
 
     build_window(app_data);
 
@@ -812,6 +1015,11 @@ main(int argc, char** argv)
     atomic_store(&app_data.preset_dir_pending, false);
     atomic_store(&app_data.next_preset_pending, false);
     atomic_store(&app_data.prev_preset_pending, false);
+    app_data.startup_hidden = false;
+    app_data.startup_warmup_drawn = false;
+    app_data.startup_deferred_preset_activation = false;
+    app_data.startup_final_content_active = false;
+    app_data.render_frame_counter = 0;
     atomic_store(&app_data.fps_runtime, 60);
     atomic_store(&app_data.fps_last, 0.0f);
     app_data.fps_applied = 60;

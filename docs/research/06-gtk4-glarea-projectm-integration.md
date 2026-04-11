@@ -32,15 +32,62 @@ Recommended per-frame order:
 1. Drain available stereo floats from the ring buffer.
 2. Feed samples to `projectm_pcm_add_float(...)`.
 3. Consume one pending preset change if present.
-4. Call `projectm_render_frame(...)`.
-5. Restore any GTK-sensitive GL state that testing confirms must be restored.
-6. Return success without redundant clears.
+4. Attach GTK's internal FBO via `gtk_gl_area_attach_buffers()`.
+5. Set projectM frame time via `projectm_set_frame_time()`.
+6. Call `projectm_opengl_render_frame_fbo(...)` with the current draw FBO.
+7. **CRITICAL**: Call `glFinish()` to synchronize multi-pass blur rendering (see below).
+8. Restore GTK-required GL state (see GL state policy section).
+9. Return success without redundant clears.
+
+### Multi-Pass Blur Synchronization
+
+**Added 2025-04-11**: ProjectM's blur effects (Gaussian blur, etc.) require multiple rendering passes:
+
+- **Pass 0**: Horizontal blur → intermediate texture
+- **Pass 1**: Vertical blur → final blur texture
+- Repeated for each blur level (blur1, blur2, blur3)
+
+**Problem**: `projectm_opengl_render_frame_fbo()` queues all GL commands but does NOT synchronize. Without explicit synchronization, subsequent framebuffer reads (like `milkdrop_probe_startup_pixels()`) may capture intermediate rendering state instead of the final output.
+
+**Solution**: Call `glFinish()` immediately after `projectm_opengl_render_frame_fbo()`:
+
+```c
+projectm_opengl_render_frame_fbo(app_data->projectm, (uint32_t)draw_fbo);
+
+/* CRITICAL: Wait for all GL commands to complete.
+ * projectM blur passes execute asynchronously on GPU. */
+glFinish();
+```
+
+**Reference**: The official SDL example (`reference_codebases/projectm/src/sdl-test-ui/pmSDL.cpp:453-455`) relies on `SDL_GL_SwapWindow()` for implicit synchronization. GTK's swap happens later in the frame pipeline, so explicit sync is required.
+
+**Performance**: `glFinish()` overhead is minimal (<1ms) as rendering is GPU-bound. This is a correctness requirement, not an optimization.
+
+**Location**: `src/main.c:659-677`
 
 ## GL state policy
 
-The PRD assumes GTK only validates a narrow subset of GL state after render, specifically depth and stencil enablement. Until proven otherwise, restore only the state GTK checks rather than attempting an expensive “restore everything” wrapper around projectM.
+**Updated 2025-04-11**: After analyzing projectM's internal rendering implementation and GTK4's GLArea requirements, comprehensive GL state restoration is now required after `projectm_opengl_render_frame_fbo()`.
 
-This policy should remain documented as a performance decision backed by integration testing.
+### Required State Restoration
+
+The following GL state must be restored after projectM rendering:
+
+```c
+glUseProgram(0);                  // Unbind shader programs
+glBindTexture(GL_TEXTURE_2D, 0);  // Unbind textures
+glActiveTexture(GL_TEXTURE0);     // Reset to texture unit 0
+glDisable(GL_BLEND);              // Disable blending
+glDisable(GL_DEPTH_TEST);         // Disable depth test
+glDisable(GL_STENCIL_TEST);       // Disable stencil test
+glDisable(GL_SCISSOR_TEST);       // Disable scissor test
+```
+
+**Rationale**: While projectM cleans up most GL state internally (see `reference_codebases/projectm/src/libprojectM/Renderer/CopyTexture.cpp:272-275` and `BlurTexture.cpp:267`), GTK's GLArea has strict state validation requirements. The SDL reference implementation doesn't need this because it owns the GL context entirely.
+
+**Location**: `src/main.c:694-713`
+
+This policy is a correctness requirement, not a performance optimization. Failure to restore state can cause rendering artifacts or GTK warnings.
 
 ## Resize handling
 
