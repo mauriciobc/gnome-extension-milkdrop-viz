@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# For isolated testing (separate install + gsettings), use tools/nested_devkit.sh instead.
 set -euo pipefail
 LOG_FILE="./nested_shell.log"
 rm -f "${LOG_FILE}"

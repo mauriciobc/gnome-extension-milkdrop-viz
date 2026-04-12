@@ -14,6 +14,18 @@
 /* Longest line: restore-state <save-state payload>; keep in sync with test clients (MILKDROP_PATH_MAX * 5). */
 #define MILKDROP_CONTROL_RECV_MAX (MILKDROP_PATH_MAX * 5)
 
+static void
+milkdrop_preset_skip_enqueue(_Atomic uint32_t* q)
+{
+    uint32_t v = atomic_load_explicit(q, memory_order_relaxed);
+    for (;;) {
+        if (v >= MILKDROP_PRESET_SKIP_QUEUE_MAX)
+            return;
+        if (atomic_compare_exchange_weak_explicit(q, &v, v + 1u, memory_order_release, memory_order_relaxed))
+            return;
+    }
+}
+
 static bool
 parse_on_off(const char* value, bool* out_enabled)
 {
@@ -159,6 +171,7 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         g_strlcpy(response, "ok overlay\n", response_size);
         return TRUE;
     case CONTROL_CMD_PRESET_DIR:
+        /* Rapid preset-dir: last path in pending_preset_dir wins; GL applies one playlist sync per drain. */
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(app_data->pending_preset_dir, command->text_value, sizeof(app_data->pending_preset_dir));
         g_mutex_unlock(&app_data->preset_dir_lock);
@@ -166,11 +179,11 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         g_strlcpy(response, "ok preset-dir\n", response_size);
         return TRUE;
     case CONTROL_CMD_NEXT_PRESET:
-        atomic_store(&app_data->next_preset_pending, true);
+        milkdrop_preset_skip_enqueue(&app_data->next_preset_pending);
         g_strlcpy(response, "ok next\n", response_size);
         return TRUE;
     case CONTROL_CMD_PREV_PRESET:
-        atomic_store(&app_data->prev_preset_pending, true);
+        milkdrop_preset_skip_enqueue(&app_data->prev_preset_pending);
         g_strlcpy(response, "ok previous\n", response_size);
         return TRUE;
     case CONTROL_CMD_FPS:

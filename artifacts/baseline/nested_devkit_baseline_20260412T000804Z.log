@@ -1,0 +1,110 @@
+The Meson build system
+Version: 1.10.2
+Source dir: /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz
+Build dir: /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/build
+Build type: native build
+Project name: milkdrop
+Project version: 0.1.0
+C compiler for the host machine: cc (gcc 15.2.1 "cc (GCC) 15.2.1 20260209")
+C linker for the host machine: cc ld.bfd 2.46
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Found pkg-config: YES (/usr/bin/pkg-config) 2.5.1
+Run-time dependency gtk4 found: YES 4.22.2
+Run-time dependency glib-2.0 found: YES 2.88.0
+Run-time dependency gio-2.0 found: YES 2.88.0
+Run-time dependency epoxy found: YES 1.5.10
+Run-time dependency egl found: YES 1.5
+Run-time dependency projectm-4 found: YES 4.1.0
+Run-time dependency projectm-4-playlist found: YES 4.1.0
+Run-time dependency libpipewire-0.3 found: YES 1.6.3
+Run-time dependency libspa-0.2 found: YES 0.2
+Dependency glib-2.0 found: YES 2.88.0 (cached)
+Dependency gtk4 found: YES 4.22.2 (cached)
+Library m found: YES
+Program python3 found: YES (/usr/bin/python3)
+Library m found: YES
+Build targets in project: 17
+
+milkdrop 0.1.0
+
+  User defined options
+    prefix: /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data
+
+Found ninja-1.13.2 at /usr/bin/ninja
+Generating targets:   0%|          | 0/17 eta ?                                               Writing build.ninja:   0%|          | 0/82 eta ?                                                ninja: Entering directory `/home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/build'
+[1/56] Compiling C object src/milkdrop.p/audio_recovery.c.o
+[2/56] Compiling C object tests/test-ring-buffer.p/test_ring_buffer.c.o
+[3/56] Compiling C object tests/test-presets.p/test_presets.c.o
+[4/56] Compiling C object tests/test-backends.p/.._src_control.c.o
+[5/56] Compiling C object src/milkdrop.p/presets.c.o
+[6/56] Compiling C object tests/test-backends.p/test_backends.c.o
+[7/56] Compiling C object tests/test-backends.p/.._src_renderer.c.o
+[8/56] Compiling C object tests/test-control-protocol.p/test_control_protocol.c.o
+[9/56] Compiling C object tests/test-backends.p/.._src_audio_recovery.c.o
+[10/56] Compiling C object tests/test-backends.p/.._src_audio.c.o
+[11/56] Compiling C object src/milkdrop.p/renderer.c.o
+[12/56] Compiling C object src/milkdrop.p/quarantine.c.o
+[13/56] Compiling C object src/milkdrop.p/main.c.o
+[14/56] Compiling C object tests/test-control-protocol.p/.._src_control.c.o
+[15/56] Compiling C object tests/test-gtk-glarea-projectm.p/test_gtk_glarea_projectm.c.o
+[16/56] Compiling C object tests/test-gtk-glarea-fbo.p/test_gtk_glarea_fbo.c.o
+[17/56] Compiling C object src/milkdrop.p/control.c.o
+[18/56] Compiling C object tests/test-audio-alignment.p/test_audio_alignment.c.o
+[19/56] Compiling C object tests/test-presets.p/.._src_presets.c.o
+[20/56] Compiling C object tests/test-presets-edge-cases.p/.._src_presets.c.o
+[21/56] Compiling C object tests/test-audio-alignment.p/.._src_audio_recovery.c.o
+[22/56] Compiling C object tests/test-tick-state-machine.p/test_tick_state_machine.c.o
+[23/56] Compiling C object src/milkdrop.p/audio.c.o
+[24/56] Linking target tests/test-ring-buffer
+[25/56] Compiling C object tests/test-audio-recovery.p/.._src_audio_recovery.c.o
+[26/56] Compiling C object tests/test-control-state-flow.p/test_control_state_flow.c.o
+[27/56] Compiling C object tests/test-render-pipeline.p/test_render_pipeline.c.o
+[28/56] Compiling C object tests/test-control-state-flow.p/.._src_control.c.o
+[29/56] Compiling C object tests/test-render-pipeline.p/.._src_renderer.c.o
+[30/56] Compiling C object tests/test-tick-state-machine.p/.._src_presets.c.o
+[31/56] Linking target tests/test-control-protocol
+[32/56] Linking target tests/test-render-pipeline
+[33/56] Linking target tests/test-tick-state-machine
+[34/56] Compiling C object tests/test-presets-edge-cases.p/test_presets_edge_cases.c.o
+[35/56] Linking target tests/test-backends
+[36/56] Linking target tests/test-presets-edge-cases
+[37/56] Linking target tests/test-control-state-flow
+[38/56] Linking target tests/test-presets
+[39/56] Compiling C object tests/test-audio-recovery.p/test_audio_recovery.c.o
+[40/56] Compiling C object tests/test-audio-alignment.p/.._src_audio.c.o
+[41/56] Linking target tests/test-audio-recovery
+[42/56] Compiling C object tests/test-preset-quarantine.p/test_preset_quarantine.c.o
+[43/56] Linking target tests/test-gtk-glarea-projectm
+[44/56] Linking target tests/test-audio-alignment
+[45/56] Linking target src/milkdrop
+[46/56] Linking target tests/test-gtk-glarea-fbo
+[47/56] Compiling C object tests/test-state-persistence.p/test_state_persistence.c.o
+[48/56] Compiling C object tests/test-preset-quarantine.p/.._src_quarantine.c.o
+[49/56] Linking target tests/test-preset-quarantine
+[50/56] Compiling C object tests/test-pause-policy.p/test_pause_policy.c.o
+[51/56] Compiling C object tests/test-pause-policy.p/.._src_control.c.o
+[52/56] Linking target tests/test-pause-policy
+[53/56] Compiling C object tests/test-state-persistence.p/.._src_control.c.o
+[54/56] Linking target tests/test-state-persistence
+[55/56] Compiling C object tests/reference_renderer.p/reference_renderer.c.o
+../../tests/reference_renderer.c: In function ‘on_render’:
+../../tests/reference_renderer.c:35:42: warning: unused parameter ‘context’ [-Wunused-parameter]
+   35 | on_render(GtkGLArea *area, GdkGLContext *context, gpointer user_data)
+      |                            ~~~~~~~~~~~~~~^~~~~~~
+[56/56] Linking target tests/reference_renderer
+INFO: autodetecting backend as ninja
+INFO: calculating backend command to run: /usr/bin/ninja -C /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/build
+ninja: Entering directory `/home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/build'
+ninja: no work to do.
+Installing src/milkdrop to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/bin
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/data/org.gnome.shell.extensions.milkdrop.gschema.xml to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/glib-2.0/schemas
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/metadata.json to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/extension.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/prefs.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/constants.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/controlClient.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/pausePolicy.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/mprisWatcher.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Installing /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/extension/milkdrop@mauriciobc.github.io/managedWindow.js to /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/extensions/milkdrop@mauriciobc.github.io
+Nenhum esquema “org.gnome.shell.extensions.milkdrop”

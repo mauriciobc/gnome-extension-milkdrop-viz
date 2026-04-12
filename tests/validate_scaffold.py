@@ -113,6 +113,7 @@ def main() -> int:
         os.path.join(root, "tools", "install.sh"),
         os.path.join(root, "tools", "uninstall.sh"),
         os.path.join(root, "tools", "reload.sh"),
+        os.path.join(root, "tools", "nested_devkit.sh"),
     ]
     for script_path in script_paths:
         check(os.path.exists(script_path), f"missing script: {script_path}")

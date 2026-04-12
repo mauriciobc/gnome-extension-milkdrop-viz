@@ -23,6 +23,11 @@ A stable command set for v2 includes:
 
 Full details for `save-state` / `restore-state` are in the section below. See also tests: `tests/test_control_protocol.c`, `tests/test_control_state_flow.c`, `tests/test_state_persistence.c`.
 
+### Preset directory and skip queues (renderer behaviour)
+
+- **`preset-dir`:** The control thread writes the path into `pending_preset_dir` (mutex-protected) and sets a single pending flag. If many `preset-dir` lines arrive before the GL thread runs, each line updates that buffer — **the last path wins**; intermediate paths are not applied individually.
+- **`next` / `previous`:** Each command increments a saturating counter on the renderer (cap `MILKDROP_PRESET_SKIP_QUEUE_MAX`, 64 per direction). The GL thread drains both counters once per frame (after playlist sync for that frame) and applies **`next_count - previous_count`** as a signed delta: positive means that many `play_next` steps, negative means `play_previous` steps. While the renderer is still in **deferred initial preset activation** (warmup gate after a non-empty playlist sync), skip steps are **not** applied yet; counts keep accumulating until the first real preset is activated.
+
 ## save-state and restore-state
 
 ### save-state

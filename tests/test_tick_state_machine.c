@@ -1,5 +1,6 @@
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <stdint.h>
 
 #include "app.h"
 #include "presets.h"
@@ -148,30 +149,30 @@ static void
 test_next_previous_pending_atomic_exchange(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.next_preset_pending, true);
-    atomic_store(&app_data.prev_preset_pending, true);
+    atomic_store(&app_data.next_preset_pending, 2u);
+    atomic_store(&app_data.prev_preset_pending, 3u);
 
-    gboolean next_was_pending = atomic_exchange(&app_data.next_preset_pending, false);
-    gboolean prev_was_pending = atomic_exchange(&app_data.prev_preset_pending, false);
+    uint32_t n = atomic_exchange(&app_data.next_preset_pending, 0u);
+    uint32_t p = atomic_exchange(&app_data.prev_preset_pending, 0u);
 
-    g_assert_true(next_was_pending);
-    g_assert_true(prev_was_pending);
-    g_assert_false(atomic_load(&app_data.next_preset_pending));
-    g_assert_false(atomic_load(&app_data.prev_preset_pending));
+    g_assert_cmpuint(n, ==, 2u);
+    g_assert_cmpuint(p, ==, 3u);
+    g_assert_cmpuint(atomic_load(&app_data.next_preset_pending), ==, 0u);
+    g_assert_cmpuint(atomic_load(&app_data.prev_preset_pending), ==, 0u);
 }
 
 static void
 test_next_previous_pending_second_exchange_cleared(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.next_preset_pending, true);
-    atomic_store(&app_data.prev_preset_pending, true);
+    atomic_store(&app_data.next_preset_pending, 1u);
+    atomic_store(&app_data.prev_preset_pending, 1u);
 
-    g_assert_true(atomic_exchange(&app_data.next_preset_pending, false));
-    g_assert_true(atomic_exchange(&app_data.prev_preset_pending, false));
+    g_assert_cmpuint(atomic_exchange(&app_data.next_preset_pending, 0u), ==, 1u);
+    g_assert_cmpuint(atomic_exchange(&app_data.prev_preset_pending, 0u), ==, 1u);
 
-    g_assert_false(atomic_exchange(&app_data.next_preset_pending, false));
-    g_assert_false(atomic_exchange(&app_data.prev_preset_pending, false));
+    g_assert_cmpuint(atomic_exchange(&app_data.next_preset_pending, 0u), ==, 0u);
+    g_assert_cmpuint(atomic_exchange(&app_data.prev_preset_pending, 0u), ==, 0u);
 }
 
 int

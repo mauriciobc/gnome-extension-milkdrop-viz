@@ -27,6 +27,9 @@ typedef void* projectm_handle;
 
 #define MILKDROP_RING_CAPACITY 16384u
 
+/** Max queued `next` / `previous` control commands (saturation cap per queue). */
+#define MILKDROP_PRESET_SKIP_QUEUE_MAX 64u
+
 typedef struct {
     float samples[MILKDROP_RING_CAPACITY];
     atomic_uint write_index;
@@ -61,8 +64,9 @@ typedef struct {
     _Atomic bool overlay_enabled;
     _Atomic bool shuffle_runtime;
     _Atomic bool preset_dir_pending;
-    _Atomic bool next_preset_pending;
-    _Atomic bool prev_preset_pending;
+    /** Pending skip counts: control thread increments (capped), GL drains with exchange(0). */
+    _Atomic uint32_t next_preset_pending;
+    _Atomic uint32_t prev_preset_pending;
 
     int render_width;
     int render_height;
@@ -92,13 +96,12 @@ typedef struct {
 
     /* Target frame rate set via control socket (written by control thread, read by GL thread). */
     _Atomic int fps_runtime;
-    /* Last measured frame rate (written by GL thread, read by control thread). */
+    /* Last measured frame rate: completed on_render draws/sec (GL thread → control thread). */
     _Atomic float fps_last;
     /* Preset rotation interval in seconds (written by control thread, read by GL thread). */
     _Atomic int preset_rotation_interval;
-    /* GL-thread-only fields for FPS tracking and timer rescheduling. */
-    int    fps_applied;        /* last fps_runtime value used to set the timer */
-    gint64 fps_last_pulse_us;  /* g_get_monotonic_time() of the previous render pulse */
+    /* GL-thread-only: last fps_runtime value used to set the pulse timer. */
+    int fps_applied;
 
     /* Audio recovery state machine. */
 #define AUDIO_MAX_RESTARTS 5
