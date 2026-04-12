@@ -12,7 +12,13 @@ import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {RETRY_DELAYS_MS, RELOAD_BACKGROUNDS_DEBOUNCE_MS, CONTROL_SOCKET_RETRY_DELAY_MS, CONTROL_SOCKET_MAX_RETRIES} from './constants.js';
+import {
+    RETRY_DELAYS_MS,
+    RELOAD_BACKGROUNDS_DEBOUNCE_MS,
+    CONTROL_SOCKET_RETRY_DELAY_MS,
+    CONTROL_SOCKET_MAX_RETRIES,
+    RENDERER_STOP_ESCALATION_MS,
+} from './constants.js';
 import {getMilkdropSocketPath, sendMilkdropControlCommand, sendMilkdropControlCommandWithRetry} from './controlClient.js';
 import {ManagedWindow} from './managedWindow.js';
 import {PausePolicy} from './pausePolicy.js';
@@ -80,6 +86,9 @@ export default class MilkdropExtension extends Extension {
 
         // Debounce source for background reloads
         this._reloadBackgroundsSourceId = 0;
+
+        // Second force_exit after RENDERER_STOP_ESCALATION_MS; cancelled when same monitor stops again.
+        this._stopEscalationSourceIds = new Map();
     }
 
     enable() {
@@ -119,7 +128,11 @@ export default class MilkdropExtension extends Extension {
     }
 
     _setupBackgroundOverrides() {
-        this._installOverrides();
+        const installed = this._installOverrides();
+        if (!installed) {
+            log('[milkdrop] critical background override failed; skipping background reload');
+            return;
+        }
         // Force background actors to be recreated with our override immediately
         // so the renderer clone is present in the overview from the first open
         // (Hanabi pattern — without this, only backgrounds created after enable()
@@ -236,6 +249,12 @@ export default class MilkdropExtension extends Extension {
         );
     }
 
+    /**
+     * Synchronous teardown per GNOME extension guidelines: undo everything done in enable().
+     * Do not make this async — pending Promise continuations must not run after unload.
+     * Renderer stop may schedule a second force_exit after RENDERER_STOP_ESCALATION_MS (same
+     * wait_async in _spawnProcess; no extra wait). That timeout can outlive this call briefly.
+     */
     disable() {
         if (this._isDisabling || this._isEnabling) {
             log('[milkdrop] Already in transition state, skipping disable');
@@ -626,8 +645,21 @@ export default class MilkdropExtension extends Extension {
         );
     }
 
+    _removeStopEscalationForMonitor(monitorIndex) {
+        const sid = this._stopEscalationSourceIds.get(monitorIndex);
+        if (sid) {
+            GLib.source_remove(sid);
+            this._stopEscalationSourceIds.delete(monitorIndex);
+        }
+    }
+
+    /**
+     * Stops the renderer subprocess. Uses the existing wait_async in _spawnProcess for
+     * exit handling; adds a delayed second force_exit only (no second wait_async).
+     */
     _stopProcess(monitorIndex) {
         this._removeRetrySource(monitorIndex);
+        this._removeStopEscalationForMonitor(monitorIndex);
 
         const stdoutCancellable = this._stdoutCancellables.get(monitorIndex);
         if (stdoutCancellable)
@@ -640,6 +672,17 @@ export default class MilkdropExtension extends Extension {
             } catch (error) {
                 log(`[milkdrop] failed to stop renderer for monitor ${monitorIndex}: ${error}`);
             }
+            const procRef = subprocess;
+            const escalationId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, RENDERER_STOP_ESCALATION_MS, () => {
+                this._stopEscalationSourceIds.delete(monitorIndex);
+                try {
+                    procRef.force_exit();
+                } catch (e) {
+                    log(`[milkdrop] renderer stop escalation failed for monitor ${monitorIndex}: ${e}`);
+                }
+                return GLib.SOURCE_REMOVE;
+            });
+            this._stopEscalationSourceIds.set(monitorIndex, escalationId);
         }
 
         this._subprocesses.delete(monitorIndex);
@@ -694,6 +737,12 @@ export default class MilkdropExtension extends Extension {
         this._retrySourceIds.clear();
     }
 
+    /**
+     * Installs Shell method overrides. Returns false if the critical
+     * BackgroundManager hook fails (no partial critical state — manager cleared).
+     * Optional overrides are best-effort: failure is logged and skipped.
+     * @returns {boolean}
+     */
     _installOverrides() {
         this._injectionManager = new InjectionManager();
         const thisRef = this;
@@ -726,215 +775,249 @@ export default class MilkdropExtension extends Extension {
             return null;
         }
 
-        // Hanabi-style overview path: inject a clone of the renderer actor into
-        // background actors so the renderer appears as the overview wallpaper
-        // while window previews exclude the renderer window card.
-        // The actual renderer window actor is hidden during overview via the
-        // 'showing'/'hidden' signals above; only the clone is visible in overview.
-        this._injectionManager.overrideMethod(
-            Background.BackgroundManager.prototype,
-            '_createBackgroundActor',
-            originalMethod => {
-                return function () {
-                    const backgroundActor = originalMethod.call(this);
-                    const monitorIndex = Number.isInteger(backgroundActor.monitor)
-                        ? backgroundActor.monitor
-                        : this.monitorIndex;
+        // Critical: overview wallpaper clone + Hanabi-style background path.
+        try {
+            this._injectionManager.overrideMethod(
+                Background.BackgroundManager.prototype,
+                '_createBackgroundActor',
+                originalMethod => {
+                    return function () {
+                        const backgroundActor = originalMethod.call(this);
+                        const monitorIndex = Number.isInteger(backgroundActor.monitor)
+                            ? backgroundActor.monitor
+                            : this.monitorIndex;
 
-                    const monitor = Main.layoutManager.monitors[monitorIndex];
-                    if (!monitor)
-                        return backgroundActor;
+                        const monitor = Main.layoutManager.monitors[monitorIndex];
+                        if (!monitor)
+                            return backgroundActor;
 
-                    // Guard: only add one wallpaper widget per backgroundActor.
-                    if (backgroundActor._milkdropWallpaper)
-                        return backgroundActor;
+                        // Guard: only add one wallpaper widget per backgroundActor.
+                        if (backgroundActor._milkdropWallpaper)
+                            return backgroundActor;
 
-                    // Set BinLayout so our actor fills the background area correctly.
-                    backgroundActor.layout_manager = new Clutter.BinLayout();
+                        // Set BinLayout so our actor fills the background area correctly.
+                        backgroundActor.layout_manager = new Clutter.BinLayout();
 
-                    const wallpaper = new St.Widget({
-                        width: backgroundActor.width,
-                        height: backgroundActor.height,
-                        x_expand: true,
-                        y_expand: true,
-                        reactive: false,
-                    });
-                    wallpaper.layout_manager = new Clutter.BinLayout();
-
-                    backgroundActor._milkdropWallpaper = wallpaper;
-                    wallpaper._milkdropWallpaper = true;  // Mark wallpaper widget for detection
-                    backgroundActor.add_child(wallpaper);
-                    thisRef._wallpaperActors.add(wallpaper);
-
-                    let sourceId = 0;
-                    const attachClone = () => {
-                        // Only attach if not already done.
-                        if (wallpaper.get_n_children() > 0)
-                            return GLib.SOURCE_REMOVE;
-
-                        // Only inject into monitor-like backgrounds. This avoids
-                        // polluting narrow shell surfaces (e.g. app-grid strips)
-                        // with a stretched renderer clone.
-                        if (backgroundActor.width > 0 && backgroundActor.height > 0) {
-                            const bgRatio = backgroundActor.width / backgroundActor.height;
-                            const monitorRatio = monitor.width / monitor.height;
-                            const areaRatio = (backgroundActor.width * backgroundActor.height) /
-                                (monitor.width * monitor.height);
-
-                            if (areaRatio < 0.5 || Math.abs(bgRatio - monitorRatio) > 0.35)
-                                return GLib.SOURCE_REMOVE;
-                        }
-
-                        const rendererActor = findRendererActorForMonitor(monitorIndex);
-                        if (!rendererActor)
-                            return GLib.SOURCE_CONTINUE;
-
-                        // Use _safeActorOperation to handle race where actor is finalized
-                        // between validation and clone creation
-                        const result = thisRef._safeActorOperation(rendererActor, (actor) => {
-                            // Use Clutter.Clone to display the renderer window (Hanabi pattern).
-                            // Clone works with Wayland surfaces and handles GL content correctly.
-                            const rendererClone = new Clutter.Clone({
-                                source: actor,
-                                x_expand: true,
-                                y_expand: true,
-                            });
-                            rendererClone.connect('destroy', () => {
-                                log(`[milkdrop] renderer clone destroyed for monitor ${monitorIndex}`);
-                            });
-                            wallpaper.add_child(rendererClone);
-                            log(`[milkdrop] renderer actor cloned to wallpaper for monitor ${monitorIndex}`);
-                            return true;
-                        }, 'clone renderer actor');
-
-                        return result ? GLib.SOURCE_REMOVE : GLib.SOURCE_REMOVE;
-                    };
-
-                    if (attachClone() === GLib.SOURCE_CONTINUE) {
-                        sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                            // Guard: skip if extension is being disabled
-                            if (thisRef._isDisabling)
-                                return GLib.SOURCE_REMOVE;
-                            if (!wallpaper.get_stage())
-                                return GLib.SOURCE_REMOVE;
-                            return attachClone();
+                        const wallpaper = new St.Widget({
+                            width: backgroundActor.width,
+                            height: backgroundActor.height,
+                            x_expand: true,
+                            y_expand: true,
+                            reactive: false,
                         });
-                        thisRef._wallpaperSourceIds.add(sourceId);
-                    }
+                        wallpaper.layout_manager = new Clutter.BinLayout();
 
-                    wallpaper.connect('destroy', () => {
-                        thisRef._wallpaperActors.delete(wallpaper);
-                        if (backgroundActor._milkdropWallpaper === wallpaper)
-                            delete backgroundActor._milkdropWallpaper;
-                        if (sourceId > 0) {
-                            GLib.source_remove(sourceId);
-                            thisRef._wallpaperSourceIds.delete(sourceId);
-                            sourceId = 0;
+                        backgroundActor._milkdropWallpaper = wallpaper;
+                        wallpaper._milkdropWallpaper = true;  // Mark wallpaper widget for detection
+                        backgroundActor.add_child(wallpaper);
+                        thisRef._wallpaperActors.add(wallpaper);
+
+                        let sourceId = 0;
+                        const attachClone = () => {
+                            // Only attach if not already done.
+                            if (wallpaper.get_n_children() > 0)
+                                return GLib.SOURCE_REMOVE;
+
+                            // Only inject into monitor-like backgrounds. This avoids
+                            // polluting narrow shell surfaces (e.g. app-grid strips)
+                            // with a stretched renderer clone.
+                            if (backgroundActor.width > 0 && backgroundActor.height > 0) {
+                                const bgRatio = backgroundActor.width / backgroundActor.height;
+                                const monitorRatio = monitor.width / monitor.height;
+                                const areaRatio = (backgroundActor.width * backgroundActor.height) /
+                                    (monitor.width * monitor.height);
+
+                                if (areaRatio < 0.5 || Math.abs(bgRatio - monitorRatio) > 0.35)
+                                    return GLib.SOURCE_REMOVE;
+                            }
+
+                            const rendererActor = findRendererActorForMonitor(monitorIndex);
+                            if (!rendererActor)
+                                return GLib.SOURCE_CONTINUE;
+
+                            // Use _safeActorOperation to handle race where actor is finalized
+                            // between validation and clone creation
+                            const result = thisRef._safeActorOperation(rendererActor, (actor) => {
+                                // Use Clutter.Clone to display the renderer window (Hanabi pattern).
+                                // Clone works with Wayland surfaces and handles GL content correctly.
+                                const rendererClone = new Clutter.Clone({
+                                    source: actor,
+                                    x_expand: true,
+                                    y_expand: true,
+                                });
+                                rendererClone.connect('destroy', () => {
+                                    log(`[milkdrop] renderer clone destroyed for monitor ${monitorIndex}`);
+                                });
+                                wallpaper.add_child(rendererClone);
+                                log(`[milkdrop] renderer actor cloned to wallpaper for monitor ${monitorIndex}`);
+                                return true;
+                            }, 'clone renderer actor');
+
+                            return result ? GLib.SOURCE_REMOVE : GLib.SOURCE_REMOVE;
+                        };
+
+                        if (attachClone() === GLib.SOURCE_CONTINUE) {
+                            sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                                // Guard: skip if extension is being disabled
+                                if (thisRef._isDisabling)
+                                    return GLib.SOURCE_REMOVE;
+                                if (!wallpaper.get_stage())
+                                    return GLib.SOURCE_REMOVE;
+                                return attachClone();
+                            });
+                            thisRef._wallpaperSourceIds.add(sourceId);
                         }
-                    });
 
-                    return backgroundActor;
-                };
-            }
-        );
+                        wallpaper.connect('destroy', () => {
+                            thisRef._wallpaperActors.delete(wallpaper);
+                            if (backgroundActor._milkdropWallpaper === wallpaper)
+                                delete backgroundActor._milkdropWallpaper;
+                            if (sourceId > 0) {
+                                GLib.source_remove(sourceId);
+                                thisRef._wallpaperSourceIds.delete(sourceId);
+                                sourceId = 0;
+                            }
+                        });
 
-        // Hide from get_window_actors() so dock autohide logic never sees the
-        // renderer as a fullscreen window covering the screen.
-        this._injectionManager.overrideMethod(
-            Shell.Global.prototype,
-            'get_window_actors',
-            originalMethod => {
-                return function (hideRenderer = true) {
-                    const actors = originalMethod.call(this);
-                    return hideRenderer
-                        ? actors.filter(a => !isRenderer(a.meta_window))
-                        : actors;
-                };
-            }
-        );
+                        return backgroundActor;
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] critical override _createBackgroundActor failed: ${e}`);
+            try {
+                this._injectionManager.clear();
+            } catch (_err) { /* ignore */ }
+            this._injectionManager = null;
+            return false;
+        }
 
-        // Hide the renderer's window card from the overview workspace grid.
-        this._injectionManager.overrideMethod(
-            Workspace.Workspace.prototype,
-            '_isOverviewWindow',
-            originalMethod => {
-                return function (window) {
-                    if (isRenderer(window))
-                        return false;
-                    return originalMethod.call(this, window);
-                };
-            }
-        );
+        // Optional: dock / overview / tab / dash — omit rather than break Shell if API drifts.
+        try {
+            this._injectionManager.overrideMethod(
+                Shell.Global.prototype,
+                'get_window_actors',
+                originalMethod => {
+                    return function (hideRenderer = true) {
+                        const actors = originalMethod.call(this);
+                        return hideRenderer
+                            ? actors.filter(a => !isRenderer(a.meta_window))
+                            : actors;
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override get_window_actors failed: ${e}`);
+        }
 
-        // Hide the renderer's window card from workspace thumbnails.
-        this._injectionManager.overrideMethod(
-            WorkspaceThumbnail.WorkspaceThumbnail.prototype,
-            '_isOverviewWindow',
-            originalMethod => {
-                return function (window) {
-                    if (isRenderer(window))
-                        return false;
-                    return originalMethod.call(this, window);
-                };
-            }
-        );
+        try {
+            this._injectionManager.overrideMethod(
+                Workspace.Workspace.prototype,
+                '_isOverviewWindow',
+                originalMethod => {
+                    return function (window) {
+                        if (isRenderer(window))
+                            return false;
+                        return originalMethod.call(this, window);
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override Workspace._isOverviewWindow failed: ${e}`);
+        }
 
-        // Remove from Alt+Tab / Ctrl+Alt+Tab.
-        this._injectionManager.overrideMethod(
-            Meta.Display.prototype,
-            'get_tab_list',
-            originalMethod => {
-                return function (type, workspace) {
-                    const wins = originalMethod.apply(this, [type, workspace]);
-                    return wins.filter(w => !isRenderer(w));
-                };
-            }
-        );
+        try {
+            this._injectionManager.overrideMethod(
+                WorkspaceThumbnail.WorkspaceThumbnail.prototype,
+                '_isOverviewWindow',
+                originalMethod => {
+                    return function (window) {
+                        if (isRenderer(window))
+                            return false;
+                        return originalMethod.call(this, window);
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override WorkspaceThumbnail._isOverviewWindow failed: ${e}`);
+        }
 
-        // Ensure the renderer is not associated with any app entry in the dash.
-        this._injectionManager.overrideMethod(
-            Shell.WindowTracker.prototype,
-            'get_window_app',
-            originalMethod => {
-                return function (window) {
-                    if (isRenderer(window))
-                        return null;
-                    return originalMethod.call(this, window);
-                };
-            }
-        );
+        try {
+            this._injectionManager.overrideMethod(
+                Meta.Display.prototype,
+                'get_tab_list',
+                originalMethod => {
+                    return function (type, workspace) {
+                        const wins = originalMethod.apply(this, [type, workspace]);
+                        return wins.filter(w => !isRenderer(w));
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override get_tab_list failed: ${e}`);
+        }
 
-        this._injectionManager.overrideMethod(
-            Shell.App.prototype,
-            'get_windows',
-            originalMethod => {
-                return function () {
-                    const wins = originalMethod.call(this);
-                    return wins.filter(w => !isRenderer(w));
-                };
-            }
-        );
+        try {
+            this._injectionManager.overrideMethod(
+                Shell.WindowTracker.prototype,
+                'get_window_app',
+                originalMethod => {
+                    return function (window) {
+                        if (isRenderer(window))
+                            return null;
+                        return originalMethod.call(this, window);
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override get_window_app failed: ${e}`);
+        }
 
-        this._injectionManager.overrideMethod(
-            Shell.App.prototype,
-            'get_n_windows',
-            _originalMethod => {
-                return function () {
-                    return this.get_windows().length;
-                };
-            }
-        );
+        try {
+            this._injectionManager.overrideMethod(
+                Shell.App.prototype,
+                'get_windows',
+                originalMethod => {
+                    return function () {
+                        const wins = originalMethod.call(this);
+                        return wins.filter(w => !isRenderer(w));
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override App.get_windows failed: ${e}`);
+        }
 
-        this._injectionManager.overrideMethod(
-            Shell.AppSystem.prototype,
-            'get_running',
-            originalMethod => {
-                return function () {
-                    const running = originalMethod.call(this);
-                    return running.filter(app => app.get_n_windows() > 0);
-                };
-            }
-        );
+        try {
+            this._injectionManager.overrideMethod(
+                Shell.App.prototype,
+                'get_n_windows',
+                _originalMethod => {
+                    return function () {
+                        return this.get_windows().length;
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override App.get_n_windows failed: ${e}`);
+        }
+
+        try {
+            this._injectionManager.overrideMethod(
+                Shell.AppSystem.prototype,
+                'get_running',
+                originalMethod => {
+                    return function () {
+                        const running = originalMethod.call(this);
+                        return running.filter(app => app.get_n_windows() > 0);
+                    };
+                }
+            );
+        } catch (e) {
+            log(`[milkdrop] optional override AppSystem.get_running failed: ${e}`);
+        }
+
+        return true;
     }
 
     /**

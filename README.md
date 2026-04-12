@@ -113,6 +113,14 @@ meson setup --reconfigure build -Dshell-integration-tests=true
 meson test -C build compositor-behavior-integration
 ```
 
+Isolated nested Shell + extension (manual UI test):
+
+```bash
+./tools/nested_devkit.sh
+```
+
+Run that **from a terminal inside your GNOME session** (e.g. Console or Terminal on the same machine). The mutter-devkit window embeds in the **current** compositor; if `WAYLAND_DISPLAY` / `DISPLAY` are unset (plain SSH, CI, some IDE terminals), **no window appears**. Use Overview / Alt+Tab if it opened behind other windows.
+
 ## Runtime Control Protocol
 
 The renderer exposes a Unix domain control socket with line commands:

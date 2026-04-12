@@ -5,6 +5,12 @@
 # Requires: gnome-shell, dbus-run-session, mutter-devkit (GNOME 49+), Meson, Ninja.
 # GNOME 49+: gnome-shell --devkit --wayland. Older: --nested --wayland.
 #
+# Visibility: the devkit embeds a nested compositor in a *window* on your *current*
+# graphical session. You must run this from a terminal that inherits the session
+# socket (e.g. GNOME Terminal / Console on the same machine). If WAYLAND_DISPLAY
+# and DISPLAY are both unset (SSH without forwarding, CI, wrong TTY), nothing will
+# appear — check Overview / other workspaces / Alt+Tab after start.
+#
 # Usage: MILKDROP_NEST_ROOT=/path ./tools/nested_devkit.sh [options]
 # Options: --skip-build  --clean --force  --debug  --help
 
@@ -36,6 +42,8 @@ Options:
 
 Environment:
   MILKDROP_NEST_ROOT   Override nest root (default: ${ROOT_DIR}/.nested-shell)
+  WAYLAND_DISPLAY, DISPLAY, XDG_RUNTIME_DIR
+                       Must be set by the parent graphical session (see header).
 EOF
 }
 
@@ -64,6 +72,17 @@ if [[ "${CLEAN}" -eq 1 ]]; then
 fi
 
 mkdir -p "${NEST_CONFIG}" "${NEST_DATA}"
+
+warn_graphical_session() {
+    if [[ -z "${WAYLAND_DISPLAY:-}" ]] && [[ -z "${DISPLAY:-}" ]]; then
+        echo "milkdrop: warning: WAYLAND_DISPLAY and DISPLAY are both unset." >&2
+        echo "  The devkit window will not show without a parent compositor." >&2
+        echo "  Open a terminal inside GNOME (Wayland/X11), not a headless SSH session." >&2
+    fi
+    if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+        echo "milkdrop: warning: XDG_RUNTIME_DIR is unset; Wayland clients may fail." >&2
+    fi
+}
 
 gnome_shell_major() {
     gnome-shell --version 2>/dev/null | awk '{print int($3)}'
@@ -112,6 +131,14 @@ fi
 gsettings set org.gnome.shell enabled-extensions "['${EXT_UUID}']"
 gsettings set org.gnome.shell.extensions.milkdrop enabled true
 
+warn_graphical_session
+
+# Ensure the nested shell can attach to the host compositor (not stripped by a minimal env).
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}"
+export DISPLAY="${DISPLAY:-}"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}"
+[[ -n "${XAUTHORITY:-}" ]] && export XAUTHORITY
+
 read -r -a SHELL_EXTRA_ARGS <<< "$(shell_args_for_version)"
 
 ENV_PREFIX=()
@@ -121,6 +148,9 @@ fi
 
 exec dbus-run-session -- env \
     "${ENV_PREFIX[@]}" \
+    WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" \
+    DISPLAY="${DISPLAY}" \
+    XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" \
     XDG_CONFIG_HOME="${XDG_CONFIG_HOME}" \
     XDG_DATA_HOME="${XDG_DATA_HOME}" \
     GSETTINGS_SCHEMA_DIR="${GSETTINGS_SCHEMA_DIR}" \
