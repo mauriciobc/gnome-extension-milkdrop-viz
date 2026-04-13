@@ -97,6 +97,92 @@ test_parse_preset_dir_command(void)
 }
 
 static void
+test_parse_restore_state_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("restore-state\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_RESTORE_STATE);
+    g_assert_false(command.restore_has_preset_dir);
+    g_assert_false(command.restore_has_pause);
+    g_assert_false(command.restore_has_opacity);
+    g_assert_false(command.restore_has_shuffle);
+}
+
+static void
+test_parse_restore_state_with_values(void)
+{
+    ControlCommand command = {0};
+    const char* input =
+        "restore-state preset-dir='/tmp/space dir,comma:colon' paused=on opacity=0.375 shuffle=off\n";
+    ControlParseResult result = control_parse_command(input, &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_RESTORE_STATE);
+    g_assert_true(command.restore_has_preset_dir);
+    g_assert_cmpstr(command.restore_preset_dir, ==, "/tmp/space dir,comma:colon");
+    g_assert_true(command.restore_has_pause);
+    g_assert_true(command.restore_pause_enabled);
+    g_assert_true(command.restore_has_opacity);
+    g_assert_cmpfloat(command.restore_opacity, ==, 0.375f);
+    g_assert_true(command.restore_has_shuffle);
+    g_assert_false(command.restore_shuffle_enabled);
+}
+
+static void
+test_parse_restore_state_rejects_unknown_key(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("restore-state bogus=1\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_restore_state_rejects_bad_boolean(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("restore-state paused=yes\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_restore_state_rejects_bad_opacity(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("restore-state opacity=1.5\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_restore_state_rejects_empty_value(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("restore-state paused=\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_restore_state_rejects_too_long_preset_dir(void)
+{
+    g_autofree char* path = g_malloc((gsize)MILKDROP_PATH_MAX + 8);
+    memset(path, 'p', (size_t)MILKDROP_PATH_MAX);
+    path[MILKDROP_PATH_MAX] = '\0';
+
+    g_autofree char* quoted = g_shell_quote(path);
+    g_autofree char* line = g_strdup_printf("restore-state preset-dir=%s\n", quoted);
+
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command(line, &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
 test_parse_preset_dir_max_length(void)
 {
     g_autofree char* path = g_malloc(MILKDROP_PATH_MAX);
@@ -264,6 +350,13 @@ main(int argc, char** argv)
     g_test_add_func("/control/parse-preset-dir", test_parse_preset_dir_command);
     g_test_add_func("/control/parse-preset-dir-max-len", test_parse_preset_dir_max_length);
     g_test_add_func("/control/parse-preset-dir-too-long", test_parse_preset_dir_path_too_long);
+    g_test_add_func("/control/parse-restore-state", test_parse_restore_state_command);
+    g_test_add_func("/control/parse-restore-state-values", test_parse_restore_state_with_values);
+    g_test_add_func("/control/parse-restore-state-unknown", test_parse_restore_state_rejects_unknown_key);
+    g_test_add_func("/control/parse-restore-state-bad-boolean", test_parse_restore_state_rejects_bad_boolean);
+    g_test_add_func("/control/parse-restore-state-bad-opacity", test_parse_restore_state_rejects_bad_opacity);
+    g_test_add_func("/control/parse-restore-state-empty-value", test_parse_restore_state_rejects_empty_value);
+    g_test_add_func("/control/parse-restore-state-too-long-preset-dir", test_parse_restore_state_rejects_too_long_preset_dir);
     g_test_add_func("/control/parse-next", test_parse_next_command);
     g_test_add_func("/control/parse-previous", test_parse_previous_command);
     g_test_add_func("/control/parse-next-extra-args", test_parse_next_rejects_extra_args);

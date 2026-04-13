@@ -39,6 +39,14 @@ typedef struct {
 	bool bool_value;
 	int  int_value;
 	char text_value[MILKDROP_PATH_MAX];
+	bool restore_has_preset_dir;
+	bool restore_has_pause;
+	bool restore_has_opacity;
+	bool restore_has_shuffle;
+	bool restore_pause_enabled;
+	bool restore_shuffle_enabled;
+	float restore_opacity;
+	char restore_preset_dir[MILKDROP_PATH_MAX];
 	char screenshot_path[MILKDROP_PATH_MAX];
 } ControlCommand;
 

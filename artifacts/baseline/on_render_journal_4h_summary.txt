@@ -1,0 +1,18 @@
+=== Baseline on_render (stdin journal lines) ===
+Intervalos válidos entre logs consecutivos: 2194
+Δt (s): min=1.105  max=6.910  média=2.650  mediana=2.466
+  desvio padrão: 1.032
+FPS implícito (Δframes/Δt): min=8.7  max=54.3  média=26.3  mediana=24.3
+
+Histograma de Δt entre logs consecutivos:
+  ≤1s          0 (  0.0%) 
+  1-1.5      301 ( 13.7%) █████████████
+  1.5-2      407 ( 18.6%) ██████████████████
+  2-2.5      411 ( 18.7%) ██████████████████
+  2.5-3      310 ( 14.1%) ██████████████
+  3-4        496 ( 22.6%) ██████████████████████
+  4-5        236 ( 10.8%) ██████████
+  5-10        33 (  1.5%) █
+  >10s         0 (  0.0%) 
+
+Referência: Δt≈1.0s com +60 calls ≈ 60 fps nesse bloco; Δt≈2s ≈ 30 fps.

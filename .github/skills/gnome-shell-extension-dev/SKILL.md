@@ -1,6 +1,6 @@
 ---
 name: gnome-shell-extension-dev
-description: 'Use when building or modifying a GNOME Shell extension in GJS, creating metadata.json, extension.js, prefs.js, GSettings schemas, nested-shell test flows, GNOME 47-49 compatibility logic, Wayland subprocess renderers, or review-readiness checks.'
+description: 'Use when building or modifying a GNOME Shell extension in GJS, creating metadata.json, extension.js, prefs.js, GSettings schemas, nested-shell test flows, GNOME 47-49 compatibility logic, or review-readiness checks. Companion renderers in this architecture are separate C programs (not GJS/JavaScript subprocesses). Two-process model: the C renderer handles PipeWire capture, ring buffer, projectM rendering, and control socket; the GJS extension handles lifecycle, process supervision, settings routing, and compositor anchoring.'
 argument-hint: 'Describe the GNOME extension task, target GNOME versions, and whether it touches shell process, prefs process, renderer subprocess, or packaging.'
 ---
 
@@ -32,7 +32,7 @@ Use this skill before changing extension lifecycle code, metadata, prefs, schema
 3. If the change touches version-sensitive APIs, read [GNOME 47-49 notes](./references/gnome-47-49-notes.md).
 4. Keep shell-process imports limited to GNOME Shell and GI modules that are safe in shell.
 5. Keep prefs-process imports limited to GTK4, Adwaita, Gio, GLib, and related GTK-side modules.
-6. For subprocess renderers on Wayland, validate ownership and lifecycle with GNOME-version-aware Meta.WaylandClient handling.
+6. For Wayland companion renderers: treat the subprocess as a standalone C program responsible for PipeWire audio capture, ring-buffering, projectM/OpenGL rendering, and a control socket server. Validate ownership and lifecycle with GNOME-version-aware Meta.WaylandClient handling. All projectM API calls must run only on the GL thread with an active GL context—typically inside GL lifecycle callbacks such as `on_realize`, `on_render`, and `on_unrealize`. Enforce the strict two-process model (GJS extension UI + C renderer) and thread-safety constraints so projectM usage stays confined to those callbacks.
 7. Before shipping a new lifecycle feature, verify disable() disconnects signals, removes sources, and destroys tracked objects.
 8. Test with a nested shell where possible before relying on the real session.
 
@@ -55,8 +55,11 @@ Use this skill before changing extension lifecycle code, metadata, prefs, schema
 
 ## Renderer Companion Checklist
 
-- Track each subprocess explicitly
-- Prefer clean shutdown over process sweeping
+- The companion is a C program (not GJS), built with standard C11-style flags (e.g. `-D_GNU_SOURCE`, `-std=c11`) as in a typical Meson C project
+- Core C-renderer pieces: PipeWire audio capture, lock-free ring buffer for audio, projectM/OpenGL rendering, and a Unix control socket for commands
+- All projectM and OpenGL calls occur only on the GL/render thread, inside `on_realize`, `on_render`, and `on_unrealize` (or equivalent GtkGLArea lifecycle hooks)
+- No per-frame IPC in steady state—use the control socket for configuration and commands only, not per-frame data
+- Track each subprocess and those components explicitly; prefer clean shutdown over process sweeping
 - Use runtime feature detection for optional GTK or GL features
 - Keep IPC small, observable, and versioned
 - Contain renderer crashes so they do not destabilize gnome-shell

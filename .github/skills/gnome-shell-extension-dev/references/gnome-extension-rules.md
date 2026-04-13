@@ -17,6 +17,13 @@ This file distills the official GNOME extension guidance into the rules that mat
 - Do not import Gtk, Gdk, or Adw in the shell process.
 - Do not import Clutter, Meta, St, or Shell in prefs.
 
+### C renderer and two-process model
+
+- A separate **C renderer process** (the renderer binary) is supervised from **extension.js**. It is responsible for PipeWire audio capture, ring buffer management, and projectM/OpenGL rendering.
+- **Control IPC**: the extension talks to the renderer over a **control socket** (commands and settings). There is **no per-frame IPC in steady state**—only control messages, not per-frame render or audio handoff through the socket.
+- **Strict boundaries**: extension.js and prefs.js must **never** call OpenGL or projectM or perform heavy rendering. prefs.js remains in the **separate GTK prefs process** (see above); only the C renderer owns the GL context and projectM.
+- The **GJS extension** side of the two-process model should focus on **lifecycle supervision**, **GSettings routing** to the renderer, and **compositor anchoring** (wallpaper-layer integration, Wayland client ownership), not on GPU work.
+
 ## Metadata And Schema
 
 - Use a review-safe UUID with a namespace under project control.

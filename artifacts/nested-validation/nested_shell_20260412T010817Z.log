@@ -1,0 +1,403 @@
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gtk.vfs.Daemon' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gtk.vfs.Daemon'
+fusermount3: failed to access mountpoint /run/user/1000/gvfs: Permission denied
+libmutter-Message: 22:08:22.183: Running GNOME Shell (using mutter 50.0) as a Wayland display server
+libmutter-Message: 22:08:22.529: Added device '/dev/dri/renderD129' (nvidia-drm) using no mode setting.
+libmutter-Message: 22:08:22.543: Added device '/dev/dri/renderD128' (i915) using no mode setting.
+libmutter-Message: 22:08:22.545: Created gbm renderer for '/dev/dri/renderD129'
+libmutter-Message: 22:08:22.548: Created gbm renderer for '/dev/dri/renderD128'
+libmutter-Message: 22:08:22.548: Boot VGA GPU /dev/dri/renderD128 selected as primary
+** Message: 22:08:22.551: Obtained a high priority EGL context
+libmutter-Message: 22:08:22.589: Using public X11 display :2, (using unix:/tmp/.X11-unix/X3 for managed services)
+
+(gnome-shell:79378): libmutter-WARNING **: 22:08:22.589: WL: unable to lock lockfile /run/user/1000/wayland-0.lock, maybe another compositor is running
+
+libmutter-Message: 22:08:22.589: Using Wayland display name 'wayland-1'
+GNOME Shell-Message: 22:08:23.051: Unset XDG_SESSION_ID, getCurrentSessionProxy() called outside a user session. Asking logind directly.
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.Shell.Screencast' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.impl.portal.PermissionStore' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.Shell.CalendarServer' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.impl.portal.PermissionStore'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.evolution.dataserver.Sources5' requested by ':1.5' (uid=1000 pid=79452 comm="/usr/lib/gnome-shell-calendar-server")
+GNOME Shell-Message: 22:08:23.204: Registering session with GDM
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.Shell.Notifications' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+
+(process:79430): mdk-WARNING **: 22:08:23.227: Invalid application ID 'org.gnome.Ptyxis'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.portal.Desktop' requested by ':1.2' (uid=1000 pid=79430 comm="/usr/lib/mutter-devkit")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.portal.Documents' requested by ':1.8' (uid=1000 pid=79489 comm="/usr/lib/xdg-desktop-portal")
+GNOME Shell-Message: 22:08:23.242: Will monitor session 3
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.portal.Documents'
+fusermount3: failed to access mountpoint /run/user/1000/doc: Permission denied
+error: fuse init failed: Can't mount path /run/user/1000/doc
+
+(/usr/lib/xdg-desktop-portal:79489): xdg-desktop-portal-WARNING **: 22:08:23.248: Document portal fuse mount point unknown: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown: The name :1.9 was not provided by any .service files
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.OnlineAccounts' requested by ':1.6' (uid=1000 pid=79464 comm="/usr/lib/evolution-source-registry")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.impl.portal.desktop.gnome' requested by ':1.8' (uid=1000 pid=79489 comm="/usr/lib/xdg-desktop-portal")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.evolution.dataserver.Sources5'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.Shell.Notifications'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.portal.IBus' requested by ':1.10' (uid=1000 pid=79487 comm="ibus-daemon --panel disable")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.evolution.dataserver.Calendar8' requested by ':1.5' (uid=1000 pid=79452 comm="/usr/lib/gnome-shell-calendar-server")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.Shell.CalendarServer'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.portal.IBus'
+goa-daemon-Message: 22:08:23.304: goa-daemon version 3.58.0 starting
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.Identity' requested by ':1.16' (uid=1000 pid=79512 comm="/usr/lib/goa-daemon")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.OnlineAccounts'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.Identity'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.evolution.dataserver.Calendar8'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.evolution.dataserver.AddressBook10' requested by ':1.15' (uid=1000 pid=79533 comm="/usr/lib/evolution-calendar-factory")
+GNOME Shell-Message: 22:08:23.392: Error looking up permission: GDBus.Error:org.freedesktop.portal.Error.NotFound: No entry for geolocation
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gtk.vfs.UDisks2VolumeMonitor' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.evolution.dataserver.AddressBook10'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gtk.vfs.UDisks2VolumeMonitor'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gtk.vfs.GPhoto2VolumeMonitor' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gtk.vfs.GPhoto2VolumeMonitor'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gtk.vfs.MTPVolumeMonitor' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gtk.vfs.MTPVolumeMonitor'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gtk.vfs.AfcVolumeMonitor' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gtk.vfs.AfcVolumeMonitor'
+GNOME Shell-Message: 22:08:23.488: Failed to register AuthenticationAgent
+
+(gnome-shell:79378): Gjs-WARNING **: 22:08:23.681: Type GITypeInfo of property NM.Object::client does not match return type GITypeInfo of getter get_client. Falling back to slow path
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='ca.desrt.dconf' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'ca.desrt.dconf'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gnome.Settings.GlobalShortcutsProvider' requested by ':1.13' (uid=1000 pid=79514 comm="/usr/lib/xdg-desktop-portal-gnome")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.Settings.GlobalShortcutsProvider'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.impl.portal.desktop.gnome'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.impl.portal.desktop.gtk' requested by ':1.8' (uid=1000 pid=79489 comm="/usr/lib/xdg-desktop-portal")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.impl.portal.desktop.gtk'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.secrets' requested by ':1.8' (uid=1000 pid=79489 comm="/usr/lib/xdg-desktop-portal")
+discover_other_daemon: 1GNOME_KEYRING_CONTROL=/run/user/1000/keyring
+GNOME Shell-Message: 22:08:48.110: Error connecting to the screencast service
+
+(mutter-devkit:79430): Gdk-WARNING **: 22:08:48.328: Cannot get portal org.freedesktop.host.portal.Registry version: O tempo limite foi alcançado
+
+(org.gnome.Shell.Screencast:79435): Gdk-WARNING **: 22:08:48.339: Cannot get portal org.freedesktop.portal.Settings version: O tempo limite foi alcançado
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gnome.Shell.Screencast'
+
+(/usr/lib/xdg-desktop-portal:79489): xdg-desktop-portal-WARNING **: 22:08:49.600: Failed to create secret proxy: Erro ao chamar StartServiceByName para org.freedesktop.secrets: O tempo limite foi alcançado
+
+(/usr/lib/xdg-desktop-portal:79489): xdg-desktop-portal-WARNING **: 22:08:49.600: No skeleton to export
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.portal.Desktop'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.a11y.Bus' requested by ':1.2' (uid=1000 pid=79430 comm="/usr/lib/mutter-devkit")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.a11y.Bus'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.systemd1' requested by ':1.32' (uid=1000 pid=80199 comm="/usr/bin/dbus-broker-launch --config-file=/usr/sha")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activated service 'org.freedesktop.systemd1' failed: Process org.freedesktop.systemd1 exited with status 1
+Invalid MIT-MAGIC-COOKIE-1 key
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.systemd1' requested by ':1.32' (uid=1000 pid=80199 comm="/usr/bin/dbus-broker-launch --config-file=/usr/sha")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activated service 'org.freedesktop.systemd1' failed: Process org.freedesktop.systemd1 exited with status 1
+
+(mutter-devkit:79430): Gtk-CRITICAL **: 22:08:50.369: Unable to register the application: GDBus.Error:org.freedesktop.DBus.Error.NameHasNoOwner: Could not activate remote peer 'org.a11y.atspi.Registry': unit failed
+libmutter-Message: 22:08:50.447: Added virtual monitor Meta-0
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.gtk.vfs.Metadata' requested by ':1.0' (uid=1000 pid=79378 comm="gnome-shell --devkit --wayland")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.gtk.vfs.Metadata'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.systemd1' requested by ':1.32' (uid=1000 pid=80199 comm="/usr/bin/dbus-broker-launch --config-file=/usr/sha")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activated service 'org.freedesktop.systemd1' failed: Process org.freedesktop.systemd1 exited with status 1
+
+(mutter-devkit:79430): Gtk-CRITICAL **: 22:08:50.783: Unable to register the application: GDBus.Error:org.freedesktop.DBus.Error.NameHasNoOwner: Could not activate remote peer 'org.a11y.atspi.Registry': unit failed
+GNOME Shell-Message: 22:08:51.883: GNOME Shell started at Sat Apr 11 2026 22:08:23 GMT-0300 (Horário Padrão de Brasília)
+GNOME Shell-Message: 22:08:51.884: Registering display with GDM
+GNOME Shell-Message: 22:08:51.885: [milkdrop] _spawnProcess called for monitor 0
+GNOME Shell-Message: 22:08:51.885: [milkdrop] binary path: /home/mauriciobc/.local/bin/milkdrop
+GNOME Shell-Message: 22:08:51.886: [milkdrop] isWayland=true, shellMajor=50
+GNOME Shell-Message: 22:08:51.886: [milkdrop] Using new_subprocess path
+GNOME Shell-Message: 22:08:51.899: [milkdrop] WaylandClient created, subprocess obtained
+GNOME Shell-Message: 22:08:51.900: [milkdrop] subprocess created: yes
+GNOME Shell-Message: 22:08:51.901: [milkdrop] PausePolicy enabled for monitor 0
+GNOME Shell-Message: 22:08:52.014: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.013: Window title set: @milkdrop!{"monitor":0,"overlay":false,"opacity":100}|0
+GNOME Shell-Message: 22:08:52.076: [milkdrop][monitor 0] libEGL warning: pci id for fd 11: 10de:2520, driver (null)
+GNOME Shell-Message: 22:08:52.081: [milkdrop][monitor 0] pci id for fd 12: 10de:2520, driver (null)
+GNOME Shell-Message: 22:08:52.082: [milkdrop][monitor 0] pci id for fd 13: 10de:2520, driver (null)
+GNOME Shell-Message: 22:08:52.082: [milkdrop][monitor 0] libEGL warning: egl: failed to create dri2 screen
+GNOME Shell-Message: 22:08:52.090: [milkdrop][monitor 0] pci id for fd 12: 10de:2520, driver (null)
+GNOME Shell-Message: 22:08:52.091: [milkdrop][monitor 0] pci id for fd 13: 10de:2520, driver (null)
+GNOME Shell-Message: 22:08:52.092: [milkdrop][monitor 0] libEGL warning: egl: failed to create dri2 screen
+GNOME Shell-Message: 22:08:52.147: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.146: on_realize: called, area=0x56468a0b4790
+GNOME Shell-Message: 22:08:52.148: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.147: on_realize: GL context created successfully
+GNOME Shell-Message: 22:08:52.243: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.242: playlist: syncing from preset_dir=/usr/local/share/projectM/presets
+GNOME Shell-Message: 22:08:52.313: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.312: playlist: cleared existing entries
+GNOME Shell-Message: 22:08:52.313: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.312: playlist: calling projectm_playlist_add_path for /usr/local/share/projectM/presets
+GNOME Shell-Message: 22:08:52.474: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.474: playlist: projectm_playlist_add_path returned 10318 presets
+GNOME Shell-Message: 22:08:52.474: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.474: startup_gate: reset with has_content=1, init_time=19063623034
+GNOME Shell-Message: 22:08:52.475: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.474: playlist: loaded 10318 presets from /usr/local/share/projectM/presets; warming up on idle preset before reveal
+GNOME Shell-Message: 22:08:52.475: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.474: on_realize: milkdrop_try_init_projectm returned 1
+GNOME Shell-Message: 22:08:52.490: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.479: renderer: geometry=1280x800 on monitor=0, click-through=enabled
+GNOME Shell-Message: 22:08:52.491: [milkdrop][monitor 0] ** Message: 22:08:52.484: Control socket initialized at /run/user/1000/milkdrop-0.sock
+GNOME Shell-Message: 22:08:52.491: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.490: on_resize: area=0x56468a0b4790, width=1280, height=771
+GNOME Shell-Message: 22:08:52.491: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.490: on_render: called (calls=1, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:08:52.491: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.490: render: waiting for warmup (warmup=0, frame_counter=1)
+GNOME Shell-Message: 22:08:52.572: [milkdrop] renderer actor cloned to wallpaper for monitor 0
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Multiple symbols for level 1/group 1 on key <FK23>
+>                   Using F23, ignoring XF86TouchpadOff
+> Warning:          Symbol map for key <FK23> redefined
+>                   Using last definition for conflicting fields
+> Warning:          Symbol map for key <FK24> redefined
+>                   Using last definition for conflicting fields
+Errors from xkbcomp are not fatal to the X server
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Unsupported maximum keycode 709, clipping.
+>                   X11 cannot support keycodes above 255.
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server
+GNOME Shell-Message: 22:08:52.802: [milkdrop] renderer actor cloned to wallpaper for monitor 0
+GNOME Shell-Message: 22:08:52.814: [milkdrop] renderer actor cloned to wallpaper for monitor 0
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.portal.IBus' requested by ':1.38' (uid=1000 pid=81087 comm="ibus-daemon --panel disable -r --xim")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Successfully activated service 'org.freedesktop.portal.IBus'
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.systemd1' requested by ':1.32' (uid=1000 pid=80199 comm="/usr/bin/dbus-broker-launch --config-file=/usr/sha")
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activated service 'org.freedesktop.systemd1' failed: Process org.freedesktop.systemd1 exited with status 1
+GNOME Shell-Message: 22:08:52.981: [milkdrop][monitor 0] (milkdrop:81021): Gtk-CRITICAL **: 22:08:52.980: Unable to register the application: GDBus.Error:org.freedesktop.DBus.Error.NameHasNoOwner: Could not activate remote peer 'org.a11y.atspi.Registry': unit failed
+GNOME Shell-Message: 22:08:52.986: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.986: render: activating initial preset (warmup=1, frame_counter=2)
+GNOME Shell-Message: 22:08:52.986: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.986: activate_initial: called with deferred=1, playlist=0x56468a4707c0
+GNOME Shell-Message: 22:08:52.987: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.986: activate_initial: playlist size=10318
+GNOME Shell-Message: 22:08:52.987: [milkdrop][monitor 0] milkdrop-Message: 22:08:52.986: activate_initial: calling projectm_playlist_set_position(0, true)
+GNOME Shell-Message: 22:08:53.013: [milkdrop] Window matched by wayland client for monitor 0
+GNOME Shell-Message: 22:08:53.017: [milkdrop] _anchorWindow monitor 0: actor=[0x55b31a462200 MetaWindowActorWayland], visible=true
+GNOME Shell-Message: 22:08:53.018: [milkdrop] ManagedWindow: Actor parent: [0x55b31636cb10 MetaWindowGroup]
+GNOME Shell-Message: 22:08:53.018: [milkdrop] ManagedWindow: Actor moved to bottom of window_group
+GNOME Shell-Message: 22:08:53.019: [milkdrop] ManagedWindow: Window stuck to all workspaces
+GNOME Shell-Message: 22:08:53.022: [milkdrop] ManagedWindow: move_to_monitor(0) succeeded
+GNOME Shell-Message: 22:08:53.022: [milkdrop] ManagedWindow: move_resize_frame to 1280x800 succeeded
+GNOME Shell-Message: 22:08:53.023: [milkdrop] ManagedWindow: Window lowered in Meta stack
+GNOME Shell-Message: 22:08:53.023: [milkdrop] renderer window anchored successfully on monitor 0 (using ManagedWindow)
+GNOME Shell-Message: 22:08:53.070: [milkdrop][monitor 0] milkdrop-Message: 22:08:53.070: preset_switched: index=5820, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Sparkle/Explosions/mess n777 - shf fab parched i k your existence out of insane boredom.milk
+GNOME Shell-Message: 22:08:53.071: [milkdrop][monitor 0] milkdrop-Message: 22:08:53.070: startup: activated initial preset at playlist position 5820 (/usr/local/share/projectM/presets/cream-of-the-crop/Sparkle/Explosions/mess n777 - shf fab parched i k your existence out of insane boredom.milk)
+
+(gnome-shell:79378): GLib-CRITICAL **: 22:08:53.126: Source ID 2507 was not found when attempting to remove it
+GNOME Shell-Message: 22:08:53.127: [milkdrop] renderer clone destroyed for monitor 0
+GNOME Shell-Message: 22:08:53.130: [milkdrop] renderer actor cloned to wallpaper for monitor 0
+
+(gnome-shell:79378): GLib-CRITICAL **: 22:08:53.137: Source ID 2564 was not found when attempting to remove it
+GNOME Shell-Message: 22:08:53.141: [milkdrop] renderer clone destroyed for monitor 0
+
+(gnome-shell:79378): GLib-CRITICAL **: 22:08:53.143: Source ID 2557 was not found when attempting to remove it
+GNOME Shell-Message: 22:08:53.144: [milkdrop] renderer clone destroyed for monitor 0
+GNOME Shell-Message: 22:08:53.146: [milkdrop] renderer actor cloned to wallpaper for monitor 0
+GNOME Shell-Message: 22:08:53.148: [milkdrop] renderer actor cloned to wallpaper for monitor 0
+GNOME Shell-Message: 22:08:55.765: [milkdrop][monitor 0] milkdrop-Message: 22:08:55.764: on_render: called (calls=61, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:08:58.335: [milkdrop][monitor 0] milkdrop-Message: 22:08:58.334: on_render: called (calls=121, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:00.868: [milkdrop][monitor 0] milkdrop-Message: 22:09:00.868: on_render: called (calls=181, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:03.233: [milkdrop][monitor 0] milkdrop-Message: 22:09:03.232: on_render: called (calls=241, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:05.645: [milkdrop][monitor 0] milkdrop-Message: 22:09:05.643: on_render: called (calls=301, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:08.143: [milkdrop][monitor 0] milkdrop-Message: 22:09:08.143: on_render: called (calls=361, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:10.445: [milkdrop][monitor 0] milkdrop-Message: 22:09:10.444: on_render: called (calls=421, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:12.714: [milkdrop][monitor 0] milkdrop-Message: 22:09:12.714: on_render: called (calls=481, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:15.031: [milkdrop][monitor 0] milkdrop-Message: 22:09:15.029: on_render: called (calls=541, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:17.654: [milkdrop][monitor 0] milkdrop-Message: 22:09:17.653: on_render: called (calls=601, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:20.243: [milkdrop][monitor 0] milkdrop-Message: 22:09:20.242: on_render: called (calls=661, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:22.435: [milkdrop][monitor 0] milkdrop-Message: 22:09:22.435: preset_switched: index=2485, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Reaction/Liquid Blobby/xtramartin (578).milk
+GNOME Shell-Message: 22:09:24.940: [milkdrop][monitor 0] milkdrop-Message: 22:09:24.939: on_render: called (calls=721, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:28.304: [milkdrop][monitor 0] milkdrop-Message: 22:09:28.301: on_render: called (calls=781, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:31.635: [milkdrop][monitor 0] milkdrop-Message: 22:09:31.634: on_render: called (calls=841, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:35.226: [milkdrop][monitor 0] milkdrop-Message: 22:09:35.226: on_render: called (calls=901, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:38.569: [milkdrop][monitor 0] milkdrop-Message: 22:09:38.567: on_render: called (calls=961, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:40.758: [milkdrop] renderer clone destroyed for monitor 0
+GNOME Shell-Message: 22:09:40.759: [milkdrop] renderer clone destroyed for monitor 0
+GNOME Shell-Message: 22:09:42.179: [milkdrop][monitor 0] milkdrop-Message: 22:09:42.178: on_render: called (calls=1021, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:45.576: [milkdrop][monitor 0] milkdrop-Message: 22:09:45.575: on_render: called (calls=1081, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:48.701: [milkdrop][monitor 0] milkdrop-Message: 22:09:48.700: on_render: called (calls=1141, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:51.280: [milkdrop][monitor 0] milkdrop-Message: 22:09:51.280: preset_switched: index=209, filename=/usr/local/share/projectM/presets/Se7enSlasher/Cynos + Se7enSlasher - Glowing Viscous Sustance (Reflected Random Texture Mix).milk
+GNOME Shell-Message: 22:09:52.915: [milkdrop][monitor 0] milkdrop-Message: 22:09:52.914: on_render: called (calls=1201, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:56.330: [milkdrop][monitor 0] milkdrop-Message: 22:09:56.329: on_render: called (calls=1261, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:09:59.234: [milkdrop][monitor 0] milkdrop-Message: 22:09:59.232: on_render: called (calls=1321, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:02.074: [milkdrop][monitor 0] milkdrop-Message: 22:10:02.074: on_render: called (calls=1381, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:04.931: [milkdrop][monitor 0] milkdrop-Message: 22:10:04.930: on_render: called (calls=1441, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:08.110: [milkdrop][monitor 0] milkdrop-Message: 22:10:08.107: on_render: called (calls=1501, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:10.604: [milkdrop][monitor 0] milkdrop-Message: 22:10:10.602: on_render: called (calls=1561, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:13.196: [milkdrop][monitor 0] milkdrop-Message: 22:10:13.195: on_render: called (calls=1621, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:15.885: [milkdrop][monitor 0] milkdrop-Message: 22:10:15.885: on_render: called (calls=1681, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:18.550: [milkdrop][monitor 0] milkdrop-Message: 22:10:18.550: on_render: called (calls=1741, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:19.215: [milkdrop][monitor 0] milkdrop-Message: 22:10:19.215: preset_switched: index=7279, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Dancer/Whirl/ORB - Stahl - 3 Jelly worms.milk
+GNOME Shell-Message: 22:10:22.706: [milkdrop][monitor 0] milkdrop-Message: 22:10:22.702: on_render: called (calls=1801, projectm=0x56468fdd55e0)
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Failed to activate service 'org.freedesktop.secrets': timed out (service_start_timeout=120000ms)
+GNOME Shell-Message: 22:10:25.783: [milkdrop][monitor 0] milkdrop-Message: 22:10:25.783: on_render: called (calls=1861, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:28.842: [milkdrop][monitor 0] milkdrop-Message: 22:10:28.841: on_render: called (calls=1921, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:32.190: [milkdrop][monitor 0] milkdrop-Message: 22:10:32.190: on_render: called (calls=1981, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:35.547: [milkdrop][monitor 0] milkdrop-Message: 22:10:35.546: on_render: called (calls=2041, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:38.914: [milkdrop][monitor 0] milkdrop-Message: 22:10:38.914: on_render: called (calls=2101, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:42.443: [milkdrop][monitor 0] milkdrop-Message: 22:10:42.442: on_render: called (calls=2161, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:45.141: [milkdrop][monitor 0] milkdrop-Message: 22:10:45.139: on_render: called (calls=2221, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:48.156: [milkdrop][monitor 0] milkdrop-Message: 22:10:48.156: on_render: called (calls=2281, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:48.947: [milkdrop][monitor 0] milkdrop-Message: 22:10:48.947: preset_switched: index=4696, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Fractal/Nested Circle/Hexcollie - Personal Mashup6.milk
+GNOME Shell-Message: 22:10:52.233: [milkdrop][monitor 0] milkdrop-Message: 22:10:52.232: on_render: called (calls=2341, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:54.222: [milkdrop][monitor 0] milkdrop-Message: 22:10:54.221: on_render: called (calls=2401, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:56.109: [milkdrop][monitor 0] milkdrop-Message: 22:10:56.107: on_render: called (calls=2461, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:10:58.100: [milkdrop][monitor 0] milkdrop-Message: 22:10:58.100: on_render: called (calls=2521, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:00.328: [milkdrop][monitor 0] milkdrop-Message: 22:11:00.328: on_render: called (calls=2581, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:02.320: [milkdrop][monitor 0] milkdrop-Message: 22:11:02.319: on_render: called (calls=2641, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:04.440: [milkdrop][monitor 0] milkdrop-Message: 22:11:04.439: on_render: called (calls=2701, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:06.358: [milkdrop][monitor 0] milkdrop-Message: 22:11:06.357: on_render: called (calls=2761, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:08.218: [milkdrop][monitor 0] milkdrop-Message: 22:11:08.216: on_render: called (calls=2821, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:10.188: [milkdrop][monitor 0] milkdrop-Message: 22:11:10.187: on_render: called (calls=2881, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:12.175: [milkdrop][monitor 0] milkdrop-Message: 22:11:12.173: on_render: called (calls=2941, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:14.134: [milkdrop][monitor 0] milkdrop-Message: 22:11:14.133: on_render: called (calls=3001, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:16.191: [milkdrop][monitor 0] milkdrop-Message: 22:11:16.189: on_render: called (calls=3061, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:18.165: [milkdrop][monitor 0] milkdrop-Message: 22:11:18.164: on_render: called (calls=3121, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:19.438: [milkdrop][monitor 0] milkdrop-Message: 22:11:19.438: preset_switched: index=1218, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Geometric/Cathedral/xtramartin (97).milk
+GNOME Shell-Message: 22:11:21.061: [milkdrop][monitor 0] milkdrop-Message: 22:11:21.061: on_render: called (calls=3181, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:23.516: [milkdrop][monitor 0] milkdrop-Message: 22:11:23.515: on_render: called (calls=3241, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:25.386: [milkdrop][monitor 0] milkdrop-Message: 22:11:25.386: on_render: called (calls=3301, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:27.411: [milkdrop][monitor 0] milkdrop-Message: 22:11:27.411: on_render: called (calls=3361, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:29.427: [milkdrop][monitor 0] milkdrop-Message: 22:11:29.427: on_render: called (calls=3421, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:31.417: [milkdrop][monitor 0] milkdrop-Message: 22:11:31.415: on_render: called (calls=3481, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:33.372: [milkdrop][monitor 0] milkdrop-Message: 22:11:33.371: on_render: called (calls=3541, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:35.379: [milkdrop][monitor 0] milkdrop-Message: 22:11:35.378: on_render: called (calls=3601, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:37.302: [milkdrop][monitor 0] milkdrop-Message: 22:11:37.302: on_render: called (calls=3661, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:39.300: [milkdrop][monitor 0] milkdrop-Message: 22:11:39.300: on_render: called (calls=3721, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:41.337: [milkdrop][monitor 0] milkdrop-Message: 22:11:41.337: on_render: called (calls=3781, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:43.291: [milkdrop][monitor 0] milkdrop-Message: 22:11:43.289: on_render: called (calls=3841, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:45.211: [milkdrop][monitor 0] milkdrop-Message: 22:11:45.210: on_render: called (calls=3901, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:47.138: [milkdrop][monitor 0] milkdrop-Message: 22:11:47.138: on_render: called (calls=3961, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:49.088: [milkdrop][monitor 0] milkdrop-Message: 22:11:49.088: on_render: called (calls=4021, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:49.124: [milkdrop][monitor 0] milkdrop-Message: 22:11:49.124: preset_switched: index=576, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Geometric/Wire Circles/PieturP - circles_progressive.milk
+GNOME Shell-Message: 22:11:52.180: [milkdrop][monitor 0] milkdrop-Message: 22:11:52.180: on_render: called (calls=4081, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:54.317: [milkdrop][monitor 0] milkdrop-Message: 22:11:54.316: on_render: called (calls=4141, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:56.461: [milkdrop][monitor 0] milkdrop-Message: 22:11:56.459: on_render: called (calls=4201, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:11:58.627: [milkdrop][monitor 0] milkdrop-Message: 22:11:58.627: on_render: called (calls=4261, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:00.703: [milkdrop][monitor 0] milkdrop-Message: 22:12:00.702: on_render: called (calls=4321, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:02.798: [milkdrop][monitor 0] milkdrop-Message: 22:12:02.798: on_render: called (calls=4381, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:05.001: [milkdrop][monitor 0] milkdrop-Message: 22:12:05.000: on_render: called (calls=4441, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:07.235: [milkdrop][monitor 0] milkdrop-Message: 22:12:07.234: on_render: called (calls=4501, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:09.413: [milkdrop][monitor 0] milkdrop-Message: 22:12:09.412: on_render: called (calls=4561, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:11.614: [milkdrop][monitor 0] milkdrop-Message: 22:12:11.613: on_render: called (calls=4621, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:13.750: [milkdrop][monitor 0] milkdrop-Message: 22:12:13.749: on_render: called (calls=4681, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:16.002: [milkdrop][monitor 0] milkdrop-Message: 22:12:16.001: on_render: called (calls=4741, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:18.166: [milkdrop][monitor 0] milkdrop-Message: 22:12:18.165: on_render: called (calls=4801, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:20.355: [milkdrop][monitor 0] milkdrop-Message: 22:12:20.355: preset_switched: index=4101, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Fractal/Core/Zylot - Crystal Ball.milk
+GNOME Shell-Message: 22:12:20.507: [milkdrop][monitor 0] milkdrop-Message: 22:12:20.506: on_render: called (calls=4861, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:24.068: [milkdrop][monitor 0] milkdrop-Message: 22:12:24.067: on_render: called (calls=4921, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:26.026: [milkdrop][monitor 0] milkdrop-Message: 22:12:26.026: on_render: called (calls=4981, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:28.100: [milkdrop][monitor 0] milkdrop-Message: 22:12:28.100: on_render: called (calls=5041, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:30.278: [milkdrop][monitor 0] milkdrop-Message: 22:12:30.278: on_render: called (calls=5101, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:32.373: [milkdrop][monitor 0] milkdrop-Message: 22:12:32.373: on_render: called (calls=5161, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:34.445: [milkdrop][monitor 0] milkdrop-Message: 22:12:34.445: on_render: called (calls=5221, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:36.455: [milkdrop][monitor 0] milkdrop-Message: 22:12:36.455: on_render: called (calls=5281, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:38.550: [milkdrop][monitor 0] milkdrop-Message: 22:12:38.546: on_render: called (calls=5341, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:40.674: [milkdrop][monitor 0] milkdrop-Message: 22:12:40.673: on_render: called (calls=5401, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:42.847: [milkdrop][monitor 0] milkdrop-Message: 22:12:42.846: on_render: called (calls=5461, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:44.903: [milkdrop][monitor 0] milkdrop-Message: 22:12:44.902: on_render: called (calls=5521, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:47.038: [milkdrop][monitor 0] milkdrop-Message: 22:12:47.037: on_render: called (calls=5581, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:49.357: [milkdrop][monitor 0] milkdrop-Message: 22:12:49.355: on_render: called (calls=5641, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:50.712: [milkdrop][monitor 0] milkdrop-Message: 22:12:50.712: preset_switched: index=9278, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Drawing/Explosions/shifter + Flexi - liquid circuitry from the hive nz+ absolute module deqay holiday i am.milk
+GNOME Shell-Message: 22:12:53.569: [milkdrop][monitor 0] milkdrop-Message: 22:12:53.568: on_render: called (calls=5701, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:12:57.696: [milkdrop][monitor 0] milkdrop-Message: 22:12:57.696: on_render: called (calls=5761, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:01.136: [milkdrop][monitor 0] milkdrop-Message: 22:13:01.136: on_render: called (calls=5821, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:04.342: [milkdrop][monitor 0] milkdrop-Message: 22:13:04.341: on_render: called (calls=5881, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:07.768: [milkdrop][monitor 0] milkdrop-Message: 22:13:07.768: on_render: called (calls=5941, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:10.902: [milkdrop][monitor 0] milkdrop-Message: 22:13:10.900: on_render: called (calls=6001, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:14.612: [milkdrop][monitor 0] milkdrop-Message: 22:13:14.612: on_render: called (calls=6061, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:18.299: [milkdrop][monitor 0] milkdrop-Message: 22:13:18.299: on_render: called (calls=6121, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:20.873: [milkdrop][monitor 0] milkdrop-Message: 22:13:20.873: preset_switched: index=7435, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Dancer/Glowsticks Mirror/405.milk
+GNOME Shell-Message: 22:13:22.886: [milkdrop][monitor 0] milkdrop-Message: 22:13:22.885: on_render: called (calls=6181, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:26.243: [milkdrop][monitor 0] milkdrop-Message: 22:13:26.242: on_render: called (calls=6241, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:29.277: [milkdrop][monitor 0] milkdrop-Message: 22:13:29.277: on_render: called (calls=6301, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:32.020: [milkdrop][monitor 0] milkdrop-Message: 22:13:32.018: on_render: called (calls=6361, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:34.537: [milkdrop][monitor 0] milkdrop-Message: 22:13:34.537: on_render: called (calls=6421, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:37.915: [milkdrop][monitor 0] milkdrop-Message: 22:13:37.915: on_render: called (calls=6481, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:41.240: [milkdrop][monitor 0] milkdrop-Message: 22:13:41.236: on_render: called (calls=6541, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:44.485: [milkdrop][monitor 0] milkdrop-Message: 22:13:44.481: on_render: called (calls=6601, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:47.236: [milkdrop][monitor 0] milkdrop-Message: 22:13:47.235: on_render: called (calls=6661, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:49.766: [milkdrop][monitor 0] milkdrop-Message: 22:13:49.765: on_render: called (calls=6721, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:52.227: [milkdrop][monitor 0] milkdrop-Message: 22:13:52.227: on_render: called (calls=6781, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:52.520: [milkdrop][monitor 0] milkdrop-Message: 22:13:52.519: preset_switched: index=6879, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Dancer/Aurora/$$$ Royal - Mashup (259).milk
+GNOME Shell-Message: 22:13:56.365: [milkdrop][monitor 0] milkdrop-Message: 22:13:56.364: on_render: called (calls=6841, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:13:58.437: [milkdrop][monitor 0] milkdrop-Message: 22:13:58.437: on_render: called (calls=6901, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:00.559: [milkdrop][monitor 0] milkdrop-Message: 22:14:00.558: on_render: called (calls=6961, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:02.644: [milkdrop][monitor 0] milkdrop-Message: 22:14:02.644: on_render: called (calls=7021, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:04.791: [milkdrop][monitor 0] milkdrop-Message: 22:14:04.791: on_render: called (calls=7081, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:06.897: [milkdrop][monitor 0] milkdrop-Message: 22:14:06.896: on_render: called (calls=7141, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:09.043: [milkdrop][monitor 0] milkdrop-Message: 22:14:09.041: on_render: called (calls=7201, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:11.513: [milkdrop][monitor 0] milkdrop-Message: 22:14:11.513: on_render: called (calls=7261, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:13.642: [milkdrop][monitor 0] milkdrop-Message: 22:14:13.642: on_render: called (calls=7321, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:15.985: [milkdrop][monitor 0] milkdrop-Message: 22:14:15.984: on_render: called (calls=7381, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:18.235: [milkdrop][monitor 0] milkdrop-Message: 22:14:18.235: on_render: called (calls=7441, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:20.687: [milkdrop][monitor 0] milkdrop-Message: 22:14:20.686: on_render: called (calls=7501, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:22.697: [milkdrop][monitor 0] milkdrop-Message: 22:14:22.696: preset_switched: index=5713, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Sparkle/Explosions/suksma - ephemefake compartmentalist waferlotch - cankeror.milk
+GNOME Shell-Message: 22:14:23.720: [milkdrop][monitor 0] milkdrop-Message: 22:14:23.720: on_render: called (calls=7561, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:27.019: [milkdrop][monitor 0] milkdrop-Message: 22:14:27.018: on_render: called (calls=7621, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:29.432: [milkdrop][monitor 0] milkdrop-Message: 22:14:29.431: on_render: called (calls=7681, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:31.824: [milkdrop][monitor 0] milkdrop-Message: 22:14:31.823: on_render: called (calls=7741, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:34.248: [milkdrop][monitor 0] milkdrop-Message: 22:14:34.247: on_render: called (calls=7801, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:36.526: [milkdrop][monitor 0] milkdrop-Message: 22:14:36.525: on_render: called (calls=7861, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:38.757: [milkdrop][monitor 0] milkdrop-Message: 22:14:38.757: on_render: called (calls=7921, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:40.974: [milkdrop][monitor 0] milkdrop-Message: 22:14:40.974: on_render: called (calls=7981, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:43.642: [milkdrop][monitor 0] milkdrop-Message: 22:14:43.640: on_render: called (calls=8041, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:46.249: [milkdrop][monitor 0] milkdrop-Message: 22:14:46.248: on_render: called (calls=8101, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:48.838: [milkdrop][monitor 0] milkdrop-Message: 22:14:48.838: on_render: called (calls=8161, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:51.285: [milkdrop][monitor 0] milkdrop-Message: 22:14:51.285: on_render: called (calls=8221, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:52.373: [milkdrop][monitor 0] milkdrop-Message: 22:14:52.373: preset_switched: index=4076, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Fractal/Core/Rovastar + Loadus + Geiss - FractalDrop (Cauliflower Mix).milk
+GNOME Shell-Message: 22:14:54.488: [milkdrop][monitor 0] milkdrop-Message: 22:14:54.487: on_render: called (calls=8281, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:56.861: [milkdrop][monitor 0] milkdrop-Message: 22:14:56.860: on_render: called (calls=8341, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:14:59.094: [milkdrop][monitor 0] milkdrop-Message: 22:14:59.094: on_render: called (calls=8401, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:01.387: [milkdrop][monitor 0] milkdrop-Message: 22:15:01.386: on_render: called (calls=8461, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:03.491: [milkdrop][monitor 0] milkdrop-Message: 22:15:03.491: on_render: called (calls=8521, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:05.639: [milkdrop][monitor 0] milkdrop-Message: 22:15:05.638: on_render: called (calls=8581, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:07.718: [milkdrop][monitor 0] milkdrop-Message: 22:15:07.717: on_render: called (calls=8641, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:09.971: [milkdrop][monitor 0] milkdrop-Message: 22:15:09.970: on_render: called (calls=8701, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:12.140: [milkdrop][monitor 0] milkdrop-Message: 22:15:12.140: on_render: called (calls=8761, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:14.470: [milkdrop][monitor 0] milkdrop-Message: 22:15:14.470: on_render: called (calls=8821, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:16.792: [milkdrop][monitor 0] milkdrop-Message: 22:15:16.789: on_render: called (calls=8881, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:19.016: [milkdrop][monitor 0] milkdrop-Message: 22:15:19.015: on_render: called (calls=8941, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:21.061: [milkdrop][monitor 0] milkdrop-Message: 22:15:21.060: on_render: called (calls=9001, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:21.373: [milkdrop][monitor 0] milkdrop-Message: 22:15:21.372: preset_switched: index=6761, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Dancer/Comet Mirror/Phat+EoS_Zion_v3.milk
+GNOME Shell-Message: 22:15:23.938: [milkdrop][monitor 0] milkdrop-Message: 22:15:23.938: on_render: called (calls=9061, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:25.829: [milkdrop][monitor 0] milkdrop-Message: 22:15:25.828: on_render: called (calls=9121, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:27.497: [milkdrop][monitor 0] milkdrop-Message: 22:15:27.497: on_render: called (calls=9181, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:29.159: [milkdrop][monitor 0] milkdrop-Message: 22:15:29.159: on_render: called (calls=9241, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:30.814: [milkdrop][monitor 0] milkdrop-Message: 22:15:30.813: on_render: called (calls=9301, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:32.467: [milkdrop][monitor 0] milkdrop-Message: 22:15:32.467: on_render: called (calls=9361, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:34.344: [milkdrop][monitor 0] milkdrop-Message: 22:15:34.344: on_render: called (calls=9421, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:36.312: [milkdrop][monitor 0] milkdrop-Message: 22:15:36.311: on_render: called (calls=9481, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:38.204: [milkdrop][monitor 0] milkdrop-Message: 22:15:38.203: on_render: called (calls=9541, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:40.232: [milkdrop][monitor 0] milkdrop-Message: 22:15:40.229: on_render: called (calls=9601, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:42.264: [milkdrop][monitor 0] milkdrop-Message: 22:15:42.263: on_render: called (calls=9661, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:44.044: [milkdrop][monitor 0] milkdrop-Message: 22:15:44.044: on_render: called (calls=9721, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:45.745: [milkdrop][monitor 0] milkdrop-Message: 22:15:45.744: on_render: called (calls=9781, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:47.398: [milkdrop][monitor 0] milkdrop-Message: 22:15:47.397: on_render: called (calls=9841, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:48.915: [milkdrop][monitor 0] milkdrop-Message: 22:15:48.914: preset_switched: index=9242, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Drawing/Explosions/my dismal dream i live and breath i realize i cannot leave nz+.milk
+GNOME Shell-Message: 22:15:49.543: [milkdrop][monitor 0] milkdrop-Message: 22:15:49.543: on_render: called (calls=9901, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:55.151: [milkdrop][monitor 0] milkdrop-Message: 22:15:55.150: on_render: called (calls=9961, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:15:59.834: [milkdrop][monitor 0] milkdrop-Message: 22:15:59.832: on_render: called (calls=10021, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:04.463: [milkdrop][monitor 0] milkdrop-Message: 22:16:04.462: on_render: called (calls=10081, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:08.892: [milkdrop][monitor 0] milkdrop-Message: 22:16:08.889: on_render: called (calls=10141, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:13.375: [milkdrop][monitor 0] milkdrop-Message: 22:16:13.375: on_render: called (calls=10201, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:17.988: [milkdrop][monitor 0] milkdrop-Message: 22:16:17.988: preset_switched: index=2852, filename=/usr/local/share/projectM/presets/cream-of-the-crop/Reaction/Growth/suksma - sick star bloat --- Isosceles edit14.milk
+GNOME Shell-Message: 22:16:18.291: [milkdrop][monitor 0] milkdrop-Message: 22:16:18.291: on_render: called (calls=10261, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:21.815: [milkdrop][monitor 0] milkdrop-Message: 22:16:21.815: on_render: called (calls=10321, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:23.496: [milkdrop][monitor 0] milkdrop-Message: 22:16:23.494: on_render: called (calls=10381, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:25.554: [milkdrop][monitor 0] milkdrop-Message: 22:16:25.553: on_render: called (calls=10441, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:28.524: [milkdrop][monitor 0] milkdrop-Message: 22:16:28.524: on_render: called (calls=10501, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:31.595: [milkdrop][monitor 0] milkdrop-Message: 22:16:31.593: on_render: called (calls=10561, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:34.143: [milkdrop][monitor 0] milkdrop-Message: 22:16:34.142: on_render: called (calls=10621, projectm=0x56468fdd55e0)
+GNOME Shell-Message: 22:16:36.487: [milkdrop][monitor 0] milkdrop-Message: 22:16:36.486: on_render: called (calls=10681, projectm=0x56468fdd55e0)
+
+(mutter-devkit:79430): Gtk-CRITICAL **: 22:16:38.183: gtk_native_get_surface: assertion 'GTK_IS_NATIVE (self)' failed
+
+(mutter-devkit:79430): GLib-GObject-CRITICAL **: 22:16:38.184: invalid (NULL) pointer instance
+
+(mutter-devkit:79430): GLib-GObject-CRITICAL **: 22:16:38.184: g_signal_handler_disconnect: assertion 'G_TYPE_CHECK_INSTANCE (instance)' failed
+libmutter-Message: 22:16:38.189: Removed virtual monitor Meta-0
+GNOME Shell-Message: 22:16:38.194: [milkdrop] renderer clone destroyed for monitor 0
+GNOME Shell-Message: 22:16:38.196: [milkdrop] _enforceWindowCoverage: monitor=0
+
+(gnome-shell:79378): libmutter-CRITICAL **: 22:16:38.196: meta_display_get_monitor_geometry: assertion 'monitor >= 0 && monitor < n_logical_monitors' failed
+GNOME Shell-Message: 22:16:38.196: [milkdrop] Monitor 0 geometry: 0,0 0x0
+GNOME Shell-Message: 22:16:38.196: [milkdrop] ERROR: Invalid monitor geometry for monitor 0
+** Message: 22:16:38.327: Shutting down GNOME Shell
+Gdk-Message: 22:16:38.450: Lost connection to Wayland compositor.
+Gdk-Message: 22:16:38.450: Error reading events from display: Pipe quebrado
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.impl.portal.desktop.gtk' requested by ':1.8' (uid=1000 pid=79489 comm="/usr/lib/xdg-desktop-portal")
+
+(xdg-desktop-portal-gtk:85412): Gtk-WARNING **: 22:16:38.496: cannot open display: :2
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activated service 'org.freedesktop.impl.portal.desktop.gtk' failed: Process org.freedesktop.impl.portal.desktop.gtk exited with status 1
+
+** (/usr/lib/xdg-desktop-portal:79489): WARNING **: 22:16:38.498: Failed to close session implementation: GDBus.Error:org.freedesktop.DBus.Error.Spawn.ChildExited: Process org.freedesktop.impl.portal.desktop.gtk exited with status 1
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Activating service name='org.freedesktop.secrets' requested by ':1.6' (uid=1000 pid=79464 comm="/usr/lib/evolution-source-registry")
+discover_other_daemon: 1GNOME_KEYRING_CONTROL=/run/user/1000/keyring
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Failed to activate service 'org.freedesktop.secrets': timed out (service_start_timeout=120000ms)
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Reloaded configuration
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Reloaded configuration
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Reloaded configuration
+dbus-daemon[79370]: [session uid=1000 pid=79370 pidfd=4] Reloaded configuration

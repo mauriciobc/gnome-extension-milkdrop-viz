@@ -4,6 +4,9 @@ import GLib from 'gi://GLib';
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
 
+/** Align with MILKDROP_CONTROL_RECV_MAX in src/control.c (PATH_MAX * 5). */
+const CONTROL_MAX_RESPONSE_BYTES = 5 * 4096;
+
 function _connectUnixSocket(path, callback) {
     const socketClient = new Gio.SocketClient();
     const socketAddress = Gio.UnixSocketAddress.new(path);
@@ -17,6 +20,55 @@ function _connectUnixSocket(path, callback) {
         }
         callback(connection, null);
     });
+}
+
+/**
+ * Read until EOF or maxBytes, concatenating chunks (Unix stream closes after one response).
+ */
+function _readResponseFully(input, maxBytes, callback) {
+    const parts = [];
+
+    const readChunk = () => {
+        const soFar = parts.reduce((a, p) => a + p.length, 0);
+        if (soFar >= maxBytes) {
+            callback(null);
+            return;
+        }
+
+        const ask = Math.min(8192, maxBytes - soFar);
+        input.read_bytes_async(ask, GLib.PRIORITY_DEFAULT, null, (_in, readRes) => {
+            let bytes;
+            try {
+                bytes = _in.read_bytes_finish(readRes);
+            } catch (_e) {
+                callback(null);
+                return;
+            }
+
+            const n = bytes.get_size();
+            if (n === 0) {
+                const totalLen = parts.reduce((a, p) => a + p.length, 0);
+                const buf = new Uint8Array(totalLen);
+                let o = 0;
+                for (const p of parts) {
+                    buf.set(p, o);
+                    o += p.length;
+                }
+                callback(buf);
+                return;
+            }
+
+            const data = bytes.get_data();
+            const arr = new Uint8Array(n);
+            for (let i = 0; i < n; i++)
+                arr[i] = data[i];
+
+            parts.push(arr);
+            readChunk();
+        });
+    };
+
+    readChunk();
 }
 
 function _writeAllAndClose(connection, data, callback) {
@@ -179,6 +231,82 @@ export function queryMilkdropStatus(socketPath = null) {
             });
         });
     });
+}
+
+/**
+ * Request a one-line state snapshot from the renderer (`save-state`).
+ * Returns the line without trailing newline, or null if the renderer is down / error response.
+ * Do not log the returned string at info level — it may be long.
+ */
+export function queryMilkdropSaveState(socketPath = null) {
+    return new Promise(resolve => {
+        const socketPath_ = socketPath ?? getMilkdropSocketPath(0);
+        const request = TEXT_ENCODER.encode('save-state\n');
+
+        _connectUnixSocket(socketPath_, (connection, error) => {
+            if (error) {
+                resolve(null);
+                return;
+            }
+
+            const closeAndResolve = result => {
+                connection.close_async(GLib.PRIORITY_DEFAULT, null, () => {});
+                resolve(result);
+            };
+
+            const output = connection.get_output_stream();
+            output.write_all_async(request, GLib.PRIORITY_DEFAULT, null, (_out, writeRes) => {
+                try {
+                    _out.write_all_finish(writeRes);
+                } catch (_e) {
+                    closeAndResolve(null);
+                    return;
+                }
+
+                const input = connection.get_input_stream();
+                _readResponseFully(input, CONTROL_MAX_RESPONSE_BYTES, buf => {
+                    if (!buf || buf.length === 0) {
+                        closeAndResolve(null);
+                        return;
+                    }
+
+                    const text = TEXT_DECODER.decode(buf).trimEnd();
+                    const firstLine = text.split('\n')[0] ?? '';
+
+                    if (firstLine.startsWith('err '))
+                        closeAndResolve(null);
+                    else
+                        closeAndResolve(firstLine);
+                });
+            });
+        });
+    });
+}
+
+/**
+ * Apply a snapshot line previously returned by {@link queryMilkdropSaveState}.
+ * Fire-and-forget; same semantics as {@link sendMilkdropControlCommand}.
+ */
+export function sendMilkdropRestoreState(savedStateLine, socketPath = null) {
+    const line = (savedStateLine ?? '').trim();
+    const command = line.length === 0 ? 'restore-state' : `restore-state ${line}`;
+    sendMilkdropControlCommand(command, socketPath);
+}
+
+/**
+ * Snapshot state from all renderer instances (one per monitor).
+ * Resolves to an array of { monitorIndex, saveState } where saveState is string or null.
+ */
+export function queryAllMilkdropSaveState(numMonitors) {
+    const promises = [];
+    for (let i = 0; i < numMonitors; i++) {
+        const socketPath = getMilkdropSocketPath(i);
+        promises.push(queryMilkdropSaveState(socketPath).then(saveState => ({
+            monitorIndex: i,
+            saveState,
+        })));
+    }
+    return Promise.all(promises);
 }
 
 /**

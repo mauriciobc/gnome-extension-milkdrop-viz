@@ -1,2 +1,5 @@
 # Runtime logs
 nested_shell.log
+
+# Isolated nested-shell test sandbox (tools/nested_devkit.sh)
+.nested-shell/

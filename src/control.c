@@ -9,6 +9,23 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+/* save-state may include g_shell_quote(preset_dir); must cover worst-case expansion. */
+#define MILKDROP_CONTROL_RESPONSE_MAX (MILKDROP_PATH_MAX * 2 + 512)
+/* Longest line: restore-state <save-state payload>; keep in sync with test clients (MILKDROP_PATH_MAX * 5). */
+#define MILKDROP_CONTROL_RECV_MAX (MILKDROP_PATH_MAX * 5)
+
+static void
+milkdrop_preset_skip_enqueue(_Atomic uint32_t* q)
+{
+    uint32_t v = atomic_load_explicit(q, memory_order_relaxed);
+    for (;;) {
+        if (v >= MILKDROP_PRESET_SKIP_QUEUE_MAX)
+            return;
+        if (atomic_compare_exchange_weak_explicit(q, &v, v + 1u, memory_order_release, memory_order_relaxed))
+            return;
+    }
+}
+
 static bool
 parse_on_off(const char* value, bool* out_enabled)
 {
@@ -60,6 +77,61 @@ parse_long_range(const char* value, long min, long max, long* out_parsed)
     return true;
 }
 
+static bool
+parse_restore_state_token(ControlCommand* command, const char* token)
+{
+    if (!command || !token || token[0] == '\0')
+        return false;
+
+    const char* eq = strchr(token, '=');
+    if (!eq || eq == token || eq[1] == '\0')
+        return false;
+
+    g_autofree gchar* key = g_strndup(token, (gsize)(eq - token));
+    const char* value = eq + 1;
+
+    if (g_strcmp0(key, "paused") == 0) {
+        bool enabled = false;
+        if (!parse_on_off(value, &enabled))
+            return false;
+
+        command->restore_has_pause = true;
+        command->restore_pause_enabled = enabled;
+        return true;
+    }
+
+    if (g_strcmp0(key, "opacity") == 0) {
+        double parsed = 0.0;
+        if (!parse_double_range(value, 0.0, 1.0, &parsed))
+            return false;
+
+        command->restore_has_opacity = true;
+        command->restore_opacity = (float)parsed;
+        return true;
+    }
+
+    if (g_strcmp0(key, "shuffle") == 0) {
+        bool enabled = false;
+        if (!parse_on_off(value, &enabled))
+            return false;
+
+        command->restore_has_shuffle = true;
+        command->restore_shuffle_enabled = enabled;
+        return true;
+    }
+
+    if (g_strcmp0(key, "preset-dir") == 0) {
+        if (strlen(value) >= sizeof(command->restore_preset_dir))
+            return false;
+
+        command->restore_has_preset_dir = true;
+        g_strlcpy(command->restore_preset_dir, value, sizeof(command->restore_preset_dir));
+        return true;
+    }
+
+    return false;
+}
+
 static gboolean
 control_apply_command(AppData* app_data, const ControlCommand* command, gchar* response, gsize response_size)
 {
@@ -99,6 +171,7 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         g_strlcpy(response, "ok overlay\n", response_size);
         return TRUE;
     case CONTROL_CMD_PRESET_DIR:
+        /* Rapid preset-dir: last path in pending_preset_dir wins; GL applies one playlist sync per drain. */
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(app_data->pending_preset_dir, command->text_value, sizeof(app_data->pending_preset_dir));
         g_mutex_unlock(&app_data->preset_dir_lock);
@@ -106,11 +179,11 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         g_strlcpy(response, "ok preset-dir\n", response_size);
         return TRUE;
     case CONTROL_CMD_NEXT_PRESET:
-        atomic_store(&app_data->next_preset_pending, true);
+        milkdrop_preset_skip_enqueue(&app_data->next_preset_pending);
         g_strlcpy(response, "ok next\n", response_size);
         return TRUE;
     case CONTROL_CMD_PREV_PRESET:
-        atomic_store(&app_data->prev_preset_pending, true);
+        milkdrop_preset_skip_enqueue(&app_data->prev_preset_pending);
         g_strlcpy(response, "ok previous\n", response_size);
         return TRUE;
     case CONTROL_CMD_FPS:
@@ -122,20 +195,53 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         g_strlcpy(response, "ok rotation-interval\n", response_size);
         return TRUE;
     case CONTROL_CMD_SAVE_STATE: {
-        // Retorna estado atual como JSON para persistência
-        g_snprintf(response,
-                   response_size,
-                   "{\"preset\":\"%s\",\"paused\":%d,\"opacity\":%.3f,\"shuffle\":%d}\n",
-                   app_data->last_good_preset[0] != '\0' ? app_data->last_good_preset : "",
-                   atomic_load(&app_data->pause_audio) ? 1 : 0,
-                   atomic_load(&app_data->opacity),
-                   atomic_load(&app_data->shuffle_runtime) ? 1 : 0);
+        const char* paused = atomic_load(&app_data->pause_audio) ? "on" : "off";
+        const char* shuffle = atomic_load(&app_data->shuffle_runtime) ? "on" : "off";
+        float opacity = atomic_load(&app_data->opacity);
+        int n = 0;
+
+        if (app_data->preset_dir && app_data->preset_dir[0] != '\0') {
+            g_autofree gchar* quoted = g_shell_quote(app_data->preset_dir);
+
+            n = g_snprintf(response,
+                           response_size,
+                           "paused=%s opacity=%.3f shuffle=%s preset-dir=%s\n",
+                           paused,
+                           (double)opacity,
+                           shuffle,
+                           quoted);
+        } else {
+            n = g_snprintf(response,
+                           response_size,
+                           "paused=%s opacity=%.3f shuffle=%s\n",
+                           paused,
+                           (double)opacity,
+                           shuffle);
+        }
+
+        if (n < 0 || (gsize)n >= response_size) {
+            g_strlcpy(response, "err save-state-overflow\n", response_size);
+            return FALSE;
+        }
+
         return TRUE;
     }
     case CONTROL_CMD_RESTORE_STATE:
-        // Aplica estado restaurado (preset, paused, etc)
-        // TODO: Implementar restauração completa de estado
-        g_strlcpy(response, "ok restore (partial)\n", response_size);
+        if (command->restore_has_pause)
+            atomic_store(&app_data->pause_audio, command->restore_pause_enabled);
+        if (command->restore_has_opacity)
+            atomic_store(&app_data->opacity, command->restore_opacity);
+        if (command->restore_has_shuffle)
+            atomic_store(&app_data->shuffle_runtime, command->restore_shuffle_enabled);
+        if (command->restore_has_preset_dir) {
+            g_mutex_lock(&app_data->preset_dir_lock);
+            g_strlcpy(app_data->pending_preset_dir,
+                      command->restore_preset_dir,
+                      sizeof(app_data->pending_preset_dir));
+            g_mutex_unlock(&app_data->preset_dir_lock);
+            atomic_store(&app_data->preset_dir_pending, true);
+        }
+        g_strlcpy(response, "ok restore-state\n", response_size);
         return TRUE;
     case CONTROL_CMD_SCREENSHOT:
         // Request screenshot on next render frame
@@ -153,14 +259,15 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
 static void
 control_handle_client(AppData* app_data, int client_fd)
 {
-    char buffer[1024] = {0};
+    g_autofree gchar* buffer = g_malloc0((gsize)MILKDROP_CONTROL_RECV_MAX);
+    const gsize buf_cap = (gsize)MILKDROP_CONTROL_RECV_MAX;
     size_t used = 0;
 
     struct timeval tv = { .tv_sec = 2, .tv_usec = 0 };
     setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    while (used < sizeof(buffer) - 1) {
-        ssize_t n = recv(client_fd, buffer + used, sizeof(buffer) - 1 - used, 0);
+    while (used < buf_cap - 1) {
+        ssize_t n = recv(client_fd, buffer + used, buf_cap - 1 - used, 0);
         if (n <= 0)
             break;
         used += (size_t)n;
@@ -176,7 +283,7 @@ control_handle_client(AppData* app_data, int client_fd)
 
     ControlCommand command = {0};
     ControlParseResult parse_result = control_parse_command(buffer, &command);
-    gchar response[MILKDROP_PATH_MAX + 256] = {0};
+    gchar response[MILKDROP_CONTROL_RESPONSE_MAX] = {0};
 
     if (parse_result == CONTROL_PARSE_OK)
         (void)control_apply_command(app_data, &command, response, sizeof(response));
@@ -329,8 +436,13 @@ control_parse_command(const char* line, ControlCommand* out_command)
 
     if (g_strcmp0(argv[0], "restore-state") == 0 && argc >= 1) {
         out_command->type = CONTROL_CMD_RESTORE_STATE;
-        if (argc >= 2)
-            g_strlcpy(out_command->text_value, argv[1], sizeof(out_command->text_value));
+        if (argc == 1)
+            return CONTROL_PARSE_OK;
+
+        for (gint i = 1; i < argc; i++) {
+            if (!parse_restore_state_token(out_command, argv[i]))
+                return CONTROL_PARSE_INVALID;
+        }
         return CONTROL_PARSE_OK;
     }
 

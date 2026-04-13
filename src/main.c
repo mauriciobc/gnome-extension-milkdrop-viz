@@ -445,16 +445,9 @@ on_render_pulse(gpointer user_data)
             return G_SOURCE_REMOVE;
         }
 
-        /* Update measured FPS for the status command. */
-        gint64 now_us = g_get_monotonic_time();
-        if (app_data->fps_last_pulse_us > 0) {
-            gint64 delta_us = now_us - app_data->fps_last_pulse_us;
-            if (delta_us > 0) {
-                float measured = (float)(1000000.0 / (double)delta_us);
-                atomic_store(&app_data->fps_last, measured);
-            }
-        }
-        app_data->fps_last_pulse_us = now_us;
+        /* fps_last is updated in on_render from completed frames (not here): the pulse
+         * cannot run while the main loop is blocked inside on_render, so pulse spacing
+         * falsely reported ~20–30 "FPS" when the target was 60. */
     }
 
 #if !HAVE_PROJECTM
@@ -462,10 +455,9 @@ on_render_pulse(gpointer user_data)
         char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
-        g_mutex_unlock(&app_data->preset_dir_lock);
-
         g_clear_pointer(&app_data->preset_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
+        g_mutex_unlock(&app_data->preset_dir_lock);
         if (!presets_reload(app_data))
             g_warning("Failed to reload presets from %s", next_dir);
     }
@@ -633,26 +625,32 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
-        g_mutex_unlock(&app_data->preset_dir_lock);
-
         g_clear_pointer(&app_data->preset_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
+        g_mutex_unlock(&app_data->preset_dir_lock);
         milkdrop_sync_playlist_from_preset_dir(app_data);
     }
 
     bool must_reattach_buffers = false;
 
     if (app_data->projectm && app_data->projectm_playlist) {
-        bool do_next = atomic_exchange(&app_data->next_preset_pending, false);
-        bool do_prev = atomic_exchange(&app_data->prev_preset_pending, false);
+        /* Defer play_next/previous until initial preset activation (warmup gate). Skips accumulate. */
+        if (!app_data->startup_deferred_preset_activation) {
+            uint32_t n_skip = atomic_exchange(&app_data->next_preset_pending, 0u);
+            uint32_t p_skip = atomic_exchange(&app_data->prev_preset_pending, 0u);
+            int64_t         delta = (int64_t)n_skip - (int64_t)p_skip;
 
-        /* projectM preset loading must happen with a current GL context. */
-        if (do_next) {
-            projectm_playlist_play_next(app_data->projectm_playlist, true);
-            must_reattach_buffers = true;
-        } else if (do_prev) {
-            projectm_playlist_play_previous(app_data->projectm_playlist, true);
-            must_reattach_buffers = true;
+            if (delta > 0) {
+                for (int64_t i = 0; i < delta; i++) {
+                    projectm_playlist_play_next(app_data->projectm_playlist, true);
+                    must_reattach_buffers = true;
+                }
+            } else if (delta < 0) {
+                for (int64_t i = 0; i < -delta; i++) {
+                    projectm_playlist_play_previous(app_data->projectm_playlist, true);
+                    must_reattach_buffers = true;
+                }
+            }
         }
     }
 
@@ -696,6 +694,23 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 
         if (prep.would_draw) {
             app_data->render_frame_counter++;
+
+            /* Status FPS: rolling ~1s window of completed draws (not GLib pulse spacing). */
+            {
+                static gint64 fps_window_start_us = 0;
+                static guint fps_window_frames      = 0;
+                gint64        now_fps_us            = g_get_monotonic_time();
+                if (fps_window_start_us == 0)
+                    fps_window_start_us = now_fps_us;
+                fps_window_frames++;
+                if (now_fps_us - fps_window_start_us >= 1000000) {
+                    float fps = (float)fps_window_frames * 1000000.0f /
+                                (float)(now_fps_us - fps_window_start_us);
+                    atomic_store(&app_data->fps_last, fps);
+                    fps_window_start_us = now_fps_us;
+                    fps_window_frames   = 0;
+                }
+            }
 
             /* GtkGLArea makes the GL context current before emitting "render". */
 
@@ -1200,8 +1215,8 @@ main(int argc, char** argv)
     atomic_store(&app_data.overlay_enabled, overlay);
     atomic_store(&app_data.shuffle_runtime, app_data.shuffle);
     atomic_store(&app_data.preset_dir_pending, false);
-    atomic_store(&app_data.next_preset_pending, false);
-    atomic_store(&app_data.prev_preset_pending, false);
+    atomic_store(&app_data.next_preset_pending, 0u);
+    atomic_store(&app_data.prev_preset_pending, 0u);
     app_data.startup_hidden = false;
     app_data.startup_warmup_drawn = false;
     app_data.startup_deferred_preset_activation = false;
@@ -1210,7 +1225,6 @@ main(int argc, char** argv)
     atomic_store(&app_data.fps_runtime, 60);
     atomic_store(&app_data.fps_last, 0.0f);
     app_data.fps_applied = 60;
-    app_data.fps_last_pulse_us = 0;
     atomic_store(&app_data.preset_rotation_interval, CLAMP(preset_rotation_interval, 5, 300));
     atomic_store(&app_data.control_thread_running, false);
     app_data.control_fd = -1;

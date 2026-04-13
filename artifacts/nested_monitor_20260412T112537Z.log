@@ -1,0 +1,1165 @@
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gtk.vfs.Daemon' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gtk.vfs.Daemon'
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:37.465: _g_io_module_get_default: Found default implementation gvfs (GDaemonVfs) for ‘gio-vfs’
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:37.465: _g_io_module_get_default: Found default implementation dconf (DConfSettingsBackend) for ‘gsettings-backend’
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.465: watch_fast: "/org/gnome/shell/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.466: watch_established: "/org/gnome/shell/" (establishing: 1)
+fusermount3: failed to access mountpoint /run/user/1000/gvfs: Permission denied
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:37.479: Failed to initialize portal (GMemoryMonitorPortal) for gio-memory-monitor: Not using portals
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:37.479: _g_io_module_get_default: Found default implementation dbus (GMemoryMonitorDBus) for ‘gio-memory-monitor’
+libmutter-Message: 08:25:37.493: Running GNOME Shell (using mutter 50.0) as a Wayland display server
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.493: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.493: watch_fast: "/org/gnome/desktop/privacy/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.493: watch_fast: "/org/gnome/mutter/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.493: watch_fast: "/org/gnome/mutter/wayland/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.494: watch_established: "/org/gnome/desktop/interface/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.494: watch_established: "/org/gnome/desktop/privacy/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.494: watch_established: "/org/gnome/mutter/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.494: watch_fast: "/org/gnome/settings-daemon/peripherals/touchscreen/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.494: watch_established: "/org/gnome/mutter/wayland/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:37.494: watch_established: "/org/gnome/settings-daemon/peripherals/touchscreen/" (establishing: 1)
+libmutter-Message: 08:25:39.194: Added device '/dev/dri/renderD128' (nvidia-drm) using no mode setting.
+libmutter-Message: 08:25:39.208: Added device '/dev/dri/renderD129' (i915) using no mode setting.
+libmutter-Message: 08:25:39.210: Created gbm renderer for '/dev/dri/renderD128'
+libmutter-Message: 08:25:39.211: Created gbm renderer for '/dev/dri/renderD129'
+libmutter-Message: 08:25:39.211: Boot VGA GPU /dev/dri/renderD129 selected as primary
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.211: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.211: watch_fast: "/org/gnome/desktop/peripherals/mouse/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.211: watch_fast: "/org/gnome/desktop/a11y/mouse/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.212: watch_established: "/org/gnome/desktop/peripherals/mouse/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.212: watch_established: "/org/gnome/desktop/a11y/mouse/" (establishing: 1)
+** Message: 08:25:39.215: Obtained a high priority EGL context
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.216: watch_fast: "/org/gnome/desktop/peripherals/mouse/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.216: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.216: watch_fast: "/org/gnome/desktop/peripherals/trackball/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.216: watch_fast: "/org/gnome/desktop/peripherals/pointingstick/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.216: watch_fast: "/org/gnome/desktop/peripherals/keyboard/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.216: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.217: watch_established: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.217: watch_established: "/org/gnome/desktop/peripherals/trackball/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.217: watch_established: "/org/gnome/desktop/peripherals/pointingstick/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.217: watch_established: "/org/gnome/desktop/peripherals/keyboard/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.217: watch_established: "/org/gnome/desktop/a11y/keyboard/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.243: watch_fast: "/org/gnome/desktop/wm/preferences/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.244: watch_fast: "/org/gnome/mutter/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.244: watch_fast: "/org/gnome/desktop/peripherals/mouse/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.244: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.244: watch_fast: "/org/gnome/desktop/input-sources/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.244: watch_established: "/org/gnome/desktop/wm/preferences/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.244: watch_established: "/org/gnome/desktop/input-sources/" (establishing: 1)
+libmutter-Message: 08:25:39.244: Using public X11 display :2, (using unix:/tmp/.X11-unix/X3 for managed services)
+
+(gnome-shell:21138): libmutter-WARNING **: 08:25:39.244: WL: unable to lock lockfile /run/user/1000/wayland-0.lock, maybe another compositor is running
+
+== Stack trace for context 0x56359ac01e10 ==
+libmutter-Message: 08:25:39.244: Using Wayland display name 'wayland-1'
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.245: watch_fast: "/org/gnome/desktop/wm/keybindings/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.246: watch_fast: "/org/gnome/mutter/keybindings/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.246: watch_fast: "/org/gnome/mutter/wayland/keybindings/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.246: watch_established: "/org/gnome/desktop/wm/keybindings/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.246: watch_established: "/org/gnome/mutter/keybindings/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.246: watch_established: "/org/gnome/mutter/wayland/keybindings/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_fast: "/org/gnome/desktop/peripherals/mouse/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_fast: "/org/gnome/desktop/a11y/applications/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_fast: "/org/gnome/desktop/lockdown/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_fast: "/org/gnome/desktop/sound/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_established: "/org/gnome/desktop/a11y/applications/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.247: watch_established: "/org/gnome/desktop/a11y/interface/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.248: watch_established: "/org/gnome/desktop/lockdown/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.248: watch_established: "/org/gnome/desktop/sound/" (establishing: 1)
+(gnome-shell:21138): GLib-GIRepository-DEBUG: 08:25:39.276: Ignoring GIRepository-2.0.typelib because this libgirepository corresponds to GIRepository-3.0.typelib
+(gnome-shell:21138): GLib-DEBUG: 08:25:39.312: unsetenv() is not thread-safe and should not be used after threads are created
+(gnome-shell:21138): GLib-DEBUG: 08:25:39.312: unsetenv() is not thread-safe and should not be used after threads are created
+(gnome-shell:21138): GLib-DEBUG: 08:25:39.312: unsetenv() is not thread-safe and should not be used after threads are created
+** (gnome-shell:21138): DEBUG: 08:25:39.315: switcheroo-control appeared
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.666: watch_fast: "/org/gnome/desktop/privacy/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.696: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 4)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.699: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 1, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 2, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_established: "/org/gnome/shell/keybindings/" (establishing: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 4)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 5)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 6)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.701: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 7)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 8)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 9)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 10)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 11)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 12)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 13)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 14)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 15)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 16)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 17)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 18)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.702: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 19)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.703: watch_fast: "/org/gnome/mutter/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.704: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.705: watch_fast: "/org/gnome/desktop/a11y/magnifier/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.705: watch_established: "/org/gnome/desktop/a11y/magnifier/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.706: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 5)
+GNOME Shell-Message: 08:25:39.725: Unset XDG_SESSION_ID, getCurrentSessionProxy() called outside a user session. Asking logind directly.
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.726: watch_fast: "/org/gnome/desktop/screensaver/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.726: watch_fast: "/org/gnome/desktop/lockdown/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.727: watch_established: "/org/gnome/desktop/screensaver/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.728: watch_fast: "/org/gnome/desktop/wm/keybindings/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.729: watch_fast: "/org/gnome/desktop/wm/keybindings/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.729: watch_fast: "/org/gnome/desktop/input-sources/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.730: watch_fast: "/org/gnome/desktop/input-sources/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.765: watch_fast: "/org/gnome/desktop/lockdown/" (establishing: 0, active: 2)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.Shell.Screencast' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.770: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 20)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.771: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 21)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.771: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 22)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.771: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 23)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.772: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 24)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.777: watch_fast: "/org/gnome/desktop/notifications/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.777: watch_established: "/org/gnome/desktop/notifications/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.778: watch_fast: "/org/gnome/desktop/calendar/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.778: watch_established: "/org/gnome/desktop/calendar/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.786: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 6)
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: clock_format: 24h
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: show_weekday: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: show_full_date: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: show_seconds: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: format_string: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: no_enspace: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: replaced_format: 12 de abr_08:25
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: is_utf8: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.786: ret: 12 de abr 08:25
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.787: watch_fast: "/org/gnome/shell/world-clocks/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.787: watch_established: "/org/gnome/shell/world-clocks/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.793: watch_fast: "/org/gnome/system/location/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.793: watch_fast: "/org/gnome/GWeather4/" (establishing: 0, active: 0)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.impl.portal.PermissionStore' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.793: watch_fast: "/org/gnome/shell/weather/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.793: watch_established: "/org/gnome/system/location/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.794: watch_established: "/org/gnome/GWeather4/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.794: watch_established: "/org/gnome/shell/weather/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.794: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 7)
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: clock_format: 24h
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: show_weekday: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: show_full_date: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: show_seconds: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: format_string: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: no_enspace: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: replaced_format: 12 de abr_08:25
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: is_utf8: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:25:39.795: ret: 12 de abr 08:25
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.Shell.CalendarServer' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.freedesktop.impl.portal.PermissionStore'
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.811: watch_fast: "/org/gnome/desktop/a11y/mouse/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.816: watch_fast: "/org/gnome/desktop/a11y/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.816: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.816: watch_established: "/org/gnome/desktop/a11y/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.818: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.819: watch_fast: "/org/gnome/desktop/a11y/applications/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.820: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.821: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 8)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.822: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 4)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.823: watch_fast: "/org/gnome/desktop/a11y/applications/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.824: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 5)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.evolution.dataserver.Sources5' requested by ':1.5' (uid=1000 pid=21287 comm="/usr/lib/gnome-shell-calendar-server")
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.824: watch_fast: "/org/gnome/desktop/a11y/applications/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.825: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 6)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.825: watch_fast: "/org/gnome/desktop/wm/preferences/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.826: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 7)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.827: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.828: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 8)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.828: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.829: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 9)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.829: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 4)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.830: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 10)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.831: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 5)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.832: watch_fast: "/org/gnome/desktop/a11y/interface/" (establishing: 0, active: 11)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.841: watch_fast: "/org/gnome/desktop/a11y/applications/" (establishing: 0, active: 4)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.843: watch_fast: "/org/gnome/desktop/break-reminders/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.843: watch_established: "/org/gnome/desktop/break-reminders/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.843: watch_fast: "/org/gnome/desktop/screen-time-limits/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.844: watch_established: "/org/gnome/desktop/screen-time-limits/" (establishing: 1)
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.844: Ignoring session limits because parental controls not yet initialised
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.844: Ignoring session limits because parental controls not yet initialised
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.845: watch_fast: "/org/gnome/login-screen/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.845: watch_fast: "/org/gnome/desktop/lockdown/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.845: watch_fast: "/org/gnome/settings-daemon/peripherals/touchscreen/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.845: watch_fast: "/org/gnome/desktop/screensaver/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.845: watch_established: "/org/gnome/login-screen/" (establishing: 1)
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:39.847: ActUserManager: trying to track new user with username mauriciobc
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:39.847: ActUserManager: finding user 'mauriciobc' state 1
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:39.847: ActUserManager: waiting for user manager to load before finding user 'mauriciobc'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:39.849: ActUserManager: Unable to switch sessions until fully loaded
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.850: Ignoring session limits because parental controls not yet initialised
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/settings-daemon/plugins/power/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 25)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 26)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 27)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 28)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_established: "/org/gnome/settings-daemon/plugins/power/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 29)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.850: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 30)
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.855: Hiding app because parental controls not yet initialised: firefox.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.855: Hiding app because parental controls not yet initialised: org.gnome.Nautilus.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.855: Hiding app because parental controls not yet initialised: org.gnome.Console.desktop
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.858: watch_fast: "/org/gnome/desktop/search-providers/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.858: watch_established: "/org/gnome/desktop/search-providers/" (establishing: 1)
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: org.gnome.Settings.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: org.gnome.Nautilus.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: org.gnome.Boxes.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: org.gnome.Calculator.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: org.gnome.Calendar.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: firefox.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.866: Hiding app because parental controls not yet initialised: org.gnome.clocks.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.867: Hiding app because parental controls not yet initialised: org.gnome.Terminal.desktop
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.867: Hiding app because parental controls not yet initialised: org.gnome.Epiphany.desktop
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.868: watch_fast: "/org/gnome/mutter/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.868: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.869: watch_fast: "/org/gnome/mutter/" (establishing: 0, active: 4)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.870: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 3)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.873: watch_fast: "/org/gnome/desktop/app-folders/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.873: watch_established: "/org/gnome/desktop/app-folders/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.873: watch_fast: "/org/gnome/desktop/a11y/keyboard/" (establishing: 0, active: 6)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.873: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 31)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.873: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 32)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.873: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 33)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.874: watch_fast: "/org/gnome/shell/keybindings/" (establishing: 0, active: 34)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.874: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 4)
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:39.876: ActUserManager: User with username 'mauriciobc' fetched by username more than once before it loaded
+GNOME Shell-Message: 08:25:39.881: Registering session with GDM
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.882: Ignoring session limits because parental controls not yet initialised
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.882: TimeLimitsManager: Parental controls session limits: disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.882: TimeLimitsManager: Wellbeing active time today: 38s, daily limit disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.882: TimeLimitsManager: Loaded 8 transitions from history
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.884: watch_fast: "/org/gnome/desktop/lockdown/" (establishing: 0, active: 4)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.Shell.Notifications' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.885: TimeLimitsManager: User state changed from INACTIVE to ACTIVE at 2026-04-12T08:25:39-03
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.885: Ignoring session limits because parental controls not yet initialised
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.885: TimeLimitsManager: Parental controls session limits: disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.886: TimeLimitsManager: Wellbeing active time today: 38s, daily limit disabled
+** (gnome-shell:21138): DEBUG: 08:25:39.896: Got switcheroo-control proxy successfully
+(process:21219): GLib-GIO-DEBUG: 08:25:39.897: _g_io_module_get_default: Found default implementation dconf (DConfSettingsBackend) for ‘gsettings-backend’
+(process:21219): dconf-DEBUG: 08:25:39.897: watch_fast: "/org/gnome/mutter/" (establishing: 0, active: 0)
+(process:21219): dconf-DEBUG: 08:25:39.898: watch_established: "/org/gnome/mutter/" (establishing: 1)
+
+(process:21219): mdk-WARNING **: 08:25:39.900: Invalid application ID 'org.gnome.Ptyxis'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.portal.Desktop' requested by ':1.2' (uid=1000 pid=21219 comm="/usr/lib/mutter-devkit")
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.910: Loading extension milkdrop@mauriciobc.github.io
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.portal.Documents' requested by ':1.8' (uid=1000 pid=21322 comm="/usr/lib/xdg-desktop-portal")
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.913: Parental controls globally disabled
+GNOME Shell-Message: 08:25:39.915: Will monitor session 3
+GNOME Shell-Message: 08:25:39.917: Error looking up permission: GDBus.Error:org.freedesktop.portal.Error.NotFound: No entry for geolocation
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:39.918: Parental controls globally disabled
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.freedesktop.portal.Documents'
+fusermount3: failed to access mountpoint /run/user/1000/doc: Permission denied
+error: fuse init failed: Can't mount path /run/user/1000/doc
+
+(/usr/lib/xdg-desktop-portal:21322): xdg-desktop-portal-WARNING **: 08:25:39.923: Document portal fuse mount point unknown: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown: The name :1.9 was not provided by any .service files
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.923: watch_fast: "/org/gnome/desktop/app-folders/folders/System/" (establishing: 0, active: 0)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.impl.portal.desktop.gnome' requested by ':1.8' (uid=1000 pid=21322 comm="/usr/lib/xdg-desktop-portal")
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.924: watch_established: "/org/gnome/desktop/app-folders/folders/System/" (establishing: 1)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.OnlineAccounts' requested by ':1.6' (uid=1000 pid=21299 comm="/usr/lib/evolution-source-registry")
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.925: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 5)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.934: watch_fast: "/org/gnome/desktop/app-folders/folders/Utilities/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.934: watch_established: "/org/gnome/desktop/app-folders/folders/Utilities/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.935: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 6)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.evolution.dataserver.Sources5'
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.944: watch_fast: "/org/gnome/desktop/app-folders/folders/YaST/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.945: watch_established: "/org/gnome/desktop/app-folders/folders/YaST/" (establishing: 1)
+(ibus-daemon:21323): GLib-GIO-DEBUG: 08:25:39.946: _g_io_module_get_default: Found default implementation gvfs (GDaemonVfs) for ‘gio-vfs’
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.947: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 7)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.portal.IBus' requested by ':1.10' (uid=1000 pid=21323 comm="ibus-daemon --panel disable")
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.950: watch_fast: "/org/gnome/desktop/app-folders/folders/Pardus/" (establishing: 0, active: 0)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.evolution.dataserver.Calendar8' requested by ':1.5' (uid=1000 pid=21287 comm="/usr/lib/gnome-shell-calendar-server")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.Shell.CalendarServer'
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.953: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 8)
+(gnome-shell:21138): dconf-DEBUG: 08:25:39.953: watch_established: "/org/gnome/desktop/app-folders/folders/Pardus/" (establishing: 1)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.freedesktop.portal.IBus'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.Shell.Notifications'
+goa-daemon-Message: 08:25:39.982: goa-daemon version 3.58.1 starting
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.Identity' requested by ':1.16' (uid=1000 pid=21347 comm="/usr/lib/goa-daemon")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.OnlineAccounts'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.Identity'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.evolution.dataserver.Calendar8'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.evolution.dataserver.AddressBook10' requested by ':1.14' (uid=1000 pid=21359 comm="/usr/lib/evolution-calendar-factory")
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.052: watch_fast: "/org/gnome/desktop/app-folders/folders/YaST/" (establishing: 0, active: 1)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.evolution.dataserver.AddressBook10'
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.054: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 9)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.056: watch_fast: "/org/gnome/desktop/app-folders/folders/Pardus/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.058: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 10)
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.061: TimeLimitsManager: Parental controls session limits: disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.061: TimeLimitsManager: Wellbeing active time today: 39s, daily limit disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.061: Recording usage to the parental controls daemon: 2026-04-12T08:25:39-03 2026-04-12T08:25:40-03
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gtk.vfs.UDisks2VolumeMonitor' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gtk.vfs.UDisks2VolumeMonitor'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gtk.vfs.GPhoto2VolumeMonitor' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gtk.vfs.GPhoto2VolumeMonitor'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gtk.vfs.MTPVolumeMonitor' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gtk.vfs.MTPVolumeMonitor'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gtk.vfs.AfcVolumeMonitor' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gtk.vfs.AfcVolumeMonitor'
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.120: watch_fast: "/org/gnome/desktop/media-handling/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.121: watch_established: "/org/gnome/desktop/media-handling/" (establishing: 1)
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.126: Parental controls timer daemon not available
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.130: watch_fast: "/org/gnome/desktop/media-handling/" (establishing: 0, active: 1)
+GNOME Shell-Message: 08:25:40.133: Failed to register AuthenticationAgent
+(gnome-shell:21138): Gcr-DEBUG: 08:25:40.133: registering prompter
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.136: TimeLimitsManager: Parental controls session limits: disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.136: TimeLimitsManager: Wellbeing active time today: 39s, daily limit disabled
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.195: Changing state of extension milkdrop@mauriciobc.github.io to INACTIVE
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.197: Changing state of extension milkdrop@mauriciobc.github.io to ACTIVATING
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.198: watch_fast: "/org/gnome/shell/extensions/milkdrop/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.198: watch_established: "/org/gnome/shell/extensions/milkdrop/" (establishing: 1)
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.198: Changing state of extension milkdrop@mauriciobc.github.io to ACTIVE
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.199: Extension milkdrop@mauriciobc.github.io in state ACTIVE after loading
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.200: Loading extension gsconnect@andyholmes.github.io
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:25:40.200: Extension gsconnect@andyholmes.github.io in state OUT_OF_DATE after loading
+(gnome-shell:21138): libsoup-DEBUG: 08:25:40.203: [SESSION QUEUE] [0x56359dfd6dc0] [STARTING] Processing item, paused=0 state=0
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_fast: "/system/proxy/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_fast: "/system/proxy/http/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_fast: "/system/proxy/https/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_fast: "/system/proxy/ftp/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_fast: "/system/proxy/socks/" (establishing: 0, active: 0)
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.209: _g_io_module_get_default: Found default implementation gnome (GProxyResolverGnome) for ‘gio-proxy-resolver’
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.209: g_socket_client_connect_async: starting new g_socket_client_connect_async() with GTask 0x56359de29be0 and GSocketClientAsyncConnectData 0x56359cc039c0
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.209: GSocketClient: Starting new address enumeration
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_established: "/system/proxy/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_established: "/system/proxy/http/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_established: "/system/proxy/https/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_established: "/system/proxy/ftp/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.209: watch_established: "/system/proxy/socks/" (establishing: 1)
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.235: lookup_by_name_with_flags_async: starting new lookup for extensions.gnome.org with GTask 0x56359de35560, LookupData 0x56359de35510
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.235: lookup_by_name_with_flags_async: starting new lookup for extensions.gnome.org with GTask 0x56359dfc5940, LookupData 0x56359dfc58d0
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.236: Failed to initialize portal (GNetworkMonitorPortal) for gio-network-monitor: Not using portals
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.237: _g_io_module_get_default: Found default implementation networkmanager (GNetworkMonitorNM) for ‘gio-network-monitor’
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.246: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 9)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.268: watch_fast: "/org/gnome/desktop/sound/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.271: watch_fast: "/org/gnome/desktop/sound/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.277: watch_fast: "/org/gnome/system/location/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.280: watch_fast: "/org/gnome/settings-daemon/plugins/color/" (establishing: 0, active: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.280: watch_established: "/org/gnome/settings-daemon/plugins/color/" (establishing: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.281: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 10)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.283: watch_fast: "/org/gnome/desktop/notifications/" (establishing: 0, active: 1)
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.293: watch_fast: "/org/gnome/settings-daemon/peripherals/touchscreen/" (establishing: 0, active: 2)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Successfully created UpClient
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Adding adapters from ObjectManager
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Inserting adapter :1.7 /org/bluez/hci0 org.bluez.Adapter1
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Setting '/org/bluez/hci0' as the new default adapter
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Emptying list store as default adapter changed
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Coldplugging devices for new default adapter
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.303: Adding device '98:B6:E9:88:A8:7C' on adapter '/org/bluez/hci0' to list store
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 00001132-0000-1000-8000-00805f9b34fb (0x1132)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 00001800-0000-1000-8000-00805f9b34fb (0x1800)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 00001801-0000-1000-8000-00805f9b34fb (0x1801)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 0000fcc0-0000-1000-8000-00805f9b34fb (0xfcc0)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 0000fcc0-36a2-11ea-8467-484d7e99a198 (0xfcc0)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 0000fdaa-0000-1000-8000-00805f9b34fb (0xfdaa)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 185f3df4-3268-4e3f-9fca-d4d5059915bd (0x185f3df4)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 931c7e8a-540f-4686-b798-e8df0a2ad9f7 (0x931c7e8a)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Unhandled UUID 98b97136-36a2-11ea-8467-484d7e99a198 (0x98b97136)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.306: Adding device 'A4:E2:87:EE:18:16' on adapter '/org/bluez/hci0' to list store
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.307: Unhandled UUID 00001802-0000-1000-8000-00805f9b34fb (0x1802)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.307: Unhandled UUID 00001803-0000-1000-8000-00805f9b34fb (0x1803)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.307: Unhandled UUID 0000ffe0-0000-1000-8000-00805f9b34fb (0xffe0)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.307: Adding device 'FF:FF:11:B6:A4:6B' on adapter '/org/bluez/hci0' to list store
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.309: Adding device 'FC:58:FA:B7:A3:05' on adapter '/org/bluez/hci0' to list store
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.310: Unhandled UUID 0000fd3d-0000-1000-8000-00805f9b34fb (0xfd3d)
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.310: Adding device '4F:AB:46:9F:14:87' on adapter '/org/bluez/hci0' to list store
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.311: New default adapter so invalidating all the default-adapter* properties
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.328: Got initial list of 2 UPower devices
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.328: Considering UPower device /org/freedesktop/UPower/devices/battery_BAT1
+(gnome-shell:21138): Bluetooth-DEBUG: 08:25:40.328: Considering UPower device /org/freedesktop/UPower/devices/line_power_ACAD
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.328: IPv6 DNS error: Erro ao resolver “extensions.gnome.org”: Nome ou serviço desconhecido
+
+(gnome-shell:21138): Gjs-WARNING **: 08:25:40.348: Type GITypeInfo of property NM.Object::client does not match return type GITypeInfo of getter get_client. Falling back to slow path
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.361: GSocketClient: Address enumeration succeeded
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.361: g_socket_client_enumerator_callback: starting connection attempt 0x7fdd341c8af0 for GSocketClientAsyncConnectData 0x56359cc039c0
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.361: GSocketClient: Starting TCP connection attempt
+(gnome-shell:21138): dconf-DEBUG: 08:25:40.377: change_fast
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='ca.desrt.dconf' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.380: Finding a graphical session for user 1000
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.380: Considering session '4'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.380: Session '4' is not a graphical session (type: 'unspecified')
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.380: Considering session '3'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.380: ActUserManager: Seat still actively loading, so not setting loaded property
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'ca.desrt.dconf'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: get server info
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: update server
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: Updating card alsa_card.pci-0000_01_00.1 (index: 48 driver: alsa):
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'off': 0 sources 0 sinks (Current)
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'output:hdmi-stereo': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'output:hdmi-stereo-extra1': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'output:hdmi-stereo-extra2': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'output:hdmi-stereo-extra3': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'output:hdmi-surround': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.386: 	Profile 'output:hdmi-surround71': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'output:hdmi-surround-extra1': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'output:hdmi-surround71-extra1': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'output:hdmi-surround-extra2': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'output:hdmi-surround71-extra2': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'output:hdmi-surround-extra3': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'output:hdmi-surround71-extra3': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Profile 'pro-audio': 0 sources 4 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.enum.api' = 'udev'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.api' = 'alsa'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'media.class' = 'Audio/Device'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.alsa.path' = 'hw:1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.alsa.card' = '1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.alsa.card.name' = 'HDA NVidia'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.alsa.card.longname' = 'HDA NVidia at 0x60000000 irq 17'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.plugged.usec' = '9570941'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.bus_path' = 'pci-0000:01:00.1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'sysfs.path' = '/devices/pci0000:00/0000:00:01.0/0000:01:00.1/sound/card1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.bus' = 'pci'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.subsystem' = 'sound'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.vendor.id' = '0x10de'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.vendor.name' = 'NVIDIA Corporation'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.product.id' = '0x228e'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.product.name' = 'GA106 High Definition Audio Controller'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.name' = 'alsa_card.pci-0000_01_00.1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.description' = 'GA106 High Definition Audio Controller'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.nick' = 'HDA NVidia'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.icon_name' = 'audio-card-analog-pci'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.alsa.use-acp' = 'true'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.acp.auto-profile' = 'false'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.acp.auto-port' = 'false'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.dbus.ReserveDevice1.Priority' = '-20'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.alsa.split-enable' = 'true'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'api.dbus.ReserveDevice1' = 'Audio1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'spa.object.id' = '4'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'factory.id' = '15'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'client.id' = '47'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'object.id' = '48'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'object.serial' = '48'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'object.path' = 'alsa:acp:NVidia'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.card' = '1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.card_name' = 'HDA NVidia'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.long_card_name' = 'HDA NVidia at 0x60000000 irq 17'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.driver_name' = 'snd_hda_intel'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.mixer_name' = 'Nvidia GPU 9f HDMI/DP'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.components' = 'HDA:10de009f,10de0000,00100100'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'alsa.id' = 'NVidia'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 	Property: 'device.string' = '1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 3 profiles supported on port HDMI / DisplayPort / hdmi-output-0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card: 0x56359d9558f0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card port name: hdmi-output-0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 2nd line: GA106 High Definition Audio Controller
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Set profiles for 'HDMI / DisplayPort'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround' is 'output:hdmi-surround'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround' - 'Saída Surround digital 5.1 (HDMI)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71' is 'output:hdmi-surround71'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround71' - 'Saída Digital Surround 7.1 (HDMI)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo' is 'output:hdmi-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-stereo' - 'Saída Estéreo digital (HDMI)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround' is 'output:hdmi-surround'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71' is 'output:hdmi-surround71'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo' is 'output:hdmi-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort', origin 'GA106 High Definition Audio Controller', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 3 profiles supported on port HDMI / DisplayPort 2 / hdmi-output-1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card: 0x56359d9558f0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card port name: hdmi-output-1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort 2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 2nd line: GA106 High Definition Audio Controller
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Set profiles for 'HDMI / DisplayPort 2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround-extra1' is 'output:hdmi-surround-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround-extra1' - 'Saída Digital Surround 5.1 (HDMI 2)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71-extra1' is 'output:hdmi-surround71-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround71-extra1' - 'Saída Digital Surround 7.1 (HDMI 2)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo-extra1' is 'output:hdmi-stereo-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-stereo-extra1' - 'Saída Digital Stereo (HDMI 2)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround-extra1' is 'output:hdmi-surround-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71-extra1' is 'output:hdmi-surround71-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo-extra1' is 'output:hdmi-stereo-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort 2', origin 'GA106 High Definition Audio Controller', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 3 profiles supported on port HDMI / DisplayPort 3 / hdmi-output-2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card: 0x56359d9558f0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card port name: hdmi-output-2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort 3
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 2nd line: GA106 High Definition Audio Controller
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Set profiles for 'HDMI / DisplayPort 3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround-extra2' is 'output:hdmi-surround-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround-extra2' - 'Saída Digital Surround 5.1 (HDMI 3)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71-extra2' is 'output:hdmi-surround71-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround71-extra2' - 'Saída Digital Surround 7.1 (HDMI 3)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo-extra2' is 'output:hdmi-stereo-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-stereo-extra2' - 'Saída Digital Stereo (HDMI 3)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround-extra2' is 'output:hdmi-surround-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71-extra2' is 'output:hdmi-surround71-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo-extra2' is 'output:hdmi-stereo-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort 3', origin 'GA106 High Definition Audio Controller', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: 3 profiles supported on port HDMI / DisplayPort 4 / hdmi-output-3
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card: 0x56359d9558f0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - card port name: hdmi-output-3
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort 4
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - 2nd line: GA106 High Definition Audio Controller
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Set profiles for 'HDMI / DisplayPort 4'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround-extra3' is 'output:hdmi-surround-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround-extra3' - 'Saída Digital Surround 5.1 (HDMI 4)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71-extra3' is 'output:hdmi-surround71-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-surround71-extra3' - 'Saída Digital Surround 7.1 (HDMI 4)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo-extra3' is 'output:hdmi-stereo-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: Adding profile to combobox: 'output:hdmi-stereo-extra3' - 'Saída Digital Stereo (HDMI 4)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround-extra3' is 'output:hdmi-surround-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-surround71-extra3' is 'output:hdmi-surround71-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: The canonical name for 'output:hdmi-stereo-extra3' is 'output:hdmi-stereo-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.387: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort 4', origin 'GA106 High Definition Audio Controller', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: Updating card alsa_card.pci-0000_00_1f.3 (index: 49 driver: alsa):
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'off': 0 sources 0 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:analog-stereo+input:analog-stereo': 1 sources 1 sinks (Current)
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:analog-stereo': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo-extra1+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo-extra2+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo-extra3+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo-extra1': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo-extra2': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-stereo-extra3': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround-extra1+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71-extra1+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround-extra2+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71-extra2+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround-extra3+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71-extra3+input:analog-stereo': 1 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround-extra1': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71-extra1': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround-extra2': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71-extra2': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround-extra3': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'output:hdmi-surround71-extra3': 0 sources 1 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'input:analog-stereo': 1 sources 0 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Profile 'pro-audio': 1 sources 5 sinks
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.enum.api' = 'udev'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.api' = 'alsa'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'media.class' = 'Audio/Device'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.alsa.path' = 'hw:0'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.alsa.card' = '0'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.alsa.card.name' = 'HDA Intel PCH'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.alsa.card.longname' = 'HDA Intel PCH at 0x6205270000 irq 227'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.plugged.usec' = '10511255'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.bus_path' = 'pci-0000:00:1f.3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'sysfs.path' = '/devices/pci0000:00/0000:00:1f.3/sound/card0'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.bus' = 'pci'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.subsystem' = 'sound'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.vendor.id' = '0x8086'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.vendor.name' = 'Intel Corporation'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.product.id' = '0x43c8'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.product.name' = 'Tiger Lake-H HD Audio Controller'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.form_factor' = 'internal'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.name' = 'alsa_card.pci-0000_00_1f.3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.description' = 'Áudio interno'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.nick' = 'HDA Intel PCH'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.icon_name' = 'audio-card-analog-pci'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.alsa.use-acp' = 'true'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.acp.auto-profile' = 'false'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.acp.auto-port' = 'false'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.dbus.ReserveDevice1.Priority' = '-20'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.alsa.split-enable' = 'true'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'api.dbus.ReserveDevice1' = 'Audio0'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'spa.object.id' = '2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'factory.id' = '15'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'client.id' = '47'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'object.id' = '49'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'object.serial' = '49'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'object.path' = 'alsa:acp:PCH'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.card' = '0'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.card_name' = 'HDA Intel PCH'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.long_card_name' = 'HDA Intel PCH at 0x6205270000 irq 227'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.driver_name' = 'snd_hda_intel'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.mixer_name' = 'Realtek ALC295'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.components' = 'HDA:10ec0295,10251534,00100002 HDA:80862812,80860101,00100000'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'alsa.id' = 'PCH'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 	Property: 'device.string' = '0'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: 14 profiles supported on port Microfone interno / analog-input-internal-mic
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - icon name: audio-input-microphone
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - device type: input
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - card port name: analog-input-internal-mic
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - 1st line: Microfone interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: gvc-mixer-output-set-property - old port available 0, value passed in 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: Set profiles for 'Microfone interno'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: Adding profile to combobox: 'input:analog-stereo' - 'Entrada Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-surround71+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:hdmi-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.388: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: update_ui_device_on_port_added, direction 0, description 'Microfone interno', origin 'Áudio interno', port available 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: 14 profiles supported on port Microfone de headset / analog-input-headset-mic
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - icon name: audio-input-microphone
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - device type: input
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - card port name: analog-input-headset-mic
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - 1st line: Microfone de headset
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: Set profiles for 'Microfone de headset'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: Adding profile to combobox: 'input:analog-stereo' - 'Entrada Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-surround71+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo-extra1+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo-extra2+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo-extra3+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.389: The canonical name for 'output:hdmi-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'input:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: update_ui_device_on_port_added, direction 0, description 'Microfone de headset', origin 'Áudio interno', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: 2 profiles supported on port Alto-falantes / analog-output-speaker
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - icon name: audio-speakers
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - card port name: analog-output-speaker
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - 1st line: Alto-falantes
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - old port available 0, value passed in 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Set profiles for 'Alto-falantes'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Adding profile to combobox: 'output:analog-stereo' - 'Saída Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: update_ui_device_on_port_added, direction 1, description 'Alto-falantes', origin 'Áudio interno', port available 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: 2 profiles supported on port Fones de ouvido / analog-output-headphones
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - icon name: audio-headphones
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - card port name: analog-output-headphones
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - 1st line: Fones de ouvido
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Set profiles for 'Fones de ouvido'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Adding profile to combobox: 'output:analog-stereo' - 'Saída Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:analog-stereo+input:analog-stereo' is 'output:analog-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: update_ui_device_on_port_added, direction 1, description 'Fones de ouvido', origin 'Áudio interno', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: 6 profiles supported on port HDMI / DisplayPort / hdmi-output-0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - card port name: hdmi-output-0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Set profiles for 'HDMI / DisplayPort'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround' is 'output:hdmi-surround'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Adding profile to combobox: 'output:hdmi-surround' - 'Saída Surround digital 5.1 (HDMI)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround71' is 'output:hdmi-surround71'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Adding profile to combobox: 'output:hdmi-surround71' - 'Saída Digital Surround 7.1 (HDMI)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround+input:analog-stereo' is 'output:hdmi-surround'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround71+input:analog-stereo' is 'output:hdmi-surround71'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-stereo' is 'output:hdmi-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: Adding profile to combobox: 'output:hdmi-stereo' - 'Saída Estéreo digital (HDMI)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-stereo+input:analog-stereo' is 'output:hdmi-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround' is 'output:hdmi-surround'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround71' is 'output:hdmi-surround71'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround+input:analog-stereo' is 'output:hdmi-surround'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-surround71+input:analog-stereo' is 'output:hdmi-surround71'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-stereo' is 'output:hdmi-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: The canonical name for 'output:hdmi-stereo+input:analog-stereo' is 'output:hdmi-stereo'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.390: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort', origin 'Áudio interno', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: 6 profiles supported on port HDMI / DisplayPort 2 / hdmi-output-1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - card port name: hdmi-output-1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort 2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Set profiles for 'HDMI / DisplayPort 2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra1' is 'output:hdmi-surround-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-surround-extra1' - 'Saída Digital Surround 5.1 (HDMI 2)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra1' is 'output:hdmi-surround71-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-surround71-extra1' - 'Saída Digital Surround 7.1 (HDMI 2)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra1+input:analog-stereo' is 'output:hdmi-surround-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra1+input:analog-stereo' is 'output:hdmi-surround71-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra1' is 'output:hdmi-stereo-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-stereo-extra1' - 'Saída Digital Stereo (HDMI 2)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra1+input:analog-stereo' is 'output:hdmi-stereo-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra1' is 'output:hdmi-surround-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra1' is 'output:hdmi-surround71-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra1+input:analog-stereo' is 'output:hdmi-surround-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra1+input:analog-stereo' is 'output:hdmi-surround71-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra1' is 'output:hdmi-stereo-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra1+input:analog-stereo' is 'output:hdmi-stereo-extra1'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort 2', origin 'Áudio interno', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: 6 profiles supported on port HDMI / DisplayPort 3 / hdmi-output-2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - card port name: hdmi-output-2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort 3
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Set profiles for 'HDMI / DisplayPort 3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra2' is 'output:hdmi-surround-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-surround-extra2' - 'Saída Digital Surround 5.1 (HDMI 3)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra2' is 'output:hdmi-surround71-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-surround71-extra2' - 'Saída Digital Surround 7.1 (HDMI 3)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra2+input:analog-stereo' is 'output:hdmi-surround-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra2+input:analog-stereo' is 'output:hdmi-surround71-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra2' is 'output:hdmi-stereo-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-stereo-extra2' - 'Saída Digital Stereo (HDMI 3)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra2+input:analog-stereo' is 'output:hdmi-stereo-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra2' is 'output:hdmi-surround-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra2' is 'output:hdmi-surround71-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra2+input:analog-stereo' is 'output:hdmi-surround-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra2+input:analog-stereo' is 'output:hdmi-surround71-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra2' is 'output:hdmi-stereo-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra2+input:analog-stereo' is 'output:hdmi-stereo-extra2'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort 3', origin 'Áudio interno', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: 6 profiles supported on port HDMI / DisplayPort 4 / hdmi-output-3
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - icon name: video-display
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - device type: output
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - card: 0x56359e767770
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - card port name: hdmi-output-3
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - 1st line: HDMI / DisplayPort 4
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - 2nd line: Áudio interno
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: gvc-mixer-output-set-property - old port available 0, value passed in 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Set profiles for 'HDMI / DisplayPort 4'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra3' is 'output:hdmi-surround-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-surround-extra3' - 'Saída Digital Surround 5.1 (HDMI 4)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra3' is 'output:hdmi-surround71-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-surround71-extra3' - 'Saída Digital Surround 7.1 (HDMI 4)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra3+input:analog-stereo' is 'output:hdmi-surround-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra3+input:analog-stereo' is 'output:hdmi-surround71-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra3' is 'output:hdmi-stereo-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Adding profile to combobox: 'output:hdmi-stereo-extra3' - 'Saída Digital Stereo (HDMI 4)'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra3+input:analog-stereo' is 'output:hdmi-stereo-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra3' is 'output:hdmi-surround-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra3' is 'output:hdmi-surround71-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround-extra3+input:analog-stereo' is 'output:hdmi-surround-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-surround71-extra3+input:analog-stereo' is 'output:hdmi-surround71-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra3' is 'output:hdmi-stereo-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: The canonical name for 'output:hdmi-stereo-extra3+input:analog-stereo' is 'output:hdmi-stereo-extra3'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: update_ui_device_on_port_added, direction 1, description 'HDMI / DisplayPort 4', origin 'Áudio interno', port available 0
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=32 name='pipewire'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=33 name='WirePlumber'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=34 name='GNOME Volume Control Media Keys'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=47 name='WirePlumber [export]'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=66 name='gnome-shell'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=67 name='GNOME Shell Volume Control'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=70 name='xdg-desktop-portal'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=90 name='Mutter'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=99 name='Helium input'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=226 name='gnome-shell'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.391: Updating client: index=227 name='GNOME Shell Volume Control'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Updating sink: index=56 name='alsa_output.pci-0000_00_1f.3.analog-stereo' description='Áudio interno Estéreo analógico' map='front-left,front-right'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: update sink - is new
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'Alto-falantes', origin : 'Áudio interno', device port name : 'analog-output-speaker', card : 0x56359e767770, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'Fones de ouvido', origin : 'Áudio interno', device port name : 'analog-output-headphones', card : 0x56359e767770, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Match device with stream: We have a match with description: 'Fones de ouvido', origin: 'Áudio interno', cached already with device id 8, so set stream id to 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: gvc-mixer-output-set-property - sink/source id: 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 2', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-1', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-0', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort', origin : 'Áudio interno', device port name : 'hdmi-output-0', card : 0x56359e767770, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 3', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-2', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 2', origin : 'Áudio interno', device port name : 'hdmi-output-1', card : 0x56359e767770, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 4', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-3', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 3', origin : 'Áudio interno', device port name : 'hdmi-output-2', card : 0x56359e767770, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 4', origin : 'Áudio interno', device port name : 'hdmi-output-3', card : 0x56359e767770, AGAINST stream port: 'analog-output-headphones', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'Alto-falantes', origin : 'Áudio interno', device port name : 'analog-output-speaker', card : 0x56359e767770, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Match device with stream: We have a match with description: 'Alto-falantes', origin: 'Áudio interno', cached already with device id 7, so set stream id to 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: gvc-mixer-output-set-property - sink/source id: 1
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'Fones de ouvido', origin : 'Áudio interno', device port name : 'analog-output-headphones', card : 0x56359e767770, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 2', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-1', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-0', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort', origin : 'Áudio interno', device port name : 'hdmi-output-0', card : 0x56359e767770, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 3', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-2', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 2', origin : 'Áudio interno', device port name : 'hdmi-output-1', card : 0x56359e767770, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 4', origin : 'GA106 High Definition Audio Controller', device port name : 'hdmi-output-3', card : 0x56359d9558f0, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 3', origin : 'Áudio interno', device port name : 'hdmi-output-2', card : 0x56359e767770, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.392: Attempt to match_stream update_with_existing_outputs - Try description : 'HDMI / DisplayPort 4', origin : 'Áudio interno', device port name : 'hdmi-output-3', card : 0x56359e767770, AGAINST stream port: 'analog-output-speaker', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: lookup-device-from-stream found device: device description 'Alto-falantes', device port = 'analog-output-speaker', device stream id 1 AND stream port = 'analog-output-speaker' stream id '1' and stream description 'Áudio interno Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: active_sink change
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Updating source: index=56 name='alsa_output.pci-0000_00_1f.3.analog-stereo.monitor' description='Monitor of Áudio interno Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Updating source: index=57 name='alsa_input.pci-0000_00_1f.3.analog-stereo' description='Áudio interno Estéreo analógico'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: update source
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Attempt to match_stream update_with_existing_outputs - Try description : 'Microfone interno', origin : 'Áudio interno', device port name : 'analog-input-internal-mic', card : 0x56359e767770, AGAINST stream port: 'analog-input-headset-mic', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Attempt to match_stream update_with_existing_outputs - Try description : 'Microfone de headset', origin : 'Áudio interno', device port name : 'analog-input-headset-mic', card : 0x56359e767770, AGAINST stream port: 'analog-input-headset-mic', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Match device with stream: We have a match with description: 'Microfone de headset', origin: 'Áudio interno', cached already with device id 6, so set stream id to 2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: gvc-mixer-output-set-property - sink/source id: 2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Attempt to match_stream update_with_existing_outputs - Try description : 'Microfone interno', origin : 'Áudio interno', device port name : 'analog-input-internal-mic', card : 0x56359e767770, AGAINST stream port: 'analog-input-internal-mic', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Match device with stream: We have a match with description: 'Microfone interno', origin: 'Áudio interno', cached already with device id 5, so set stream id to 2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: gvc-mixer-output-set-property - sink/source id: 2
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.393: Attempt to match_stream update_with_existing_outputs - Try description : 'Microfone de headset', origin : 'Áudio interno', device port name : 'analog-input-headset-mic', card : 0x56359e767770, AGAINST stream port: 'analog-input-internal-mic', sink card id 49
+(gnome-shell:21138): Gvc-DEBUG: 08:25:40.394: lookup-device-from-stream found device: device description 'Microfone interno', device port = 'analog-input-internal-mic', device stream id 2 AND stream port = 'analog-input-internal-mic' stream id '2' and stream description 'Áudio interno Estéreo analógico'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.394: ActUserManager: Seat loaded, so now setting loaded property
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.394: ActUserManager: checking if seat can activate sessions
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.395: ActUserManager: user manager now loaded, proceeding with fetch user request for user 'mauriciobc'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.395: ActUserManager: finding user 'mauriciobc' state 2
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.395: ActUserManager: Looking for user 'mauriciobc' in accounts service
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.396: ActUserManager: Found object path of user 'mauriciobc': /org/freedesktop/Accounts/User1000
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.396: ActUserManager: finding user 'mauriciobc' state 3
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.396: ActUserManager: user 'mauriciobc' fetched
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: user mauriciobc is now loaded
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: user mauriciobc was not yet known, adding it
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: tracking user 'mauriciobc'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: not yet loaded, so not emitting user-added signal
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: no pending users, trying to set loaded property
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: already loaded, so not setting loaded property
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: finished handling request for user 'mauriciobc'
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:40.403: ActUserManager: unrefing manager owned by fetch user request
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.552: GSocketClient: TCP connection successful
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.552: GSocketClient: Starting application layer connection
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.552: GSocketClient: Connection successful!
+(gnome-shell:21138): GLib-GIO-DEBUG: 08:25:40.554: _g_io_module_get_default: Found default implementation gnutls (GTlsBackendGnutls) for ‘gio-tls-backend’
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gnome.Settings.GlobalShortcutsProvider' requested by ':1.15' (uid=1000 pid=21344 comm="/usr/lib/xdg-desktop-portal-gnome")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.Settings.GlobalShortcutsProvider'
+(gnome-shell:21138): libsoup-DEBUG: 08:25:40.757: [SESSION QUEUE] [0x56359dfd6dc0] [CONNECTED] Processing item, paused=0 state=2
+(gnome-shell:21138): libsoup-DEBUG: 08:25:40.757: [SESSION QUEUE] [0x56359dfd6dc0] [READY] Processing item, paused=0 state=4
+(gnome-shell:21138): libsoup-DEBUG: 08:25:40.909: [SESSION QUEUE] [0x56359dfd6dc0] [RUNNING] run_until_read_done
+(gnome-shell:21138): libsoup-DEBUG: 08:25:40.910: [SESSION QUEUE] [0x56359dfd6dc0] [RUNNING] Message completed
+(gnome-shell:21138): libsoup-DEBUG: 08:25:40.910: [SESSION QUEUE] [0x56359dfd6dc0] [FINISHING] Processing item, paused=0 state=9
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.freedesktop.impl.portal.desktop.gnome'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.impl.portal.desktop.gtk' requested by ':1.8' (uid=1000 pid=21322 comm="/usr/lib/xdg-desktop-portal")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.freedesktop.impl.portal.desktop.gtk'
+(gnome-shell:21138): Gvc-DEBUG: 08:25:41.100: Updating client: index=228 name='xdg-desktop-portal'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.secrets' requested by ':1.8' (uid=1000 pid=21322 comm="/usr/lib/xdg-desktop-portal")
+discover_other_daemon: 1GNOME_KEYRING_CONTROL=/run/user/1000/keyring
+(gnome-shell:21138): dconf-DEBUG: 08:25:49.813: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 11, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:49.813: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 10, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:49.814: unwatch_fast: "/org/gnome/settings-daemon/plugins/power/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:49.815: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 9, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:49.815: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 8, establishing: 0)
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:49.926: ActUserManager: sending user-changed signal for user mauriciobc
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:49.926: ActUserManager: sent user-changed signal for user mauriciobc
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:49.926: ActUserManager: updating user mauriciobc
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:50.176: ActUserManager: sending user-changed signal for user mauriciobc
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:50.176: ActUserManager: sent user-changed signal for user mauriciobc
+(gnome-shell:21138): accountsservice-DEBUG: 08:25:50.176: ActUserManager: updating user mauriciobc
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.830: watch_fast: "/org/gnome/desktop/app-folders/folders/YaST/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.833: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 7)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.837: watch_fast: "/org/gnome/desktop/app-folders/folders/Pardus/" (establishing: 0, active: 2)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.839: watch_fast: "/org/gnome/desktop/peripherals/touchpad/" (establishing: 0, active: 8)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.853: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 9, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.853: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 8, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.854: unwatch_fast: "/org/gnome/desktop/app-folders/folders/Pardus/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.854: unwatch_fast: "/org/gnome/desktop/app-folders/folders/YaST/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.854: unwatch_fast: "/org/gnome/desktop/app-folders/folders/Pardus/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:25:59.854: unwatch_fast: "/org/gnome/desktop/app-folders/folders/YaST/" (active: 2, establishing: 0)
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: clock_format: 24h
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: show_weekday: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: show_full_date: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: show_seconds: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: format_string: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: no_enspace: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: replaced_format: 12 de abr_08:26
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: is_utf8: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: ret: 12 de abr 08:26
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: clock_format: 24h
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: show_weekday: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: show_full_date: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: show_seconds: FALSE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: format_string: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: no_enspace: %-e de %b_%R
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: replaced_format: 12 de abr_08:26
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: is_utf8: TRUE
+(gnome-shell:21138): GnomeDesktop-DEBUG: 08:26:00.000: ret: 12 de abr 08:26
+GNOME Shell-Message: 08:26:04.775: Error connecting to the screencast service
+
+(mutter-devkit:21219): Gdk-WARNING **: 08:26:05.001: Cannot get portal org.freedesktop.host.portal.Registry version: O tempo limite foi alcançado
+
+(org.gnome.Shell.Screencast:21267): Gdk-WARNING **: 08:26:05.008: Cannot get portal org.freedesktop.portal.Settings version: O tempo limite foi alcançado
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gnome.Shell.Screencast'
+
+(/usr/lib/xdg-desktop-portal:21322): xdg-desktop-portal-WARNING **: 08:26:06.206: Failed to create secret proxy: Erro ao chamar StartServiceByName para org.freedesktop.secrets: O tempo limite foi alcançado
+
+(/usr/lib/xdg-desktop-portal:21322): xdg-desktop-portal-WARNING **: 08:26:06.206: No skeleton to export
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.freedesktop.portal.Desktop'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Using portal setting for org.gnome.fontconfig serial: 0
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy disable-microphone
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy disable-camera
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy old-files-age
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Using portal setting for org.gnome.desktop.privacy remember-recent-files: true
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy disable-sound-output
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy send-software-usage-stats
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy report-technical-problems
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy remove-old-trash-files
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy remove-old-temp-files
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy privacy-screen
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy usb-protection
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy usb-protection-level
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy remember-app-usage
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy show-full-name-in-top-bar
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Ignoring portal setting for org.gnome.desktop.privacy hide-identity
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.230: Using portal setting for org.gnome.desktop.privacy recent-files-max-age: -1
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.a11y.interface reduced-motion: 'no-preference'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.a11y.interface show-status-shapes: false
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.a11y.interface high-contrast: false
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.a11y always-show-universal-access-status
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.a11y always-show-text-caret: false
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface toolkit-accessibility
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-color-palette
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface can-change-accels
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface document-font-name
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface enable-animations: true
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface cursor-blink: true
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface clock-show-weekday
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface icon-theme: 'Qogir-Dark'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-im-preedit-style
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface scaling-factor
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface menus-have-tearoff
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface cursor-size: 24
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface clock-show-seconds
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface gtk-im-module: ''
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-timeout-initial
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface accent-color
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface gtk-theme: 'Adwaita-dark'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-color-scheme
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface clock-show-date
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface cursor-blink-time: 1200
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface toolbar-icons-size
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface font-antialiasing: 'grayscale'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface toolbar-style
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface enable-hot-corners
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface monospace-font-name
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-timeout-repeat
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface overlay-scrolling: true
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface cursor-blink-timeout: 10
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-key-theme
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface toolbar-detachable
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface font-rendering: 'automatic'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface cursor-theme: 'Qogir-Dark'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface avatar-directories
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface gtk-im-status-style
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface menubar-detachable
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface text-scaling-factor: 1.0
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface show-battery-percentage
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface clock-format
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface menubar-accel
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface gtk-enable-primary-paste: false
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface color-scheme
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.interface locate-pointer
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface font-rgba-order: 'rgb'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface font-hinting: 'slight'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.interface font-name: 'Noto Sans 10'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.sound theme-name: 'freedesktop'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.sound event-sounds: true
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.sound input-feedback-sounds: false
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.sound allow-volume-above-100-percent
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.peripherals.mouse left-handed
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.peripherals.mouse double-click: 400
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.peripherals.mouse natural-scroll
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.peripherals.mouse middle-click-emulation
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.peripherals.mouse speed
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.peripherals.mouse accel-profile
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.gnome.desktop.peripherals.mouse drag-threshold: 8
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.freedesktop.appearance contrast: 0
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.freedesktop.appearance color-scheme: 1
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Using portal setting for org.freedesktop.appearance reduced-motion: 0
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.freedesktop.appearance accent-color
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources sources
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources mru-sources
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources show-all-sources
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources current
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources xkb-options
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources xkb-model
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.input-sources per-window
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.231: Ignoring portal setting for org.gnome.desktop.calendar show-weekdate
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.calendar week-start-day
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences theme
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences focus-new-windows
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences disable-workarounds
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences num-workspaces
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences titlebar-uses-system-font
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences raise-on-click
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences titlebar-font
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences resize-with-right-button
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences auto-raise
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Using portal setting for org.gnome.desktop.wm.preferences action-right-click-titlebar: 'menu'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences mouse-button-modifier
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Using portal setting for org.gnome.desktop.wm.preferences action-double-click-titlebar: 'toggle-maximize'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences workspace-names
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences visual-bell-type
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Using portal setting for org.gnome.desktop.wm.preferences action-middle-click-titlebar: 'none'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences focus-mode
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Using portal setting for org.gnome.desktop.wm.preferences button-layout: 'appmenu:close'
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences auto-raise-delay
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences audible-bell
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.desktop.wm.preferences visual-bell
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.settings-daemon.plugins.xsettings overrides
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.settings-daemon.plugins.xsettings disabled-gtk-modules
+(mutter-devkit:21219): Gdk-DEBUG: 08:26:06.232: Ignoring portal setting for org.gnome.settings-daemon.plugins.xsettings enabled-gtk-modules
+(mutter-devkit:21219): GLib-GIO-DEBUG: 08:26:06.241: _g_io_module_get_default: Found default implementation gvfs (GDaemonVfs) for ‘gio-vfs’
+** Message: 08:26:06.313: Shutting down GNOME Shell
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:26:06.377: TimeLimitsManager: User state changed from ACTIVE to INACTIVE at 2026-04-12T08:26:06-03
+(gnome-shell:21138): GNOME Shell-DEBUG: 08:26:06.377: TimeLimitsManager: Storing screen time limits data to ‘/home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/.nested-shell/data/share/gnome-shell/session-active-history.json’
+(mutter-devkit:21219): dconf-DEBUG: 08:26:06.381: watch_fast: "/org/gnome/desktop/interface/" (establishing: 0, active: 0)
+(mutter-devkit:21219): dconf-DEBUG: 08:26:06.381: watch_established: "/org/gnome/desktop/interface/" (establishing: 1)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.gtk.vfs.Metadata' requested by ':1.0' (uid=1000 pid=21138 comm="gnome-shell --devkit --wayland")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.gtk.vfs.Metadata'
+** (gnome-shell:21138): DEBUG: 08:26:06.392: Tearing down the gjs context
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.401: unwatch_fast: "/org/gnome/desktop/app-folders/folders/Pardus/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.401: unwatch_fast: "/org/gnome/desktop/app-folders/folders/YaST/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.401: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 12, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.402: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 7, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.402: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 11, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/mutter/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 6, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 10, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 9, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 8, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 7, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 6, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.403: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.404: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/interface/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/applications/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/interface/" (active: 11, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/notifications/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/keyboard/" (active: 7, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/keyboard/" (active: 6, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/keyboard/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/applications/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/applications/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/wm/preferences/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.406: unwatch_fast: "/org/gnome/desktop/a11y/keyboard/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.407: unwatch_fast: "/org/gnome/mutter/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.411: unwatch_fast: "/org/gnome/system/location/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.411: unwatch_fast: "/org/gnome/desktop/media-handling/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.411: unwatch_fast: "/org/gnome/desktop/app-folders/folders/System/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.411: unwatch_fast: "/org/gnome/desktop/a11y/magnifier/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.412: unwatch_fast: "/org/gnome/desktop/app-folders/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.412: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.412: unwatch_fast: "/org/gnome/desktop/interface/" (active: 10, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/GWeather4/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/system/location/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/break-reminders/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/calendar/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/lockdown/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/input-sources/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/sound/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/interface/" (active: 9, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.413: unwatch_fast: "/org/gnome/desktop/a11y/keyboard/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.414: unwatch_fast: "/org/gnome/desktop/lockdown/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.414: unwatch_fast: "/org/gnome/settings-daemon/peripherals/touchscreen/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.414: unwatch_fast: "/org/gnome/desktop/interface/" (active: 8, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.414: unwatch_fast: "/org/gnome/desktop/peripherals/touchpad/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.414: unwatch_fast: "/org/gnome/desktop/a11y/mouse/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.414: unwatch_fast: "/org/gnome/mutter/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.415: unwatch_fast: "/org/gnome/desktop/interface/" (active: 7, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.415: unwatch_fast: "/org/gnome/shell/weather/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.416: unwatch_fast: "/org/gnome/desktop/screensaver/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.416: unwatch_fast: "/org/gnome/desktop/a11y/keyboard/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.416: unwatch_fast: "/org/gnome/desktop/app-folders/folders/Utilities/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.416: unwatch_fast: "/org/gnome/login-screen/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.416: unwatch_fast: "/org/gnome/desktop/search-providers/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.416: unwatch_fast: "/org/gnome/desktop/lockdown/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.417: unwatch_fast: "/org/gnome/desktop/lockdown/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.417: unwatch_fast: "/org/gnome/shell/world-clocks/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.417: unwatch_fast: "/org/gnome/desktop/screensaver/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.418: unwatch_fast: "/org/gnome/desktop/screen-time-limits/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.420: unwatch_fast: "/org/gnome/desktop/input-sources/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.420: unwatch_fast: "/org/gnome/desktop/interface/" (active: 6, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.421: unwatch_fast: "/org/gnome/desktop/media-handling/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.421: unwatch_fast: "/org/gnome/desktop/a11y/applications/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.423: unwatch_fast: "/org/gnome/desktop/sound/" (active: 2, establishing: 0)
+(gnome-shell:21138): Gcr-DEBUG: 08:26:06.423: disposing prompter
+(gnome-shell:21138): Gcr-DEBUG: 08:26:06.423: unregistering prompter
+(gnome-shell:21138): Gcr-DEBUG: 08:26:06.423: finalizing prompter
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.423: unwatch_fast: "/org/gnome/shell/extensions/milkdrop/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.424: unwatch_fast: "/org/gnome/desktop/a11y/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.431: unwatch_fast: "/org/gnome/settings-daemon/plugins/color/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.431: unwatch_fast: "/org/gnome/desktop/interface/" (active: 5, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.432: unwatch_fast: "/org/gnome/desktop/notifications/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.432: unwatch_fast: "/org/gnome/settings-daemon/peripherals/touchscreen/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.443: unwatch_fast: "/org/gnome/shell/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.445: unwatch_fast: "/org/gnome/desktop/privacy/" (active: 2, establishing: 0)
+** (gnome-shell:21138): DEBUG: 08:26:06.445: Tearing down the mutter context
+Gdk-Message: 08:26:06.446: Lost connection to Wayland compositor.
+Gdk-Message: 08:26:06.446: Lost connection to Wayland compositor.
+Gdk-Message: 08:26:06.446: Lost connection to Wayland compositor.
+Gdk-Message: 08:26:06.447: Error reading events from display: Pipe quebrado
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.447: unwatch_fast: "/org/gnome/desktop/sound/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.447: unwatch_fast: "/org/gnome/settings-daemon/peripherals/touchscreen/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.460: unwatch_fast: "/org/gnome/desktop/interface/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.460: unwatch_fast: "/org/gnome/desktop/peripherals/mouse/" (active: 4, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:06.460: unwatch_fast: "/org/gnome/desktop/a11y/mouse/" (active: 1, establishing: 0)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.a11y.Bus' requested by ':1.2' (uid=1000 pid=21219 comm="/usr/lib/mutter-devkit")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Successfully activated service 'org.a11y.Bus'
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.systemd1' requested by ':1.33' (uid=1000 pid=21932 comm="/usr/bin/dbus-broker-launch --config-file=/usr/sha")
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activated service 'org.freedesktop.systemd1' failed: Process org.freedesktop.systemd1 exited with status 1
+(mutter-devkit:21219): mdk-DEBUG: 08:26:06.498: Initializing session
+(mutter-devkit:21219): mdk-DEBUG: 08:26:06.500: Opening remote desktop and screen cast session
+
+(mutter-devkit:21219): mdk-WARNING **: 08:26:06.500: Context got an error: Não foi possível chamar método; o proxy é para um nome conhecido org.gnome.Mutter.RemoteDesktop sem um dono e o proxy foi construído com o sinalizador G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activating service name='org.freedesktop.impl.portal.desktop.gtk' requested by ':1.8' (uid=1000 pid=21322 comm="/usr/lib/xdg-desktop-portal")
+
+(xdg-desktop-portal-gtk:21938): Gtk-WARNING **: 08:26:06.523: cannot open display: :2
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Activated service 'org.freedesktop.impl.portal.desktop.gtk' failed: Process org.freedesktop.impl.portal.desktop.gtk exited with status 1
+
+** (/usr/lib/xdg-desktop-portal:21322): WARNING **: 08:26:06.525: Failed to close session implementation: GDBus.Error:org.freedesktop.DBus.Error.Spawn.ChildExited: Process org.freedesktop.impl.portal.desktop.gtk exited with status 1
+(gnome-shell:21138): dconf-DEBUG: 08:26:08.021: unwatch_fast: "/org/gnome/mutter/" (active: 2, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:08.022: unwatch_fast: "/org/gnome/desktop/interface/" (active: 3, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:08.022: unwatch_fast: "/org/gnome/desktop/privacy/" (active: 1, establishing: 0)
+(gnome-shell:21138): dconf-DEBUG: 08:26:08.022: unwatch_fast: "/org/gnome/mutter/wayland/" (active: 1, establishing: 0)
+dbus-daemon[21137]: [session uid=1000 pid=21137 pidfd=4] Failed to activate service 'org.freedesktop.secrets': timed out (service_start_timeout=120000ms)

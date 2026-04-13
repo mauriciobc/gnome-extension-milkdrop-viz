@@ -1,0 +1,31 @@
+=== 2026-04-11T22:11:27-03:00 GPU profile (milkdrop) ===
+hostname: Wintermute
+sample_seconds: 45
+
+=== nvidia-smi -L ===
+GPU 0: NVIDIA GeForce RTX 3060 Laptop GPU (UUID: GPU-3d38b147-2351-85db-c93b-b4347de1e3ca)
+
+=== milkdrop PIDs ===
+70347 /home/mauriciobc/.local/bin/milkdrop --monitor 0 --opacity 1 --preset-dir /usr/local/share/projectM/presets/cream-of-the-crop --shuffle --overlay --preset-rotation-interval 8
+81021 /home/mauriciobc/.local/bin/milkdrop --monitor 0 --opacity 1 --preset-dir /usr/local/share/projectM/presets --shuffle --preset-rotation-interval 30
+82571 /usr/bin/zsh -c snap=$(command cat <&3); builtin unsetopt aliases 2>/dev/null; builtin unalias -m '*' 2>/dev/null || true; builtin eval "$snap" && { builtin unsetopt nounset 2>/dev/null || true; builtin eval "${__CURSOR_SANDBOX_ENV_RESTORE:-}" 2>/dev/null; builtin export PWD="$(builtin pwd)"; builtin setopt aliases 2>/dev/null; builtin eval "$1"; }; COMMAND_EXIT_CODE=$?; dump_zsh_state >&4; builtin exit $COMMAND_EXIT_CODE -- chmod +x /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/tools/profile_gpu_milkdrop.sh && /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/tools/profile_gpu_milkdrop.sh 45
+82608 bash /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/tools/profile_gpu_milkdrop.sh 45
+
+=== snapshot: gpu + compute apps ===
+index, name, driver_version, temperature.gpu, clocks.current.graphics [MHz], clocks.current.memory [MHz], utilization.gpu [%], utilization.memory [%], memory.used [MiB], memory.total [MiB], power.draw [W]
+0, NVIDIA GeForce RTX 3060 Laptop GPU, 595.58.03, 65, 210 MHz, 405 MHz, 29 %, 5 %, 134 MiB, 6144 MiB, 20.79 W
+
+pid, process_name, used_gpu_memory [MiB]
+70347, /home/mauriciobc/.local/bin/milkdrop, 4 MiB
+79430, /usr/lib/mutter-devkit, 32 MiB
+81021, /home/mauriciobc/.local/bin/milkdrop, 4 MiB
+
+Field "process_name" is not a valid field to query.
+
+=== post-sample snapshot ===
+utilization.gpu [%], utilization.memory [%], memory.used [MiB]
+34 %, 5 %, 134 MiB
+pid, process_name, used_gpu_memory [MiB]
+70347, /home/mauriciobc/.local/bin/milkdrop, 4 MiB
+79430, /usr/lib/mutter-devkit, 32 MiB
+81021, /home/mauriciobc/.local/bin/milkdrop, 4 MiB

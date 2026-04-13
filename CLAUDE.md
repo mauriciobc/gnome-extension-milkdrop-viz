@@ -96,7 +96,7 @@ PipeWire thread → `ring_push()` (~50ns, lock-free) → GL thread → `ring_rea
 ### Control Protocol
 
 Text-based commands over Unix domain socket:
-`status`, `opacity <0.0-1.0>`, `pause <0|1>`, `shuffle <0|1>`, `overlay <0|1>`, `preset-dir <path>`
+`status`, `opacity <0.0-1.0>`, `pause <on|off>`, `shuffle <on|off>`, `overlay <on|off>`, `preset-dir <path>`, `save-state`, `restore-state` (see `docs/research/09-control-socket-settings-and-state.md`)
 
 Settings routed to socket at runtime: `opacity`, `preset-dir`, `shuffle`, `overlay`
 Settings requiring restart: `monitor`

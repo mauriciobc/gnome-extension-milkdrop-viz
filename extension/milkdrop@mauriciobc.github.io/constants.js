@@ -14,3 +14,7 @@ export const RELOAD_BACKGROUNDS_DEBOUNCE_MS = 100;
 // The renderer needs time to initialize before the socket is available.
 export const CONTROL_SOCKET_RETRY_DELAY_MS = 200;
 export const CONTROL_SOCKET_MAX_RETRIES = 5;
+
+// Second force_exit() after this delay if the renderer subprocess is still shutting down.
+// Keeps a single wait_async in _spawnProcess; escalation does not add another wait.
+export const RENDERER_STOP_ESCALATION_MS = 800;
