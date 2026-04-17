@@ -213,6 +213,26 @@ test_parse_preset_dir_path_too_long(void)
 }
 
 static void
+test_parse_load_preset_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("load-preset /tmp/foo.milk\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_LOAD_PRESET);
+    g_assert_cmpstr(command.text_value, ==, "/tmp/foo.milk");
+}
+
+static void
+test_parse_load_preset_rejects_empty_path(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("load-preset \n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_INVALID);
+}
+
+static void
 test_parse_next_command(void)
 {
     ControlCommand command = {0};
@@ -350,6 +370,8 @@ main(int argc, char** argv)
     g_test_add_func("/control/parse-preset-dir", test_parse_preset_dir_command);
     g_test_add_func("/control/parse-preset-dir-max-len", test_parse_preset_dir_max_length);
     g_test_add_func("/control/parse-preset-dir-too-long", test_parse_preset_dir_path_too_long);
+    g_test_add_func("/control/parse-load-preset", test_parse_load_preset_command);
+    g_test_add_func("/control/parse-load-preset-empty", test_parse_load_preset_rejects_empty_path);
     g_test_add_func("/control/parse-restore-state", test_parse_restore_state_command);
     g_test_add_func("/control/parse-restore-state-values", test_parse_restore_state_with_values);
     g_test_add_func("/control/parse-restore-state-unknown", test_parse_restore_state_rejects_unknown_key);

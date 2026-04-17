@@ -47,7 +47,10 @@ test_audio_init_initializes_ring(void)
 static void
 test_control_init_creates_socket_path(void)
 {
-    AppData app_data = {0};
+    AppData app_data;
+    memset(&app_data, 0, sizeof app_data);
+    g_mutex_init(&app_data.preset_dir_lock);
+    g_mutex_init(&app_data.load_preset_lock);
 
     g_assert_true(control_init(&app_data));
     g_assert_nonnull(app_data.socket_path);
@@ -56,6 +59,8 @@ test_control_init_creates_socket_path(void)
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
+    g_mutex_clear(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.load_preset_lock);
 }
 
 static void
@@ -77,7 +82,10 @@ test_control_cleanup_unlinks_existing_socket_file(void)
 static void
 test_control_init_listens_for_clients(void)
 {
-    AppData app_data = {0};
+    AppData app_data;
+    memset(&app_data, 0, sizeof app_data);
+    g_mutex_init(&app_data.preset_dir_lock);
+    g_mutex_init(&app_data.load_preset_lock);
     struct sockaddr_un addr = {0};
 
     g_assert_true(control_init(&app_data));
@@ -94,12 +102,17 @@ test_control_init_listens_for_clients(void)
     close(client_fd);
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
+    g_mutex_clear(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.load_preset_lock);
 }
 
 static void
 test_control_commands_update_runtime_state(void)
 {
-    AppData app_data = {0};
+    AppData app_data;
+    memset(&app_data, 0, sizeof app_data);
+    g_mutex_init(&app_data.preset_dir_lock);
+    g_mutex_init(&app_data.load_preset_lock);
 
     g_assert_true(control_init(&app_data));
 
@@ -117,6 +130,8 @@ test_control_commands_update_runtime_state(void)
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
+    g_mutex_clear(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.load_preset_lock);
 }
 
 static void

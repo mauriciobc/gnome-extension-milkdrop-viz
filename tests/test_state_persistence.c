@@ -69,7 +69,7 @@ test_parse_restore_state_without_preset_dir(void)
 static void
 test_title_encoding_format(void)
 {
-    const char* expected_format = "@milkdrop!{\"monitor\":0,\"overlay\":false,\"opacity\":1.00}|0";
+    const char* expected_format = "@milkdrop!{\"monitor\":0,\"overlay\":false,\"opacity\":100}|0";
 
     g_assert_true(g_str_has_prefix(expected_format, "@milkdrop!"));
     g_assert_true(strstr(expected_format, "\"monitor\":") != NULL);

@@ -20,6 +20,7 @@ A stable command set for v2 includes:
 - `status`
 - `save-state`
 - `restore-state [key=value ...]`
+- `load-preset <absolute-path>` — loads a single `.milk` file on the GL thread (shell-quoted path; same length limits as `preset-dir`)
 
 Full details for `save-state` / `restore-state` are in the section below. See also tests: `tests/test_control_protocol.c`, `tests/test_control_state_flow.c`, `tests/test_state_persistence.c`.
 
@@ -74,7 +75,7 @@ Extending the snapshot requires parser changes, tests, docs, and `controlClient.
 
 ### Buffer limits (renderer)
 
-Defined in `src/control.c`:
+Defined in `src/control.h` / `src/control.c`:
 
 - **Response buffer** (including `save-state` output): `MILKDROP_CONTROL_RESPONSE_MAX` (`MILKDROP_PATH_MAX * 2 + 512`). If serialization does not fit, the server responds with `err save-state-overflow\n`.
 - **Receive buffer** (one command line): `MILKDROP_CONTROL_RECV_MAX` (`MILKDROP_PATH_MAX * 5`), so long `restore-state …` lines match test clients and the extension.

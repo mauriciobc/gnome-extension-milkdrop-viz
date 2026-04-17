@@ -72,11 +72,11 @@ export class PausePolicy {
 
         const ids = [];
 
-        ids.push(win.connect('notify::maximized-vertically', () => {
+        ids.push(win.connect('notify::maximized_vertically', () => {
             this._evaluateMaximized();
         }));
 
-        ids.push(win.connect('notify::maximized-horizontally', () => {
+        ids.push(win.connect('notify::maximized_horizontally', () => {
             this._evaluateMaximized();
         }));
 

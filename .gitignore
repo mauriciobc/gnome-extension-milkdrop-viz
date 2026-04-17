@@ -3,3 +3,6 @@ nested_shell.log
 
 # Isolated nested-shell test sandbox (tools/nested_devkit.sh)
 .nested-shell/
+
+# Local profiling / nested run artifacts (not for version control)
+artifacts/

@@ -81,10 +81,10 @@ export class MprisWatcher {
             this._nameChangedSubscriptionId = 0;
         }
 
-        for (const [busName, subscriptionId] of this._players) {
-            Gio.DBus.session.signal_unsubscribe(subscriptionId);
-            this._players.delete(busName);
-        }
+        const names = [...this._players.keys()];
+        for (const busName of names)
+            this._removePlayer(busName);
+        this._players.clear();
         this._states.clear();
     }
 

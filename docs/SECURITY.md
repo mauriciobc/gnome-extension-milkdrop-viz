@@ -2,7 +2,12 @@
 
 ## Threat model
 
-The renderer exposes a **Unix domain stream socket** (default: `$XDG_RUNTIME_DIR/milkdrop.sock`, or `/tmp/milkdrop.sock` if the runtime directory is unset). Commands adjust opacity, preset directory, shuffle, overlay flag, and related state.
+The renderer exposes a **Unix domain stream socket** per monitor instance:
+
+- Default path pattern: `$XDG_RUNTIME_DIR/milkdrop-<monitorIndex>.sock`
+- If `XDG_RUNTIME_DIR` is unset: `/tmp/milkdrop-<monitorIndex>.sock`
+
+Commands adjust opacity, preset directory, shuffle, overlay, frame rate, preset rotation interval, pause, optional `load-preset`, and related state.
 
 - The socket file is created with mode **0600** after bind so only the owning user can connect via the filesystem path.
 - There is **no cryptographic authentication**. Any process running as the **same user** that can open the socket path can send control commands.

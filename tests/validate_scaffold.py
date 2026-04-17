@@ -71,6 +71,8 @@ def main() -> int:
         "fps": "i",
         "last-preset": "s",
         "was-paused": "b",
+        "use-discrete-gpu": "b",
+        "respect-reduced-motion": "b",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 

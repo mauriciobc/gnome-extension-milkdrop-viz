@@ -9,11 +9,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-/* save-state may include g_shell_quote(preset_dir); must cover worst-case expansion. */
-#define MILKDROP_CONTROL_RESPONSE_MAX (MILKDROP_PATH_MAX * 2 + 512)
-/* Longest line: restore-state <save-state payload>; keep in sync with test clients (MILKDROP_PATH_MAX * 5). */
-#define MILKDROP_CONTROL_RECV_MAX (MILKDROP_PATH_MAX * 5)
-
 static void
 milkdrop_preset_skip_enqueue(_Atomic uint32_t* q)
 {
@@ -243,11 +238,14 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         }
         g_strlcpy(response, "ok restore-state\n", response_size);
         return TRUE;
-    case CONTROL_CMD_SCREENSHOT:
-        // Request screenshot on next render frame
-        g_strlcpy(app_data->screenshot_path, command->screenshot_path, sizeof(app_data->screenshot_path));
-        atomic_store(&app_data->screenshot_requested, true);
-        g_strlcpy(response, "ok screenshot queued\n", response_size);
+    case CONTROL_CMD_LOAD_PRESET:
+        g_mutex_lock(&app_data->load_preset_lock);
+        g_strlcpy(app_data->pending_load_preset,
+                  command->text_value,
+                  sizeof(app_data->pending_load_preset));
+        g_mutex_unlock(&app_data->load_preset_lock);
+        atomic_store(&app_data->load_preset_pending, true);
+        g_strlcpy(response, "ok load-preset\n", response_size);
         return TRUE;
     case CONTROL_CMD_NONE:
     default:
@@ -446,12 +444,15 @@ control_parse_command(const char* line, ControlCommand* out_command)
         return CONTROL_PARSE_OK;
     }
 
-    if (g_strcmp0(argv[0], "screenshot") == 0 && argc == 2) {
-        if (strlen(argv[1]) >= sizeof(out_command->screenshot_path))
+    if (g_strcmp0(argv[0], "load-preset") == 0 && argc == 2) {
+        if (argv[1][0] == '\0')
+            return CONTROL_PARSE_INVALID;
+
+        if (strlen(argv[1]) >= sizeof(out_command->text_value))
             return CONTROL_PARSE_PATH_TOO_LONG;
 
-        out_command->type = CONTROL_CMD_SCREENSHOT;
-        g_strlcpy(out_command->screenshot_path, argv[1], sizeof(out_command->screenshot_path));
+        out_command->type = CONTROL_CMD_LOAD_PRESET;
+        g_strlcpy(out_command->text_value, argv[1], sizeof(out_command->text_value));
         return CONTROL_PARSE_OK;
     }
 

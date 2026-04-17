@@ -49,7 +49,9 @@ init_test_app_data(AppData* app_data)
 {
     *app_data = (AppData){0};
     g_mutex_init(&app_data->preset_dir_lock);
+    g_mutex_init(&app_data->load_preset_lock);
     app_data->pending_preset_dir[0] = '\0';
+    app_data->pending_load_preset[0] = '\0';
     atomic_store(&app_data->opacity, 1.0f);
     atomic_store(&app_data->pause_audio, false);
     atomic_store(&app_data->shuffle_runtime, false);
@@ -70,6 +72,7 @@ free_test_app_data(AppData* app_data)
     g_clear_pointer(&app_data->preset_dir, g_free);
     g_clear_pointer(&app_data->socket_path, g_free);
     g_mutex_clear(&app_data->preset_dir_lock);
+    g_mutex_clear(&app_data->load_preset_lock);
 }
 
 static void

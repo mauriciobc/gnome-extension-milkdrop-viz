@@ -53,6 +53,8 @@ meson setup build -Dshell-integration-tests=true   # register nested GNOME Shell
 
 ## Test Commands
 
+Meson test **names** are defined in `tests/meson.build` (source of truth).
+
 ```bash
 # Run all tests (default: no nested Shell integration test)
 meson test -C build
@@ -76,7 +78,7 @@ meson test -C build scaffold-validation
 meson test -C build ring-buffer --print-errorlogs --verbose
 ```
 
-Test files: `tests/test_ring_buffer.c`, `tests/test_backends.c`, `tests/test_control_protocol.c`, `tests/test_presets.c`, `tests/validate_scaffold.py`, `tests/test_compositor_behavior.sh`
+Test files include: `tests/test_ring_buffer.c`, `tests/test_backends.c`, `tests/test_control_protocol.c`, `tests/test_presets.c`, `tests/test_audio_alignment.c`, `tests/test_render_pipeline.c`, `tests/test_tick_state_machine.c`, `tests/test_control_state_flow.c`, `tests/test_presets_edge_cases.c`, `tests/test_audio_recovery.c`, `tests/test_pause_policy.c`, `tests/test_preset_quarantine.c`, `tests/test_state_persistence.c`, `tests/test_gtk_glarea_projectm.c`, `tests/test_gtk_glarea_fbo.c`, `tests/validate_scaffold.py`, `tests/test_compositor_behavior.sh`
 
 C tests use GLib test framework (`g_test_init`, `g_test_add_func`, `g_assert_*` macros). Python tests validate extension scaffold integrity (metadata, schema, scripts). Bash integration tests are only registered when `-Dshell-integration-tests=true`.
 

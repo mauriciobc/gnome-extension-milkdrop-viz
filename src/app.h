@@ -116,10 +116,12 @@ typedef struct {
     int  consecutive_failures;
     char last_good_preset[MILKDROP_PATH_MAX];
     _Atomic bool quarantine_all_failed;
+    _Atomic bool quarantine_user_notified;
 
-    /* Screenshot request - GL thread reads, control thread writes */
-    _Atomic bool screenshot_requested;
-    char screenshot_path[MILKDROP_PATH_MAX];
+    /* load-preset <path>: control thread writes path, GL thread loads file. */
+    _Atomic bool load_preset_pending;
+    GMutex      load_preset_lock;
+    char        pending_load_preset[MILKDROP_PATH_MAX];
 } AppData;
 
 static inline void
