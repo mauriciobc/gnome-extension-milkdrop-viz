@@ -5,7 +5,7 @@ MilkDrop-style audio visualizer for GNOME Shell on Wayland, built as a two-proce
 - Native C renderer (`milkdrop`) for audio capture, ring buffer, and OpenGL/projectM rendering
 - GNOME Shell extension (GJS) for lifecycle supervision, settings routing, and compositor anchoring
 
-Targeted GNOME Shell versions: 47, 48, 49.
+Targeted GNOME Shell versions: 47, 48, 49, 50 (Wayland only).
 
 ## Status
 
@@ -92,6 +92,15 @@ Helper scripts:
 ./tools/reload.sh
 ```
 
+Contributor / diagnostics scripts (see script headers for usage):
+
+```bash
+./tools/nested_devkit.sh
+./tools/profile_gpu_milkdrop.sh
+./tools/debug_nested.sh
+python3 ./tools/analyze_on_render_journal.py
+```
+
 ## Test
 
 Run all registered tests:
@@ -133,6 +142,7 @@ The renderer exposes a Unix domain control socket with line commands:
 - `preset-dir <absolute-path>`
 - `next`
 - `previous`
+- `load-preset <absolute-path>` — load a single `.milk` file
 - `save-state` — returns a one-line snapshot (see docs)
 - `restore-state [key=value ...]` — apply snapshot fields
 
@@ -150,10 +160,11 @@ Keys:
 - `preset-dir` (string)
 - `shuffle` (bool)
 - `overlay` (bool)
+- `preset-rotation-interval`, `pause-on-fullscreen`, `pause-on-maximized`, `media-aware`, `fps`, `all-monitors`, `last-preset`, `was-paused`, `use-discrete-gpu`, `respect-reduced-motion` (see `data/org.gnome.shell.extensions.milkdrop.gschema.xml`)
 
-## Wayland Scope
+## Wayland scope
 
-This project targets Wayland sessions. X11 support is out of scope.
+The extension and renderer are intended for **Wayland** sessions only; the renderer is spawned via `Meta.WaylandClient`.
 
 ## Documentation
 

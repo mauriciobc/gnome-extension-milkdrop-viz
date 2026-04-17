@@ -108,6 +108,7 @@ on_stream_state_changed(void              *userdata,
         } else {
             g_warning("milkdrop: audio recovery budget exhausted after %d attempts",
                       AUDIO_MAX_RESTARTS);
+            g_print("MILKDROP_NOTIFY:audio_failed\n");
         }
         break;
 

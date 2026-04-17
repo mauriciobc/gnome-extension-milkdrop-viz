@@ -87,5 +87,17 @@
       <summary>Whether renderer was paused on exit</summary>
       <description>True if the renderer was paused when the extension was disabled. Used to restore pause state on next enable.</description>
     </key>
+
+    <key name="use-discrete-gpu" type="b">
+      <default>false</default>
+      <summary>Prefer discrete GPU (DRI_PRIME)</summary>
+      <description>When true, the extension sets DRI_PRIME=1 in the renderer environment so hybrid systems may use the dedicated GPU.</description>
+    </key>
+
+    <key name="respect-reduced-motion" type="b">
+      <default>true</default>
+      <summary>Respect reduced motion (accessibility)</summary>
+      <description>When true and the session reports reduced motion (a11y), the extension pauses the renderer automatically.</description>
+    </key>
   </schema>
 </schemalist>

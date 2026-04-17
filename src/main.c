@@ -31,6 +31,13 @@ static gint64   milkdrop_pm_mono_origin_us   = 0;
 
 #define MILKDROP_STARTUP_PROBE_COUNT 5
 
+#define milkdrop_msg(app, ...)                 \
+    G_STMT_START {                             \
+        if ((app) && (app)->verbose)           \
+            g_message(__VA_ARGS__);            \
+    }                                          \
+    G_STMT_END
+
 static void
 milkdrop_mark_startup_hidden(AppData* app_data,
                              bool     hidden)
@@ -57,12 +64,13 @@ milkdrop_reset_startup_gate(AppData* app_data,
     app_data->render_frame_counter = 0;
     app_data->startup_init_time_us = g_get_monotonic_time();
 
-    g_message("startup_gate: reset with has_content=%d, init_time=%" G_GINT64_FORMAT,
-              has_playlist_content, app_data->startup_init_time_us);
+    milkdrop_msg(app_data,
+                 "startup_gate: reset with has_content=%d, init_time=%" G_GINT64_FORMAT,
+                 has_playlist_content,
+                 app_data->startup_init_time_us);
 
-    // NÃO esconder a janela - opacity 0 impede o GTK de renderizar o GLArea
-    // Apenas marcar que ainda estamos no modo warmup, mas manter visibilidade
-    milkdrop_mark_startup_hidden(app_data, false); // SEMPRE mostrar, nunca esconder
+    /* Do not hide the window at opacity 0 — that can prevent GtkGLArea from rendering. */
+    milkdrop_mark_startup_hidden(app_data, false);
 }
 
 static void
@@ -147,17 +155,18 @@ milkdrop_probe_startup_pixels(GLint draw_fbo,
 static bool
 milkdrop_activate_initial_playlist_preset(AppData* app_data)
 {
-    g_message("activate_initial: called with deferred=%d, playlist=%p",
-              app_data ? app_data->startup_deferred_preset_activation : -1,
-              app_data ? app_data->projectm_playlist : NULL);
+    milkdrop_msg(app_data,
+                 "activate_initial: called with deferred=%d, playlist=%p",
+                 app_data ? app_data->startup_deferred_preset_activation : -1,
+                 app_data ? app_data->projectm_playlist : NULL);
 
     if (!app_data || !app_data->projectm_playlist || !app_data->startup_deferred_preset_activation) {
-        g_message("activate_initial: early exit - null or not deferred");
+        milkdrop_msg(app_data, "activate_initial: early exit - null or not deferred");
         return false;
     }
 
     uint32_t playlist_size = projectm_playlist_size(app_data->projectm_playlist);
-    g_message("activate_initial: playlist size=%u", playlist_size);
+    milkdrop_msg(app_data, "activate_initial: playlist size=%u", playlist_size);
 
     if (playlist_size == 0u) {
         g_warning("activate_initial: playlist is empty, aborting");
@@ -166,15 +175,16 @@ milkdrop_activate_initial_playlist_preset(AppData* app_data)
         return false;
     }
 
-    g_message("activate_initial: calling projectm_playlist_set_position(0, true)");
+    milkdrop_msg(app_data, "activate_initial: calling projectm_playlist_set_position(0, true)");
     uint32_t position = projectm_playlist_set_position(app_data->projectm_playlist, 0u, true);
     app_data->startup_deferred_preset_activation = false;
     app_data->startup_final_content_active = true;
 
     char* filename = projectm_playlist_item(app_data->projectm_playlist, position);
-    g_message("startup: activated initial preset at playlist position %u (%s)",
-              position,
-              filename ? filename : "(unknown)");
+    milkdrop_msg(app_data,
+                 "startup: activated initial preset at playlist position %u (%s)",
+                 position,
+                 filename ? filename : "(unknown)");
     if (filename)
         projectm_playlist_free_string(filename);
 
@@ -217,9 +227,14 @@ milkdrop_on_preset_switch_failed(const char* preset_filename,
 
     quarantine_record_failure(app_data, preset_filename);
 
-    if (atomic_load(&app_data->quarantine_all_failed))
+    if (atomic_load(&app_data->quarantine_all_failed)) {
         g_warning("milkdrop: %d consecutive preset failures — stopping auto-advance",
                   app_data->consecutive_failures);
+        if (!atomic_load(&app_data->quarantine_user_notified)) {
+            atomic_store(&app_data->quarantine_user_notified, true);
+            g_print("MILKDROP_NOTIFY:quarantine_all_failed\n");
+        }
+    }
 }
 
 static void
@@ -236,7 +251,10 @@ milkdrop_on_preset_switched(bool         is_hard_cut,
     }
 
     char* filename = projectm_playlist_item(app_data->projectm_playlist, index);
-    g_message("preset_switched: index=%u, filename=%s", index, filename ? filename : "(null)");
+    milkdrop_msg(app_data,
+                 "preset_switched: index=%u, filename=%s",
+                 index,
+                 filename ? filename : "(null)");
     quarantine_record_success(app_data, filename);
     if (filename)
         projectm_playlist_free_string(filename);
@@ -250,22 +268,23 @@ milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
         return;
     }
 
-    g_message("playlist: syncing from preset_dir=%s",
-              app_data->preset_dir ? app_data->preset_dir : "(null)");
+    milkdrop_msg(app_data,
+                 "playlist: syncing from preset_dir=%s",
+                 app_data->preset_dir ? app_data->preset_dir : "(null)");
 
     milkdrop_configure_texture_search_paths(app_data);
 
     projectm_playlist_clear(app_data->projectm_playlist);
-    g_message("playlist: cleared existing entries");
+    milkdrop_msg(app_data, "playlist: cleared existing entries");
 
     uint32_t added = 0;
     if (app_data->preset_dir && app_data->preset_dir[0] != '\0') {
-        g_message("playlist: calling projectm_playlist_add_path for %s", app_data->preset_dir);
+        milkdrop_msg(app_data, "playlist: calling projectm_playlist_add_path for %s", app_data->preset_dir);
         added = projectm_playlist_add_path(app_data->projectm_playlist,
                                            app_data->preset_dir,
                                            true,
                                            false);
-        g_message("playlist: projectm_playlist_add_path returned %u presets", added);
+        milkdrop_msg(app_data, "playlist: projectm_playlist_add_path returned %u presets", added);
     } else {
         g_warning("playlist: preset_dir is empty or null, skipping add_path");
     }
@@ -276,14 +295,16 @@ milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
     if (added > 0) {
         projectm_load_preset_file(app_data->projectm, "idle://", false);
         milkdrop_reset_startup_gate(app_data, true);
-        g_message("playlist: loaded %u presets from %s; warming up on idle preset before reveal",
-                  added,
-                  app_data->preset_dir);
+        milkdrop_msg(app_data,
+                     "playlist: loaded %u presets from %s; warming up on idle preset before reveal",
+                     added,
+                     app_data->preset_dir);
     } else {
         projectm_load_preset_file(app_data->projectm, "idle://", false);
         milkdrop_reset_startup_gate(app_data, false);
-        g_message("playlist: empty for %s, using idle preset (no defer)",
-                  app_data->preset_dir ? app_data->preset_dir : "(none)");
+        milkdrop_msg(app_data,
+                     "playlist: empty for %s, using idle preset (no defer)",
+                     app_data->preset_dir ? app_data->preset_dir : "(none)");
     }
 }
 
@@ -398,14 +419,14 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
 }
 #endif
 
-/* ~60 Hz via GLib: não usar só gtk_widget_add_tick_callback — com a janela ancorada
- * por baixo (wallpaper), o GdkFrameClock do GTK pode não sinalizar frames e o
- * projectM fica estático até um resize “acordar” o relógio. */
+/* ~60 Hz via GLib: do not rely on gtk_widget_add_tick_callback alone — when the window
+ * is anchored below (wallpaper), GTK's GdkFrameClock may not tick and projectM stays
+ * static until a resize wakes the clock. */
 #define MILKDROP_RENDER_PULSE_INTERVAL_MS 16
 
-/* Após o render GL, pedir frame na superfície no próximo idle — dentro do próprio
- * callback render o GDK ainda pode estar a fechar o frame; no Wayland isto ajuda
- * o compositor a voltar a pedir buffers (clone/wallpaper atualiza). */
+/* After GL render, queue a surface frame on the next idle — inside the render callback
+ * GDK may still be closing the frame; on Wayland this helps the compositor request
+ * buffers again (clone/wallpaper updates). */
 static gboolean
 milkdrop_idle_surface_queue_render(gpointer user_data)
 {
@@ -498,8 +519,8 @@ on_render_pulse(gpointer user_data)
                       frame_count, app_data->projectm, app_data->render_width, app_data->render_height);
     }
 
-    /* Não exigir mapped: janela ancorada como wallpaper pode ficar num estado em que
-     * get_mapped é falso e nunca pedíamos frame — imagem estática até resize. */
+    /* Do not require mapped: wallpaper-anchored window may stay unmapped-looking and
+     * never request frames — static image until resize. */
     if (app_data->gl_area)
         gtk_gl_area_queue_render(app_data->gl_area);
 
@@ -535,7 +556,7 @@ on_realize(GtkGLArea* area, gpointer user_data)
 {
     AppData* app_data = user_data;
 
-    g_message("on_realize: called, area=%p", area);
+    milkdrop_msg(app_data, "on_realize: called, area=%p", area);
 
 #if HAVE_PROJECTM
     atomic_store(&app_data->projectm_init_aborted, false);
@@ -547,15 +568,15 @@ on_realize(GtkGLArea* area, gpointer user_data)
         return;
     }
 
-    g_message("on_realize: GL context created successfully");
+    milkdrop_msg(app_data, "on_realize: GL context created successfully");
 
 #if HAVE_PROJECTM
     bool init_ok = milkdrop_try_init_projectm(area, app_data);
-    g_message("on_realize: milkdrop_try_init_projectm returned %d", init_ok);
+    milkdrop_msg(app_data, "on_realize: milkdrop_try_init_projectm returned %d", init_ok);
     if (!init_ok)
-        g_message("projectM init deferred until GL context is ready (next render)");
+        milkdrop_msg(app_data, "projectM init deferred until GL context is ready (next render)");
 #else
-    g_message("Renderer running in placeholder mode (libprojectM not available)");
+    milkdrop_msg(app_data, "Renderer running in placeholder mode (libprojectM not available)");
 #endif
 }
 
@@ -587,7 +608,7 @@ static void
 on_resize(GtkGLArea* area, int width, int height, gpointer user_data)
 {
     AppData* app_data = user_data;
-    g_message("on_resize: area=%p, width=%d, height=%d", area, width, height);
+    milkdrop_msg(app_data, "on_resize: area=%p, width=%d, height=%d", area, width, height);
     int scale = gtk_widget_get_scale_factor(GTK_WIDGET(area));
     if (scale < 1)
         scale = 1;
@@ -602,14 +623,12 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     (void)context;
     AppData* app_data = user_data;
 
-    // Log não-verbose para confirmar que on_render está sendo chamado
-    static int render_call_count = 0;
-    if (render_call_count++ % 60 == 0) {
-        g_message("on_render: called (calls=%d, projectm=%p)",
-                  render_call_count, app_data->projectm);
-    }
-
     if (app_data->verbose) {
+        static int render_call_count = 0;
+        if (render_call_count++ % 60 == 0) {
+            g_message("on_render: calls=%d projectm=%p",
+                      render_call_count, app_data->projectm);
+        }
         g_message("on_render: area=%p, width=%d, height=%d, projectm=%p",
                   area, gtk_widget_get_width(GTK_WIDGET(area)),
                   gtk_widget_get_height(GTK_WIDGET(area)),
@@ -632,6 +651,20 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     }
 
     bool must_reattach_buffers = false;
+
+    if (atomic_exchange(&app_data->load_preset_pending, false)) {
+        char path[sizeof(app_data->pending_load_preset)] = {0};
+
+        g_mutex_lock(&app_data->load_preset_lock);
+        g_strlcpy(path, app_data->pending_load_preset, sizeof(path));
+        app_data->pending_load_preset[0] = '\0';
+        g_mutex_unlock(&app_data->load_preset_lock);
+
+        if (path[0] != '\0' && app_data->projectm) {
+            projectm_load_preset_file(app_data->projectm, path, false);
+            must_reattach_buffers = true;
+        }
+    }
 
     if (app_data->projectm && app_data->projectm_playlist) {
         /* Defer play_next/previous until initial preset activation (warmup gate). Skips accumulate. */
@@ -683,11 +716,10 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         }
         renderer_frame_prep(app_data, pcm_samples, G_N_ELEMENTS(pcm_samples), &prep);
 
-        // Log de diagnóstico não-verbose para entender porque would_draw pode ser false
-        if (!prep.would_draw) {
+        if (!prep.would_draw && app_data->verbose) {
             static int no_draw_counter = 0;
             if (no_draw_counter++ % 60 == 0) {
-                g_warning("render: would_draw=FALSE (projectm=%p, render_width=%d, render_height=%d)",
+                g_message("render: would_draw=FALSE (projectm=%p, render_width=%d, render_height=%d)",
                           app_data->projectm, app_data->render_width, app_data->render_height);
             }
         }
@@ -751,25 +783,22 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             }
 
             if (app_data->startup_deferred_preset_activation) {
-                // Timeout fallback: forçar ativação após 3 segundos
                 gint64 now_us = g_get_monotonic_time();
                 gint64 elapsed_us = now_us - app_data->startup_init_time_us;
-                bool timeout_fallback = elapsed_us > 3000000; // 3 segundos
+                bool timeout_fallback = elapsed_us > 3000000;
 
-                // Ativar preset após warmup OU após alguns frames renderizados
-                // OU após timeout de 3 segundos (backup para caso warmup_drawn nunca seja setado)
                 if (app_data->startup_warmup_drawn || app_data->render_frame_counter > 5 || timeout_fallback) {
                     if (timeout_fallback && !app_data->startup_warmup_drawn)
                         g_warning("render: TIMEOUT FALLBACK - forcing preset activation after %" G_GINT64_FORMAT " us",
                                   elapsed_us);
                     else
-                        g_message("render: activating initial preset (warmup=%d, frame_counter=%" G_GUINT64_FORMAT ")",
-                                  app_data->startup_warmup_drawn,
-                                  app_data->render_frame_counter);
+                        milkdrop_msg(app_data,
+                                     "render: activating initial preset (warmup=%d, frame_counter=%" G_GUINT64_FORMAT ")",
+                                     app_data->startup_warmup_drawn,
+                                     app_data->render_frame_counter);
                     if (milkdrop_activate_initial_playlist_preset(app_data))
                         must_reattach_buffers = true;
-                } else {
-                    // Log de debug não-verbose para confirmar que estamos esperando
+                } else if (app_data->verbose) {
                     static int waiting_log_counter = 0;
                     if (waiting_log_counter++ % 60 == 0) {
                         g_message("render: waiting for warmup (warmup=%d, frame_counter=%" G_GUINT64_FORMAT ")",
@@ -817,57 +846,6 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
              * glFinish() blocks until all queued GL commands finish executing on the GPU.
              * Performance impact is minimal (<1ms) as rendering is already GPU-bound. */
             glFinish();
-
-            // Handle screenshot request - read from current framebuffer
-            // Pattern from test_gtk_glarea_projectm.c: restore framebuffer before read
-            if (atomic_exchange(&app_data->screenshot_requested, false)) {
-                if (app_data->screenshot_path[0] != '\0' && app_data->render_width > 0 && app_data->render_height > 0) {
-                    // Restore framebuffer binding before read (critical!)
-                    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
-                    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-                    
-                    // Use RGBA format like test does
-                    GLubyte *pixels = malloc((size_t)app_data->render_width * (size_t)app_data->render_height * 4);
-                    if (pixels) {
-                        glReadPixels(0, 0, app_data->render_width, app_data->render_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-                        
-                        // Check probe points like test does
-                        static const struct { float x; float y; } probe_points[] = {
-                            {0.50f, 0.50f}, {0.33f, 0.33f}, {0.67f, 0.33f}, {0.33f, 0.67f}, {0.67f, 0.67f}
-                        };
-                        int found_content = 0;
-                        for (size_t i = 0; i < 5; i++) {
-                            int px = (int)(probe_points[i].x * (float)(app_data->render_width - 1));
-                            int py = (int)(probe_points[i].y * (float)(app_data->render_height - 1));
-                            size_t idx = (size_t)py * (size_t)app_data->render_width * 4 + (size_t)px * 4;
-                            if (pixels[idx] > 0 || pixels[idx+1] > 0 || pixels[idx+2] > 0) {
-                                found_content = 1;
-                                break;
-                            }
-                        }
-                        g_message("screenshot: has_visible_content=%d at %dx%d", 
-                                  found_content, app_data->render_width, app_data->render_height);
-                        
-                        // Save as PPM (RGB only)
-                        FILE *f = fopen(app_data->screenshot_path, "wb");
-                        if (f) {
-                            fprintf(f, "P6\n%d %d\n255\n", app_data->render_width, app_data->render_height);
-                            for (int y = app_data->render_height - 1; y >= 0; y--) {
-                                for (int x = 0; x < app_data->render_width; x++) {
-                                    size_t idx = (size_t)y * (size_t)app_data->render_width * 4 + (size_t)x * 4;
-                                    fputc(pixels[idx], f);     // R
-                                    fputc(pixels[idx+1], f);   // G
-                                    fputc(pixels[idx+2], f);   // B
-                                }
-                            }
-                            fclose(f);
-                            g_message("screenshot: saved to %s", app_data->screenshot_path);
-                        }
-                        free(pixels);
-                    }
-                    app_data->screenshot_path[0] = '\0';
-                }
-            }
 
             err = glGetError();
             milkdrop_log_post_render_gl_error(app_data, err, draw_fbo);
@@ -927,21 +905,18 @@ on_close_request(GtkWidget* widget, gpointer user_data)
 }
 
 /**
- * Define o título inicial da janela com estado codificado em JSON.
- * Formato: @milkdrop!{"monitor":N,"overlay":B,"opacity":F}|N
- * Imita o padrão Hanabi para comunicação de estado via título.
- *
- * Nota: Formata opacity manualmente para garantir ponto decimal (JSON válido)
- * independente do locale (pt_BR usa vírgula, que quebraria o parsing).
+ * Set the initial window title with JSON-encoded state (Hanabi-style).
+ * Format: @milkdrop!{"monitor":N,"overlay":B,"opacity":P}|N
+ * Opacity is encoded as an integer percent (0–100) to avoid locale issues.
  */
 static void
-milkdrop_set_initial_title(GtkWindow* window,
+milkdrop_set_initial_title(AppData*   app_data,
+                           GtkWindow* window,
                            int        monitor,
                            gboolean   overlay,
                            double     opacity)
 {
     char title[256];
-    // Formata opacity manualmente como inteiro de 0-100 para evitar locale issues
     int opacity_percent = (int)(opacity * 100.0 + 0.5);
     if (opacity_percent < 0)
         opacity_percent = 0;
@@ -955,7 +930,7 @@ milkdrop_set_initial_title(GtkWindow* window,
              opacity_percent,
              monitor);
     gtk_window_set_title(window, title);
-    g_message("Window title set: %s", title);
+    milkdrop_msg(app_data, "Window title set: %s", title);
 }
 
 /**
@@ -1012,7 +987,8 @@ build_window(AppData* app_data)
     app_data->window = GTK_WINDOW(window);
     app_data->gl_area = GTK_GL_AREA(gl_area);
 
-    milkdrop_set_initial_title(app_data->window,
+    milkdrop_set_initial_title(app_data,
+                               app_data->window,
                                app_data->monitor_index,
                                atomic_load(&app_data->overlay_enabled),
                                (double)atomic_load(&app_data->opacity));
@@ -1048,8 +1024,9 @@ build_window(AppData* app_data)
     }
 
     gtk_window_set_default_size(app_data->window, default_width, default_height);
-    app_data->render_width = default_width;
-    app_data->render_height = default_height;
+    /* Pixel size for projectM comes from on_resize (backing store × scale); avoid mismatch here. */
+    app_data->render_width = 0;
+    app_data->render_height = 0;
     app_data->initial_width = default_width;
     app_data->initial_height = default_height;
     gtk_window_set_decorated(app_data->window, false);
@@ -1067,8 +1044,7 @@ build_window(AppData* app_data)
     /* projectM 4.x requires OpenGL 3.3 core profile */
     gtk_gl_area_set_required_version(GTK_GL_AREA(gl_area), 3, 3);
 #if GTK_CHECK_VERSION(4, 12, 0)
-    /* projectM precisa de OpenGL desktop; se o fundo ficar preto, experimente
-     * MILKDROP_FORCE_GL_API=1 no ambiente do renderer. */
+    /* projectM needs desktop GL; if the window stays black, set MILKDROP_FORCE_GL_API=1. */
     if (g_getenv("MILKDROP_FORCE_GL_API"))
         gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_area), GDK_GL_API_GL);
 #endif
@@ -1110,8 +1086,11 @@ build_window(AppData* app_data)
      * surface was already mapped synchronously (e.g. on X11). */
     make_surface_click_through(GTK_WIDGET(app_data->window));
 
-    g_message("renderer: geometry=%dx%d on monitor=%d, click-through=enabled",
-              default_width, default_height, app_data->monitor_index);
+    milkdrop_msg(app_data,
+                 "renderer: geometry=%dx%d on monitor=%d, click-through=enabled",
+                 default_width,
+                 default_height,
+                 app_data->monitor_index);
 }
 
 static void
@@ -1158,6 +1137,7 @@ on_shutdown(GApplication* application, gpointer user_data)
     presets_clear(app_data);
     g_clear_pointer(&app_data->socket_path, g_free);
     g_mutex_clear(&app_data->preset_dir_lock);
+    g_mutex_clear(&app_data->load_preset_lock);
 }
 
 int
@@ -1230,7 +1210,11 @@ main(int argc, char** argv)
     app_data.control_fd = -1;
     app_data.control_thread = NULL;
     g_mutex_init(&app_data.preset_dir_lock);
+    g_mutex_init(&app_data.load_preset_lock);
     app_data.pending_preset_dir[0] = '\0';
+    app_data.pending_load_preset[0] = '\0';
+    atomic_store(&app_data.load_preset_pending, false);
+    atomic_store(&app_data.quarantine_user_notified, false);
 
     /* No explicit app-id: GDK Wayland will use g_get_prgname() ("milkdrop") as
      * the xdg_toplevel app_id.  This ensures Meta.Window.get_wm_class() in the

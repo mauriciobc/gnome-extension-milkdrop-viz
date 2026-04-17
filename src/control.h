@@ -2,6 +2,11 @@
 
 #include "app.h"
 
+/** Max bytes for control server responses (status block, save-state line). */
+#define MILKDROP_CONTROL_RESPONSE_MAX (MILKDROP_PATH_MAX * 2 + 512)
+/** Max bytes for one received command line (restore-state with long paths). */
+#define MILKDROP_CONTROL_RECV_MAX (MILKDROP_PATH_MAX * 5)
+
 typedef enum {
 	CONTROL_CMD_NONE = 0,
 	CONTROL_CMD_STATUS,
@@ -16,7 +21,7 @@ typedef enum {
 	CONTROL_CMD_ROTATION_INTERVAL,
 	CONTROL_CMD_SAVE_STATE,
 	CONTROL_CMD_RESTORE_STATE,
-	CONTROL_CMD_SCREENSHOT,
+	CONTROL_CMD_LOAD_PRESET,
 } ControlCommandType;
 
 typedef enum {
@@ -47,7 +52,6 @@ typedef struct {
 	bool restore_shuffle_enabled;
 	float restore_opacity;
 	char restore_preset_dir[MILKDROP_PATH_MAX];
-	char screenshot_path[MILKDROP_PATH_MAX];
 } ControlCommand;
 
 typedef struct {

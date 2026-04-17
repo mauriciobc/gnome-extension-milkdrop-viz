@@ -58,6 +58,7 @@ quarantine_record_success(AppData *d, const char *path)
 
     d->consecutive_failures = 0;
     atomic_store(&d->quarantine_all_failed, false);
+    atomic_store(&d->quarantine_user_notified, false);
 
     if (path && path[0] != '\0')
         g_strlcpy(d->last_good_preset, path, MILKDROP_PATH_MAX);

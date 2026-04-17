@@ -61,6 +61,8 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         let pollSourceId = 0;
 
         const refreshStatus = () => {
+            if (!window.get_visible())
+                return;
             const display = Gdk.Display.get_default();
             const numMonitors = display ? display.get_monitors().get_n_items() : 1;
             queryAllMilkdropStatus(numMonitors).then(results => {
@@ -110,6 +112,8 @@ export default class MilkdropPreferences extends ExtensionPreferences {
 
         window.connect('map', () => {
             refreshStatus();
+            if (pollSourceId > 0)
+                return;
             pollSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
                 refreshStatus();
                 return GLib.SOURCE_CONTINUE;
@@ -154,6 +158,20 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         });
         settings.bind('all-monitors', allMonitorsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         runtimeGroup.add(allMonitorsRow);
+
+        const discreteGpuRow = new Adw.SwitchRow({
+            title: 'Prefer discrete GPU',
+            subtitle: 'Sets DRI_PRIME=1 for the renderer (hybrid graphics)',
+        });
+        settings.bind('use-discrete-gpu', discreteGpuRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        runtimeGroup.add(discreteGpuRow);
+
+        const reducedMotionRow = new Adw.SwitchRow({
+            title: 'Respect reduced motion',
+            subtitle: 'When enabled, pauses the visualizer if the session requests reduced motion',
+        });
+        settings.bind('respect-reduced-motion', reducedMotionRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        runtimeGroup.add(reducedMotionRow);
 
         // Disable the monitor index row when all-monitors is active
         const syncMonitorSensitivity = () => {
@@ -265,7 +283,10 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         behaviorGroup.add(mediaAwareRow);
 
         // ── Presets ──────────────────────────────────────────────────────────
-        const presetGroup = new Adw.PreferencesGroup({title: 'Presets'});
+        const presetGroup = new Adw.PreferencesGroup({
+            title: 'Presets',
+            description: 'Subfolders are scanned recursively. Directory names starting with ! are skipped (MilkDrop transition folders).',
+        });
         page.add(presetGroup);
 
         const dirRow = new Adw.ActionRow({

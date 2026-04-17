@@ -50,7 +50,7 @@ meson setup --reconfigure build -Dshell-integration-tests=true
 meson test -C build compositor-behavior-integration
 ```
 
-Test names: `ring-buffer`, `backends`, `control-protocol`, `presets`, `audio-alignment`, `render-pipeline`, `gtk-glarea-projectm`, `gtk-glarea-fbo`, `tick-state-machine`, `control-state-flow`, `presets-edge-cases`, `scaffold-validation`
+Test names (see `tests/meson.build`): `ring-buffer`, `backends`, `control-protocol`, `presets`, `audio-alignment`, `render-pipeline`, `gtk-glarea-projectm`, `gtk-glarea-fbo`, `tick-state-machine`, `control-state-flow`, `presets-edge-cases`, `audio-recovery`, `pause-policy`, `preset-quarantine`, `state-persistence`, `scaffold-validation`
 
 ## Helper Scripts
 

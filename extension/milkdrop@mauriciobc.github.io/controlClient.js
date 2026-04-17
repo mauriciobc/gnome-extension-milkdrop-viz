@@ -4,8 +4,10 @@ import GLib from 'gi://GLib';
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
 
-/** Align with MILKDROP_CONTROL_RECV_MAX in src/control.c (PATH_MAX * 5). */
-const CONTROL_MAX_RESPONSE_BYTES = 5 * 4096;
+/** Match MILKDROP_PATH_MAX / MILKDROP_CONTROL_RECV_MAX in src/control.h */
+const MILKDROP_PATH_MAX = 4096;
+/** Align with MILKDROP_CONTROL_RECV_MAX in src/control.h (PATH_MAX * 5). */
+const CONTROL_MAX_RESPONSE_BYTES = MILKDROP_PATH_MAX * 5;
 
 function _connectUnixSocket(path, callback) {
     const socketClient = new Gio.SocketClient();
@@ -26,16 +28,16 @@ function _connectUnixSocket(path, callback) {
  * Read until EOF or maxBytes, concatenating chunks (Unix stream closes after one response).
  */
 function _readResponseFully(input, maxBytes, callback) {
+    let totalSoFar = 0;
     const parts = [];
 
     const readChunk = () => {
-        const soFar = parts.reduce((a, p) => a + p.length, 0);
-        if (soFar >= maxBytes) {
+        if (totalSoFar >= maxBytes) {
             callback(null);
             return;
         }
 
-        const ask = Math.min(8192, maxBytes - soFar);
+        const ask = Math.min(8192, maxBytes - totalSoFar);
         input.read_bytes_async(ask, GLib.PRIORITY_DEFAULT, null, (_in, readRes) => {
             let bytes;
             try {
@@ -47,8 +49,7 @@ function _readResponseFully(input, maxBytes, callback) {
 
             const n = bytes.get_size();
             if (n === 0) {
-                const totalLen = parts.reduce((a, p) => a + p.length, 0);
-                const buf = new Uint8Array(totalLen);
+                const buf = new Uint8Array(totalSoFar);
                 let o = 0;
                 for (const p of parts) {
                     buf.set(p, o);
@@ -64,6 +65,7 @@ function _readResponseFully(input, maxBytes, callback) {
                 arr[i] = data[i];
 
             parts.push(arr);
+            totalSoFar += n;
             readChunk();
         });
     };
@@ -193,16 +195,13 @@ export function queryMilkdropStatus(socketPath = null) {
                 }
 
                 const input = connection.get_input_stream();
-                input.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (_in, readRes) => {
-                    let bytes;
-                    try {
-                        bytes = _in.read_bytes_finish(readRes);
-                    } catch (_e) {
+                _readResponseFully(input, MILKDROP_PATH_MAX * 2 + 512, buf => {
+                    if (!buf || buf.length === 0) {
                         closeAndResolve(null);
                         return;
                     }
 
-                    const text = TEXT_DECODER.decode(bytes.get_data());
+                    const text = TEXT_DECODER.decode(buf);
                     const status = {};
 
                     const parseByKey = {

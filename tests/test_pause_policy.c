@@ -18,6 +18,24 @@
 #include "app.h"
 #include "control.h"
 
+static void
+pause_policy_setup_app(AppData *d)
+{
+    memset(d, 0, sizeof *d);
+    g_mutex_init(&d->preset_dir_lock);
+    g_mutex_init(&d->load_preset_lock);
+}
+
+static void
+pause_policy_teardown_app(AppData *d)
+{
+    control_cleanup(d);
+    g_free(d->socket_path);
+    d->socket_path = NULL;
+    g_mutex_clear(&d->preset_dir_lock);
+    g_mutex_clear(&d->load_preset_lock);
+}
+
 static gchar *
 send_cmd(const char *socket_path, const char *command)
 {
@@ -45,7 +63,8 @@ send_cmd(const char *socket_path, const char *command)
 static void
 test_pause_on_sets_pause_audio(void)
 {
-    AppData d = {0};
+    AppData d;
+    pause_policy_setup_app(&d);
     atomic_store(&d.pause_audio, false);
 
     g_assert_true(control_init(&d));
@@ -54,14 +73,14 @@ test_pause_on_sets_pause_audio(void)
     g_assert_true(g_str_has_prefix(resp, "ok"));
     g_assert_true(atomic_load(&d.pause_audio));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
+    pause_policy_teardown_app(&d);
 }
 
 static void
 test_resume_clears_pause_audio(void)
 {
-    AppData d = {0};
+    AppData d;
+    pause_policy_setup_app(&d);
     atomic_store(&d.pause_audio, true);
 
     g_assert_true(control_init(&d));
@@ -70,14 +89,14 @@ test_resume_clears_pause_audio(void)
     g_assert_true(g_str_has_prefix(resp, "ok"));
     g_assert_false(atomic_load(&d.pause_audio));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
+    pause_policy_teardown_app(&d);
 }
 
 static void
 test_status_shows_paused_after_policy_pause(void)
 {
-    AppData d = {0};
+    AppData d;
+    pause_policy_setup_app(&d);
     atomic_store(&d.pause_audio, false);
 
     g_assert_true(control_init(&d));
@@ -90,14 +109,14 @@ test_status_shows_paused_after_policy_pause(void)
     g_autofree gchar *status = send_cmd(d.socket_path, "status\n");
     g_assert_nonnull(strstr(status, "paused=1"));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
+    pause_policy_teardown_app(&d);
 }
 
 static void
 test_status_shows_unpaused_after_resume(void)
 {
-    AppData d = {0};
+    AppData d;
+    pause_policy_setup_app(&d);
     atomic_store(&d.pause_audio, true);
 
     g_assert_true(control_init(&d));
@@ -109,8 +128,7 @@ test_status_shows_unpaused_after_resume(void)
     g_autofree gchar *status = send_cmd(d.socket_path, "status\n");
     g_assert_nonnull(strstr(status, "paused=0"));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
+    pause_policy_teardown_app(&d);
 }
 
 static void
@@ -118,7 +136,8 @@ test_pause_toggle_sequence(void)
 {
     /* Simulates the PausePolicy sending multiple pause on/off as
      * conditions change: fullscreen appears, then disappears. */
-    AppData d = {0};
+    AppData d;
+    pause_policy_setup_app(&d);
     atomic_store(&d.pause_audio, false);
 
     g_assert_true(control_init(&d));
@@ -136,8 +155,7 @@ test_pause_toggle_sequence(void)
     send_cmd(d.socket_path, "pause on\n");
     g_assert_true(atomic_load(&d.pause_audio));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
+    pause_policy_teardown_app(&d);
 }
 
 static void
@@ -145,7 +163,8 @@ test_last_pause_command_wins(void)
 {
     /* The _setPauseReason pattern sends exactly one final command.
      * Verify the last command received is the one that counts. */
-    AppData d = {0};
+    AppData d;
+    pause_policy_setup_app(&d);
     atomic_store(&d.pause_audio, false);
 
     g_assert_true(control_init(&d));
@@ -156,25 +175,22 @@ test_last_pause_command_wins(void)
 
     g_assert_false(atomic_load(&d.pause_audio));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
+    pause_policy_teardown_app(&d);
 }
 
 static void
 test_status_includes_quarantine_field(void)
 {
     /* Quarantine field (Phase 1) must still be present in Phase 2 status. */
-    AppData d = {0};
-    g_mutex_init(&d.preset_dir_lock);
+    AppData d;
+    pause_policy_setup_app(&d);
 
     g_assert_true(control_init(&d));
 
     g_autofree gchar *status = send_cmd(d.socket_path, "status\n");
     g_assert_nonnull(strstr(status, "quarantine=0"));
 
-    control_cleanup(&d);
-    g_free(d.socket_path);
-    g_mutex_clear(&d.preset_dir_lock);
+    pause_policy_teardown_app(&d);
 }
 
 /* ── main ─────────────────────────────────────────────────────────────────── */

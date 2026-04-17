@@ -1,37 +1,35 @@
 /**
- * ManagedWindow - Gerencia uma janela do renderer ancorada no wallpaper.
+ * ManagedWindow — tracks one renderer Meta.Window anchored in the wallpaper layer.
  *
- * Baseado no padrão ManagedWindow do Hanabi (hanabi/src/windowManager.js).
- * Encapsula o estado e os sinais de uma janela do renderer para manutenção
- * mais simples e cleanup garantido.
+ * Based on Hanabi’s ManagedWindow pattern (hanabi/src/windowManager.js).
+ * Encapsulates per-window state and signal wiring for predictable cleanup.
  */
 
 import GLib from 'gi://GLib';
 
 /**
- * Callbacks opcionais para eventos da janela.
+ * Optional callbacks for window events.
  * @typedef {Object} WindowCallbacks
- * @property {function(MetaWindow):void} [onRaised] - Chamado quando a janela é raised
- * @property {function(MetaWindow):void} [onMoved] - Chamado quando a janela muda de posição
- * @property {function(MetaWindow):void} [onMinimized] - Chamado quando a janela é minimizada
- * @property {function(MetaWindow):void} [onShown] - Chamado quando a janela é mostrada
+ * @property {function(MetaWindow):void} [onRaised]
+ * @property {function(MetaWindow):void} [onMoved]
+ * @property {function(MetaWindow):void} [onMinimized]
+ * @property {function(MetaWindow):void} [onShown]
  */
 
 /**
- * Estado interno da janela gerenciada.
+ * Internal window state snapshot.
  * @typedef {Object} WindowState
- * @property {boolean} keepAtBottom - Mantém a janela sempre no fundo
- * @property {boolean} keepPosition - Mantém a janela na posição do monitor
- * @property {boolean} keepMinimized - Mantém a janela minimizada (não usado ainda)
+ * @property {boolean} keepAtBottom
+ * @property {boolean} keepPosition
+ * @property {boolean} keepMinimized - reserved for future “keep minimized” behaviour
  * @property {string} reparentState - 'window_group' | 'wallpaper' | null
  */
 
 export class ManagedWindow {
     /**
-     * Cria uma nova instância de ManagedWindow.
-     * @param {Meta.Window} metaWindow - A janela Meta do renderer
-     * @param {number} monitorIndex - Índice do monitor onde a janela deve ficar
-     * @param {WindowCallbacks} [callbacks] - Callbacks opcionais para eventos
+     * @param {Meta.Window} metaWindow
+     * @param {number} monitorIndex
+     * @param {WindowCallbacks} [callbacks]
      */
     constructor(metaWindow, monitorIndex, callbacks = {}) {
         this._window = metaWindow;
@@ -41,7 +39,6 @@ export class ManagedWindow {
         this._disabled = false;
 
         /**
-         * Estado interno da janela.
          * @type {WindowState}
          */
         this._state = {
@@ -54,45 +51,38 @@ export class ManagedWindow {
         this._connectSignals();
     }
 
-    /**
-     * Conecta os sinais necessários da janela.
-     * @private
-     */
+    /** @private */
     _connectSignals() {
-        // Intercepta 'raised' para manter a janela sempre no fundo
+        /* Keep the renderer stacked at the bottom when something raises it. */
         const raisedId = this._window.connect_after('raised', () => {
             this._onRaised();
         });
         this._signals.push(raisedId);
 
-        // Monitora mudanças de posição/tamanho
+        /* Track move/resize */
         const positionId = this._window.connect('position-changed', () => {
             this._onMoved();
         });
         this._signals.push(positionId);
 
-        // Monitora minimização
+        /* Minimize state */
         const minimizedId = this._window.connect('notify::minimized', () => {
             this._onMinimized();
         });
         this._signals.push(minimizedId);
 
-        // Monitora quando a janela é mostrada
+        /* Shown */
         const shownId = this._window.connect('shown', () => {
             this._onShown();
         });
         this._signals.push(shownId);
     }
 
-    /**
-     * Handler para quando a janela é raised (trazida para frente).
-     * @private
-     */
+    /** @private */
     _onRaised() {
         if (this._disabled || !this._state.keepAtBottom)
             return;
 
-        // Mantém a janela no fundo
         this._window.lower();
 
         const actor = this._window.get_compositor_private();
@@ -108,10 +98,7 @@ export class ManagedWindow {
             this._callbacks.onRaised(this._window);
     }
 
-    /**
-     * Handler para quando a janela muda de posição.
-     * @private
-     */
+    /** @private */
     _onMoved() {
         if (this._disabled || !this._state.keepPosition)
             return;
@@ -120,10 +107,7 @@ export class ManagedWindow {
             this._callbacks.onMoved(this._window);
     }
 
-    /**
-     * Handler para quando a janela é minimizada/desminimizada.
-     * @private
-     */
+    /** @private */
     _onMinimized() {
         if (this._disabled)
             return;
@@ -132,10 +116,7 @@ export class ManagedWindow {
             this._callbacks.onMinimized(this._window);
     }
 
-    /**
-     * Handler para quando a janela é mostrada.
-     * @private
-     */
+    /** @private */
     _onShown() {
         if (this._disabled)
             return;
@@ -144,35 +125,22 @@ export class ManagedWindow {
             this._callbacks.onShown(this._window);
     }
 
-    /**
-     * Retorna a janela Meta gerenciada.
-     * @returns {Meta.Window}
-     */
+    /** @returns {Meta.Window} */
     get window() {
         return this._window;
     }
 
-    /**
-     * Retorna o índice do monitor associado.
-     * @returns {number}
-     */
+    /** @returns {number} */
     get monitorIndex() {
         return this._monitorIndex;
     }
 
-    /**
-     * Retorna o estado atual da janela.
-     * @returns {WindowState}
-     */
+    /** @returns {WindowState} */
     get state() {
         return { ...this._state };
     }
 
-    /**
-     * Define uma propriedade de estado.
-     * @param {string} key - Chave do estado
-     * @param {any} value - Valor a definir
-     */
+    /** @param {string} key @param {any} value */
     setState(key, value) {
         if (key in this._state)
             this._state[key] = value;
@@ -196,9 +164,8 @@ export class ManagedWindow {
     }
 
     /**
-     * Ancora a janela no wallpaper: move para o monitor correto,
-     * aplica sticky, redimensiona para cobrir o monitor, e posiciona no fundo.
-     * @param {Meta.Rectangle} geometry - Geometria do monitor (x, y, width, height)
+     * Anchor into the wallpaper layer: correct monitor, sticky, full coverage, lowered.
+     * @param {Meta.Rectangle} geometry
      */
     anchor(geometry) {
         const actor = this._window.get_compositor_private();
@@ -231,22 +198,16 @@ export class ManagedWindow {
             }
         }
 
-        // Aplica sticky (visível em todos os workspaces)
         this._window.stick();
         log('[milkdrop] ManagedWindow: Window stuck to all workspaces');
 
-        // Move para o monitor correto e redimensiona
         this.enforceCoverage(geometry);
 
-        // Garante que fica no fundo
         this._window.lower();
         log('[milkdrop] ManagedWindow: Window lowered in Meta stack');
     }
 
-    /**
-     * Força a janela a cobrir todo o monitor especificado.
-     * @param {Meta.Rectangle} geometry - Geometria do monitor (x, y, width, height)
-     */
+    /** @param {Meta.Rectangle} geometry */
     enforceCoverage(geometry) {
         if (!geometry || geometry.width <= 0 || geometry.height <= 0) {
             log(`[milkdrop] ManagedWindow: Invalid geometry for monitor ${this._monitorIndex}`);
@@ -274,10 +235,7 @@ export class ManagedWindow {
         }
     }
 
-    /**
-     * Desconecta todos os sinais e limpa referências.
-     * Deve ser chamado quando a janela não precisa mais ser gerenciada.
-     */
+    /** Disconnect signals and clear references. */
     disable() {
         this._disabled = true;
         
@@ -285,7 +243,7 @@ export class ManagedWindow {
             try {
                 this._window.disconnect(signalId);
             } catch (e) {
-                // Ignora erros de desconexão (janela pode já ter sido destruída)
+                /* ignore — window may already be gone */
             }
         }
         this._signals = [];
