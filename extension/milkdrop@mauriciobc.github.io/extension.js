@@ -662,6 +662,9 @@ export default class MilkdropExtension extends Extension {
             policy.disable();
             this._pausePolicies.delete(monitorIndex);
         }
+
+        // Clean up ManagedWindow for this monitor to prevent signal leaks
+        this._clearAnchor(monitorIndex);
     }
 
     _restartProcess(monitorIndex) {

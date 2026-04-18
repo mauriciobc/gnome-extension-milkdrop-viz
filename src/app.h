@@ -83,6 +83,7 @@ typedef struct {
     bool startup_hidden;
     bool startup_warmup_drawn;
     bool startup_deferred_preset_activation;
+    bool startup_waiting_for_preset_switch;
     bool startup_final_content_active;
     /* GL thread: first async scan chunk already ran milkdrop_reset_startup_gate(..., true).
      * Without this, every subsequent batch re-triggers initial preset activation at position 0. */
@@ -219,4 +220,3 @@ audio_ring_read(AudioRing* ring, float* output, size_t max_count)
     atomic_store_explicit(&ring->read_index, (read_idx + to_read) % MILKDROP_RING_CAPACITY, memory_order_release);
     return to_read;
 }
-

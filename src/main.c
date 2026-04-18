@@ -6,6 +6,7 @@
 #include "presets.h"
 #include "quarantine.h"
 #include "renderer.h"
+#include "startup_gate.h"
 
 #include <string.h>
 #include <dlfcn.h>
@@ -146,6 +147,7 @@ milkdrop_reset_startup_gate(AppData* app_data,
 
     app_data->startup_warmup_drawn = FALSE;
     app_data->startup_deferred_preset_activation = has_playlist_content;
+    app_data->startup_waiting_for_preset_switch = FALSE;
     app_data->startup_final_content_active = !has_playlist_content;
     app_data->render_frame_counter = 0;
     app_data->startup_init_time_us = g_get_monotonic_time();
@@ -258,14 +260,14 @@ milkdrop_activate_initial_playlist_preset(AppData* app_data)
     if (playlist_size == 0u) {
         g_warning("activate_initial: playlist is empty, aborting");
         app_data->startup_deferred_preset_activation = false;
+        app_data->startup_waiting_for_preset_switch = false;
         app_data->startup_final_content_active = true;
         return false;
     }
 
     g_message("activate_initial: calling projectm_playlist_set_position(0, true)");
+    startup_gate_request_preset_activation(app_data);
     uint32_t position = projectm_playlist_set_position(app_data->projectm_playlist, 0u, true);
-    app_data->startup_deferred_preset_activation = false;
-    app_data->startup_final_content_active = true;
 
     char* filename = projectm_playlist_item(app_data->projectm_playlist, position);
     g_message("startup: activated initial preset at playlist position %u (%s)",
@@ -333,6 +335,7 @@ milkdrop_on_preset_switched(bool         is_hard_cut,
 
     char* filename = projectm_playlist_item(app_data->projectm_playlist, index);
     g_message("preset_switched: index=%u, filename=%s", index, filename ? filename : "(null)");
+    startup_gate_confirm_preset_activation(app_data);
     quarantine_record_success(app_data, filename);
     if (filename)
         projectm_playlist_free_string(filename);
@@ -1372,6 +1375,7 @@ main(int argc, char** argv)
     app_data->startup_hidden = false;
     app_data->startup_warmup_drawn = false;
     app_data->startup_deferred_preset_activation = false;
+    app_data->startup_waiting_for_preset_switch = false;
     app_data->startup_final_content_active = false;
     app_data->render_frame_counter = 0;
     {

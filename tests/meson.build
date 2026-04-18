@@ -171,6 +171,15 @@ startup_async_gate_test = executable(
 
 test('startup-async-gate', startup_async_gate_test)
 
+startup_activation_test = executable(
+  'test-startup-activation',
+  ['test_startup_activation.c', '../src/startup_gate.c'],
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep, test_gtk_dep],
+)
+
+test('startup-activation', startup_activation_test)
+
 audio_recovery_test = executable(
   'test-audio-recovery',
   ['test_audio_recovery.c', '../src/audio_recovery.c'],
