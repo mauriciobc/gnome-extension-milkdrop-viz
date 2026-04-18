@@ -9,6 +9,26 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+/* Escape characters that would break a JSON string literal.
+ * Handles: backslash, double-quote, and control characters. */
+static void
+control_json_escape(const char *in, char *out, size_t out_size)
+{
+    if (out_size == 0) return;
+
+    size_t j = 0;
+    for (size_t i = 0; in[i] && j + 2 < out_size; i++) {
+        if (in[i] == '"' || in[i] == '\\') {
+            out[j++] = '\\';
+        } else if ((unsigned char)in[i] < 0x20) {
+            /* Skip non-printable control characters. */
+            continue;
+        }
+        out[j++] = in[i];
+    }
+    out[j] = '\0';
+}
+
 static bool
 parse_on_off(const char* value, bool* out_enabled)
 {
@@ -69,6 +89,12 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         const char *audio_status = (audio_fails == 0)                   ? "ok"
                                    : (audio_fails < AUDIO_MAX_RESTARTS) ? "recovering"
                                                                          : "failed";
+        /* Snapshot last_good_preset under lock — it is written by the GL thread. */
+        char preset_snapshot[MILKDROP_PATH_MAX];
+        g_mutex_lock(&app_data->last_preset_lock);
+        g_strlcpy(preset_snapshot, app_data->last_good_preset, sizeof(preset_snapshot));
+        g_mutex_unlock(&app_data->last_preset_lock);
+
         g_snprintf(response,
                    response_size,
                    "paused=%d\nopacity=%.3f\nshuffle=%d\noverlay=%d\nquarantine=%d\naudio=%s\nfps=%.1f\npreset=%s\n\n",
@@ -76,10 +102,10 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
                    atomic_load(&app_data->opacity),
                    atomic_load(&app_data->shuffle_runtime) ? 1 : 0,
                    atomic_load(&app_data->overlay_enabled) ? 1 : 0,
-                   app_data->quarantine_count,
+                   atomic_load(&app_data->quarantine_count),
                    audio_status,
                    atomic_load(&app_data->fps_last),
-                   app_data->last_good_preset);
+                   preset_snapshot);
         return TRUE;
     }
     case CONTROL_CMD_OPACITY:
@@ -122,24 +148,33 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         g_strlcpy(response, "ok rotation-interval\n", response_size);
         return TRUE;
     case CONTROL_CMD_SAVE_STATE: {
-        // Retorna estado atual como JSON para persistência
+        /* Snapshot and JSON-escape last_good_preset under lock. */
+        char preset_snapshot[MILKDROP_PATH_MAX];
+        char escaped_preset[MILKDROP_PATH_MAX * 2];
+        g_mutex_lock(&app_data->last_preset_lock);
+        g_strlcpy(preset_snapshot, app_data->last_good_preset, sizeof(preset_snapshot));
+        g_mutex_unlock(&app_data->last_preset_lock);
+        control_json_escape(preset_snapshot[0] != '\0' ? preset_snapshot : "",
+                            escaped_preset, sizeof(escaped_preset));
         g_snprintf(response,
                    response_size,
                    "{\"preset\":\"%s\",\"paused\":%d,\"opacity\":%.3f,\"shuffle\":%d}\n",
-                   app_data->last_good_preset[0] != '\0' ? app_data->last_good_preset : "",
+                   escaped_preset,
                    atomic_load(&app_data->pause_audio) ? 1 : 0,
                    atomic_load(&app_data->opacity),
                    atomic_load(&app_data->shuffle_runtime) ? 1 : 0);
         return TRUE;
     }
     case CONTROL_CMD_RESTORE_STATE:
-        // Aplica estado restaurado (preset, paused, etc)
-        // TODO: Implementar restauração completa de estado
+        // TODO: Implement full state restore
         g_strlcpy(response, "ok restore (partial)\n", response_size);
         return TRUE;
     case CONTROL_CMD_SCREENSHOT:
-        // Request screenshot on next render frame
-        g_strlcpy(app_data->screenshot_path, command->screenshot_path, sizeof(app_data->screenshot_path));
+        /* Write path under lock; GL thread copies it out before use. */
+        g_mutex_lock(&app_data->screenshot_lock);
+        g_strlcpy(app_data->screenshot_path, command->screenshot_path,
+                  sizeof(app_data->screenshot_path));
+        g_mutex_unlock(&app_data->screenshot_lock);
         atomic_store(&app_data->screenshot_requested, true);
         g_strlcpy(response, "ok screenshot queued\n", response_size);
         return TRUE;
@@ -153,7 +188,7 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
 static void
 control_handle_client(AppData* app_data, int client_fd)
 {
-    char buffer[1024] = {0};
+    char buffer[MILKDROP_PATH_MAX + 128] = {0};
     size_t used = 0;
 
     struct timeval tv = { .tv_sec = 2, .tv_usec = 0 };
@@ -163,10 +198,14 @@ control_handle_client(AppData* app_data, int client_fd)
         ssize_t n = recv(client_fd, buffer + used, sizeof(buffer) - 1 - used, 0);
         if (n <= 0)
             break;
+            
+        char *newline = memchr(buffer + used, '\n', (size_t)n);
         used += (size_t)n;
 
-        if (memchr(buffer, '\n', used))
+        if (newline) {
+            used = (size_t)(newline - buffer) + 1;
             break;
+        }
     }
 
     if (used == 0)
@@ -176,7 +215,7 @@ control_handle_client(AppData* app_data, int client_fd)
 
     ControlCommand command = {0};
     ControlParseResult parse_result = control_parse_command(buffer, &command);
-    gchar response[MILKDROP_PATH_MAX + 256] = {0};
+    gchar response[MILKDROP_PATH_MAX * 2 + 256] = {0};
 
     if (parse_result == CONTROL_PARSE_OK)
         (void)control_apply_command(app_data, &command, response, sizeof(response));
@@ -258,6 +297,7 @@ control_parse_command(const char* line, ControlCommand* out_command)
             out_command->pause_enabled = enabled;
             return CONTROL_PARSE_OK;
         }
+        return CONTROL_PARSE_INVALID;
     }
 
     if (g_strcmp0(argv[0], "shuffle") == 0 && argc == 2) {
@@ -419,7 +459,7 @@ control_init(AppData* app_data)
 
     g_unlink(app_data->socket_path);
 
-    app_data->control_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    app_data->control_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (app_data->control_fd < 0) {
         g_warning("Failed to create control socket: %s", g_strerror(errno));
         return false;
@@ -427,6 +467,14 @@ control_init(AppData* app_data)
 
     struct sockaddr_un addr = {0};
     addr.sun_family = AF_UNIX;
+    
+    if (strlen(app_data->socket_path) >= sizeof(addr.sun_path)) {
+        g_warning("Failed to bind control socket: path %s exceeds maximum length", app_data->socket_path);
+        close(app_data->control_fd);
+        app_data->control_fd = -1;
+        return false;
+    }
+    
     g_strlcpy(addr.sun_path, app_data->socket_path, sizeof(addr.sun_path));
 
     if (bind(app_data->control_fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {

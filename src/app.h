@@ -84,11 +84,20 @@ typedef struct {
     bool startup_warmup_drawn;
     bool startup_deferred_preset_activation;
     bool startup_final_content_active;
+    /* GL thread: first async scan chunk already ran milkdrop_reset_startup_gate(..., true).
+     * Without this, every subsequent batch re-triggers initial preset activation at position 0. */
+    bool startup_async_first_chunk_done;
     uint64_t render_frame_counter;
     gint64 startup_init_time_us;  /* Timestamp when startup gate was set */
 
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
+
+    /* Background preset scanning queue */
+    GMutex preset_queue_lock;
+    GPtrArray* preset_load_queue;
+    _Atomic bool is_scanning_presets;
+    _Atomic bool pending_preset_flush;
 
     /* Target frame rate set via control socket (written by control thread, read by GL thread). */
     _Atomic int fps_runtime;
@@ -97,26 +106,45 @@ typedef struct {
     /* Preset rotation interval in seconds (written by control thread, read by GL thread). */
     _Atomic int preset_rotation_interval;
     /* GL-thread-only fields for FPS tracking and timer rescheduling. */
-    int    fps_applied;        /* last fps_runtime value used to set the timer */
+    int    fps_applied;        /* last fps_runtime used for g_timeout interval; -1 until first pulse */
     gint64 fps_last_pulse_us;  /* g_get_monotonic_time() of the previous render pulse */
+
+    /* Sync tracking to avoid per-frame API calls when values haven't changed.
+     * All fields are GL-thread-only (no atomics needed). */
+    float last_synced_opacity;
+    bool  last_synced_shuffle;
+    int   last_synced_interval;
+    int   last_synced_render_width;
+    int   last_synced_render_height;
+    int   render_call_count;  /* periodic render() log counter */
+    int   pulse_frame_count;  /* periodic pulse log counter */
+
+    /* Render-time PCM buffer — GL thread only, avoids per-frame 64 KB stack alloc. */
+    float pcm_render_buf[MILKDROP_RING_CAPACITY];
 
     /* Audio recovery state machine. */
 #define AUDIO_MAX_RESTARTS 5
     _Atomic int  audio_fail_count;
     _Atomic bool audio_recovering;
 
-    /* Preset quarantine — GL thread only (no atomics needed). */
+    /* Preset quarantine — mostly GL thread; quarantine_count and
+     * last_good_preset are also read by the control thread (status/save-state). */
 #define MAX_QUARANTINE 64
 #define QUARANTINE_FAILURE_THRESHOLD 5
     char quarantine_list[MAX_QUARANTINE][MILKDROP_PATH_MAX];
-    int  quarantine_count;
+    _Atomic int  quarantine_count;
     int  consecutive_failures;
-    char last_good_preset[MILKDROP_PATH_MAX];
+    GMutex last_preset_lock;
+    char   last_good_preset[MILKDROP_PATH_MAX];
     _Atomic bool quarantine_all_failed;
 
-    /* Screenshot request - GL thread reads, control thread writes */
+    /* Screenshot request — control thread writes path+flag, GL thread reads.
+     * screenshot_path is guarded by screenshot_lock (same pattern as preset_dir_lock). */
     _Atomic bool screenshot_requested;
-    char screenshot_path[MILKDROP_PATH_MAX];
+    GMutex screenshot_lock;
+    char   screenshot_path[MILKDROP_PATH_MAX];
+    
+    gint64 pm_mono_origin_us;
 } AppData;
 
 static inline void
@@ -126,6 +154,8 @@ audio_ring_init(AudioRing* ring)
     atomic_store(&ring->read_index, 0u);
 }
 
+#include <string.h>
+
 static inline size_t
 audio_ring_push(AudioRing* ring, const float* input, size_t count)
 {
@@ -134,20 +164,28 @@ audio_ring_push(AudioRing* ring, const float* input, size_t count)
 
     unsigned int write_idx = atomic_load_explicit(&ring->write_index, memory_order_relaxed);
     unsigned int read_idx = atomic_load_explicit(&ring->read_index, memory_order_acquire);
-    size_t written = 0;
 
-    while (written < count) {
-        unsigned int next_write = (write_idx + 1u) % MILKDROP_RING_CAPACITY;
-        if (next_write == read_idx)
-            break;
-
-        ring->samples[write_idx] = input[written];
-        write_idx = next_write;
-        written++;
+    unsigned int available;
+    if (write_idx >= read_idx) {
+        available = MILKDROP_RING_CAPACITY - write_idx + read_idx - 1u;
+    } else {
+        available = read_idx - write_idx - 1u;
     }
 
-    atomic_store_explicit(&ring->write_index, write_idx, memory_order_release);
-    return written;
+    size_t to_write = count > available ? available : count;
+    if (to_write == 0)
+        return 0;
+
+    unsigned int first_part = MILKDROP_RING_CAPACITY - write_idx;
+    if (to_write <= first_part) {
+        memcpy(&ring->samples[write_idx], input, to_write * sizeof(float));
+    } else {
+        memcpy(&ring->samples[write_idx], input, first_part * sizeof(float));
+        memcpy(&ring->samples[0], input + first_part, (to_write - first_part) * sizeof(float));
+    }
+
+    atomic_store_explicit(&ring->write_index, (write_idx + to_write) % MILKDROP_RING_CAPACITY, memory_order_release);
+    return to_write;
 }
 
 static inline size_t
@@ -158,14 +196,27 @@ audio_ring_read(AudioRing* ring, float* output, size_t max_count)
 
     unsigned int read_idx = atomic_load_explicit(&ring->read_index, memory_order_relaxed);
     unsigned int write_idx = atomic_load_explicit(&ring->write_index, memory_order_acquire);
-    size_t copied = 0;
 
-    while (copied < max_count && read_idx != write_idx) {
-        output[copied] = ring->samples[read_idx];
-        read_idx = (read_idx + 1u) % MILKDROP_RING_CAPACITY;
-        copied++;
+    unsigned int available;
+    if (write_idx >= read_idx) {
+        available = write_idx - read_idx;
+    } else {
+        available = MILKDROP_RING_CAPACITY - read_idx + write_idx;
     }
 
-    atomic_store_explicit(&ring->read_index, read_idx, memory_order_release);
-    return copied;
+    size_t to_read = max_count > available ? available : max_count;
+    if (to_read == 0)
+        return 0;
+
+    unsigned int first_part = MILKDROP_RING_CAPACITY - read_idx;
+    if (to_read <= first_part) {
+        memcpy(output, &ring->samples[read_idx], to_read * sizeof(float));
+    } else {
+        memcpy(output, &ring->samples[read_idx], first_part * sizeof(float));
+        memcpy(output + first_part, &ring->samples[0], (to_read - first_part) * sizeof(float));
+    }
+
+    atomic_store_explicit(&ring->read_index, (read_idx + to_read) % MILKDROP_RING_CAPACITY, memory_order_release);
+    return to_read;
 }
+

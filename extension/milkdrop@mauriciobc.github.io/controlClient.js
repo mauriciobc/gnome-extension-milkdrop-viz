@@ -106,7 +106,46 @@ export function sendMilkdropControlCommandWithRetry(
         });
     };
 
-    attemptSend(1);
+    attemptSend(0);
+}
+
+/**
+ * Send multiple control commands in order, spacing dispatches so the renderer can
+ * accept each connection (control thread polls ~200ms; parallel connects race).
+ * @param {string[]} commands
+ * @param {string|null} socketPath
+ * @param {number} interCommandDelayMs delay between starting each send (default 120)
+ */
+export function sendMilkdropControlCommandsSequentially(
+    commands,
+    socketPath = null,
+    interCommandDelayMs = 120,
+    maxRetries = 5,
+    retryDelayMs = 200
+) {
+    if (!commands.length)
+        return;
+
+    const path = socketPath ?? getMilkdropSocketPath(0);
+    let index = 0;
+
+    const sendOne = () => {
+        sendMilkdropControlCommandWithRetry(
+            commands[index],
+            path,
+            maxRetries,
+            retryDelayMs
+        );
+        index++;
+        if (index < commands.length) {
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, interCommandDelayMs, () => {
+                sendOne();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+    };
+
+    sendOne();
 }
 
 /**

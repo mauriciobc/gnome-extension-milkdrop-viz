@@ -15,6 +15,7 @@
 #include <epoxy/gl.h>
 #include <EGL/egl.h>
 #include <projectM-4/core.h>
+#include <projectM-4/logging.h>
 #include <projectM-4/parameters.h>
 #include <projectM-4/render_opengl.h>
 #include <projectM-4/audio.h>
@@ -27,9 +28,101 @@
 
 static gboolean milkdrop_verbose_gl          = FALSE;
 static gboolean milkdrop_logged_render_fbo   = FALSE;
-static gint64   milkdrop_pm_mono_origin_us   = 0;
 
 #define MILKDROP_STARTUP_PROBE_COUNT 5
+
+static gboolean
+milkdrop_str_contains_ci(const char* haystack,
+                         const char* needle)
+{
+    if (!haystack || !needle)
+        return FALSE;
+
+    size_t nlen = strlen(needle);
+    if (nlen == 0)
+        return FALSE;
+
+    for (const char* p = haystack; *p; p++) {
+        if (g_ascii_strncasecmp(p, needle, nlen) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ * Heuristic: projectM logs texture/sprite/image I/O without a stable prefix.
+ * We surface these at g_warning so missing textures are visible without --verbose.
+ */
+static gboolean
+milkdrop_projectm_message_is_texture_io(const char* msg)
+{
+    static const char* const needles[] = {
+        "texture",
+        "sprite",
+        "jpeg",
+        "jpg",
+        "png",
+        ".jpg",
+        ".png",
+        ".bmp",
+        ".tga",
+        "failed to load",
+        "could not load",
+        "unable to load",
+        "unable to open",
+        "could not open",
+        "cannot open",
+        "file not found",
+        "no such file",
+        "missing image",
+    };
+
+    if (!msg)
+        return FALSE;
+
+    for (size_t i = 0; i < G_N_ELEMENTS(needles); i++) {
+        if (milkdrop_str_contains_ci(msg, needles[i]))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static void
+milkdrop_projectm_log(const char*           message,
+                        projectm_log_level    level,
+                        void*                 user_data)
+{
+    AppData* app_data = user_data;
+    gboolean verbose  = app_data && app_data->verbose;
+    gboolean texture_io = message && milkdrop_projectm_message_is_texture_io(message);
+
+    if (!message)
+        return;
+
+    if (level == PROJECTM_LOG_LEVEL_FATAL)
+        g_critical("milkdrop: projectM: %s", message);
+    else if (level >= PROJECTM_LOG_LEVEL_ERROR)
+        g_warning("milkdrop: projectM: %s", message);
+    else if (level >= PROJECTM_LOG_LEVEL_WARN)
+        g_warning("milkdrop: projectM: %s", message);
+    else if (texture_io && level >= PROJECTM_LOG_LEVEL_INFO)
+        g_warning("milkdrop: texture load: %s", message);
+    else if (verbose)
+        g_message("milkdrop: projectM: %s", message);
+}
+
+static void
+milkdrop_register_projectm_logging(AppData* app_data)
+{
+    projectm_set_log_callback(milkdrop_projectm_log, true, app_data);
+    projectm_set_log_level(PROJECTM_LOG_LEVEL_INFO, true);
+}
+
+static void
+milkdrop_unregister_projectm_logging(void)
+{
+    projectm_set_log_callback(NULL, true, NULL);
+}
 
 static void
 milkdrop_mark_startup_hidden(AppData* app_data,
@@ -56,6 +149,9 @@ milkdrop_reset_startup_gate(AppData* app_data,
     app_data->startup_final_content_active = !has_playlist_content;
     app_data->render_frame_counter = 0;
     app_data->startup_init_time_us = g_get_monotonic_time();
+
+    if (!has_playlist_content)
+        app_data->startup_async_first_chunk_done = false;
 
     g_message("startup_gate: reset with has_content=%d, init_time=%" G_GINT64_FORMAT,
               has_playlist_content, app_data->startup_init_time_us);
@@ -258,32 +354,17 @@ milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
     projectm_playlist_clear(app_data->projectm_playlist);
     g_message("playlist: cleared existing entries");
 
-    uint32_t added = 0;
-    if (app_data->preset_dir && app_data->preset_dir[0] != '\0') {
-        g_message("playlist: calling projectm_playlist_add_path for %s", app_data->preset_dir);
-        added = projectm_playlist_add_path(app_data->projectm_playlist,
-                                           app_data->preset_dir,
-                                           true,
-                                           false);
-        g_message("playlist: projectm_playlist_add_path returned %u presets", added);
-    } else {
-        g_warning("playlist: preset_dir is empty or null, skipping add_path");
-    }
-
     projectm_playlist_set_shuffle(app_data->projectm_playlist,
                                   atomic_load(&app_data->shuffle_runtime));
 
-    if (added > 0) {
-        projectm_load_preset_file(app_data->projectm, "idle://", false);
-        milkdrop_reset_startup_gate(app_data, true);
-        g_message("playlist: loaded %u presets from %s; warming up on idle preset before reveal",
-                  added,
-                  app_data->preset_dir);
+    projectm_load_preset_file(app_data->projectm, "idle://", false);
+    milkdrop_reset_startup_gate(app_data, false);
+
+    if (app_data->preset_dir && app_data->preset_dir[0] != '\0') {
+        g_message("playlist: starting async scan for %s", app_data->preset_dir);
+        presets_start_async_scan(app_data);
     } else {
-        projectm_load_preset_file(app_data->projectm, "idle://", false);
-        milkdrop_reset_startup_gate(app_data, false);
-        g_message("playlist: empty for %s, using idle preset (no defer)",
-                  app_data->preset_dir ? app_data->preset_dir : "(none)");
+        g_warning("playlist: preset_dir is empty or null, skipping scan");
     }
 }
 
@@ -341,6 +422,8 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
         atomic_store(&app_data->projectm_init_aborted, true);
         return FALSE;
     }
+
+    milkdrop_register_projectm_logging(app_data);
 
     if (app_data->verbose)
         g_message("Calling projectm_create()...");
@@ -472,11 +555,10 @@ on_render_pulse(gpointer user_data)
 #endif
 
     if (app_data->window) {
-        static float last_opacity = -1.0f;
         float current_opacity = app_data->startup_hidden ? 0.0f : atomic_load(&app_data->opacity);
-        if (current_opacity != last_opacity) {
+        if (current_opacity != app_data->last_synced_opacity) {
             gtk_widget_set_opacity(GTK_WIDGET(app_data->window), current_opacity);
-            last_opacity = current_opacity;
+            app_data->last_synced_opacity = current_opacity;
         }
     }
 
@@ -492,18 +574,24 @@ on_render_pulse(gpointer user_data)
         }
     }
 
+    /* Only call projectm_set_window_size when dimensions actually change
+     * (avoids potential internal FBO reallocation on every frame). */
     if (app_data->projectm && app_data->render_width > 0 && app_data->render_height > 0 &&
-        app_data->projectm_playlist) {
+        app_data->projectm_playlist &&
+        (app_data->render_width != app_data->last_synced_render_width ||
+         app_data->render_height != app_data->last_synced_render_height)) {
         projectm_set_window_size(app_data->projectm,
                                  (size_t)app_data->render_width,
                                  (size_t)app_data->render_height);
+        app_data->last_synced_render_width = app_data->render_width;
+        app_data->last_synced_render_height = app_data->render_height;
     }
 
     if (app_data->verbose) {
-        static int frame_count = 0;
-        if (frame_count % 120 == 0)
+        if (app_data->pulse_frame_count % 120 == 0)
             g_message("render-pulse: frame_count=%d, projectm=%p, render_size=%dx%d",
-                      frame_count, app_data->projectm, app_data->render_width, app_data->render_height);
+                      app_data->pulse_frame_count, app_data->projectm, app_data->render_width, app_data->render_height);
+        app_data->pulse_frame_count++;
     }
 
     /* Não exigir mapped: janela ancorada como wallpaper pode ficar num estado em que
@@ -574,6 +662,10 @@ on_unrealize(GtkGLArea* area, gpointer user_data)
     AppData* app_data = user_data;
 
 #if HAVE_PROJECTM
+    milkdrop_unregister_projectm_logging();
+
+    presets_cleanup_async(app_data);
+
     if (app_data->projectm) {
         if (app_data->projectm_playlist) {
             projectm_playlist_destroy(app_data->projectm_playlist);
@@ -582,8 +674,17 @@ on_unrealize(GtkGLArea* area, gpointer user_data)
         projectm_destroy(app_data->projectm);
         app_data->projectm = NULL;
     }
-    milkdrop_pm_mono_origin_us = 0;
+    app_data->pm_mono_origin_us = 0;
     milkdrop_logged_render_fbo = FALSE;
+
+    /* Reset sync-tracking fields so a potential re-realize cycle starts fresh. */
+    app_data->last_synced_opacity = -1.0f;
+    app_data->last_synced_shuffle = false;
+    app_data->last_synced_interval = 0;
+    app_data->last_synced_render_width = 0;
+    app_data->last_synced_render_height = 0;
+    app_data->render_call_count = 0;
+    app_data->pulse_frame_count = 0;
 #endif
 
 #if !HAVE_PROJECTM
@@ -610,11 +711,10 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     (void)context;
     AppData* app_data = user_data;
 
-    // Log não-verbose para confirmar que on_render está sendo chamado
-    static int render_call_count = 0;
-    if (render_call_count++ % 60 == 0) {
+    // Periodic render-call diagnostic
+    if (app_data->render_call_count++ % 60 == 0) {
         g_message("on_render: called (calls=%d, projectm=%p)",
-                  render_call_count, app_data->projectm);
+                  app_data->render_call_count, app_data->projectm);
     }
 
     if (app_data->verbose) {
@@ -654,6 +754,42 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             projectm_playlist_play_previous(app_data->projectm_playlist, true);
             must_reattach_buffers = true;
         }
+
+        if (atomic_load(&app_data->pending_preset_flush)) {
+            g_mutex_lock(&app_data->preset_queue_lock);
+            if (app_data->preset_load_queue && app_data->preset_load_queue->len > 0) {
+                guint chunk_size = MIN(app_data->preset_load_queue->len, 50u);
+                const char** chunk = g_new(const char*, chunk_size);
+                for (guint i = 0; i < chunk_size; i++) {
+                    chunk[i] = g_ptr_array_steal_index(app_data->preset_load_queue, app_data->preset_load_queue->len - 1);
+                }
+                g_mutex_unlock(&app_data->preset_queue_lock);
+
+                uint32_t added = projectm_playlist_add_presets(app_data->projectm_playlist, chunk, chunk_size, false);
+                if (app_data->verbose) {
+                    g_message("playlist: added batch of %u presets asynchronously", added);
+                }
+                
+                for (guint i = 0; i < chunk_size; i++) {
+                    g_free((void*)chunk[i]);
+                }
+                g_free(chunk);
+                must_reattach_buffers = true;
+
+                if (projectm_playlist_size(app_data->projectm_playlist) > 0 &&
+                    !app_data->startup_deferred_preset_activation &&
+                    app_data->startup_final_content_active &&
+                    !app_data->startup_async_first_chunk_done) {
+                    /* First chunk loaded, trigger the startup gate logic to switch from idle to preset */
+                    app_data->startup_final_content_active = false;
+                    milkdrop_reset_startup_gate(app_data, true);
+                    app_data->startup_async_first_chunk_done = true;
+                }
+            } else {
+                atomic_store(&app_data->pending_preset_flush, false);
+                g_mutex_unlock(&app_data->preset_queue_lock);
+            }
+        }
     }
 
     /* F2: skip rendering until on_resize() has supplied real dimensions.  GTK
@@ -677,13 +813,13 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         }
 
         RendererFramePrep prep;
-        float               pcm_samples[MILKDROP_RING_CAPACITY];
 
         if (app_data->verbose) {
             g_message("render: before prep: render_width=%d, render_height=%d, projectm=%p, gl_area=%p",
                       app_data->render_width, app_data->render_height, app_data->projectm, app_data->gl_area);
         }
-        renderer_frame_prep(app_data, pcm_samples, G_N_ELEMENTS(pcm_samples), &prep);
+        renderer_frame_prep(app_data, app_data->pcm_render_buf,
+                            G_N_ELEMENTS(app_data->pcm_render_buf), &prep);
 
         // Log de diagnóstico não-verbose para entender porque would_draw pode ser false
         if (!prep.would_draw) {
@@ -703,35 +839,33 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
              * projectm_opengl_render_frame() targets FBO 0 — wrong buffer → blank/white window. */
             gtk_gl_area_attach_buffers(area);
 
-            if (milkdrop_pm_mono_origin_us == 0)
-                milkdrop_pm_mono_origin_us = g_get_monotonic_time();
+            if (app_data->pm_mono_origin_us == 0)
+                app_data->pm_mono_origin_us = g_get_monotonic_time();
             projectm_set_frame_time(
                 app_data->projectm,
-                (g_get_monotonic_time() - milkdrop_pm_mono_origin_us) / 1000000.0);
+                (g_get_monotonic_time() - app_data->pm_mono_origin_us) / 1000000.0);
 
             if (prep.would_feed_pcm)
                 projectm_pcm_add_float(app_data->projectm,
-                                       pcm_samples,
+                                       app_data->pcm_render_buf,
                                        prep.stereo_frames,
                                        PROJECTM_STEREO);
 
             {
-                static bool last_shuffle = false;
                 bool current_shuffle = atomic_load(&app_data->shuffle_runtime);
-                if (current_shuffle != last_shuffle) {
+                if (current_shuffle != app_data->last_synced_shuffle) {
                     projectm_playlist_set_shuffle(app_data->projectm_playlist,
                                                   current_shuffle);
-                    last_shuffle = current_shuffle;
+                    app_data->last_synced_shuffle = current_shuffle;
                 }
             }
 
             {
-                static int last_interval = 0;
                 int current_interval = atomic_load(&app_data->preset_rotation_interval);
-                if (current_interval != last_interval) {
+                if (current_interval != app_data->last_synced_interval) {
                     projectm_set_preset_duration(app_data->projectm,
                                                 (double)current_interval);
-                    last_interval = current_interval;
+                    app_data->last_synced_interval = current_interval;
                 }
             }
 
@@ -771,7 +905,6 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
             milkdrop_clear_pending_gl_errors();
 
-            GLenum err = GL_NO_ERROR;
             if (draw_fbo != 0) {
                 if (app_data->verbose && !milkdrop_logged_render_fbo) {
                     g_message("projectM render: using GtkGLArea FBO %d (not framebuffer 0)",
@@ -782,6 +915,16 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             } else {
                 projectm_opengl_render_frame(app_data->projectm);
             }
+
+            glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+            GLint read_fbo = 0;
+            glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
+            if (read_fbo != draw_fbo) {
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)draw_fbo);
+            }
+
+            GLenum err = GL_NO_ERROR;
+            (void)glGetError();
 
             /* CRITICAL: Wait for all GL commands to complete before framebuffer access.
              *
@@ -806,13 +949,27 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             // Handle screenshot request - read from current framebuffer
             // Pattern from test_gtk_glarea_projectm.c: restore framebuffer before read
             if (atomic_exchange(&app_data->screenshot_requested, false)) {
-                if (app_data->screenshot_path[0] != '\0' && app_data->render_width > 0 && app_data->render_height > 0) {
+                /* Copy path under lock; control thread may be writing concurrently. */
+                char local_screenshot_path[MILKDROP_PATH_MAX];
+                g_mutex_lock(&app_data->screenshot_lock);
+                g_strlcpy(local_screenshot_path, app_data->screenshot_path,
+                          sizeof(local_screenshot_path));
+                app_data->screenshot_path[0] = '\0';
+                g_mutex_unlock(&app_data->screenshot_lock);
+
+                if (local_screenshot_path[0] != '\0' && app_data->render_width > 0 && app_data->render_height > 0) {
                     // Restore framebuffer binding before read (critical!)
                     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
                     glPixelStorei(GL_PACK_ALIGNMENT, 1);
                     
-                    // Use RGBA format like test does
-                    GLubyte *pixels = malloc((size_t)app_data->render_width * (size_t)app_data->render_height * 4);
+                    /* Guard against integer overflow on huge dimensions. */
+                    size_t row_bytes = (size_t)app_data->render_width * 4u;
+                    size_t total_bytes = row_bytes * (size_t)app_data->render_height;
+                    GLubyte *pixels = NULL;
+                    if (row_bytes / 4u == (size_t)app_data->render_width &&
+                        total_bytes / row_bytes == (size_t)app_data->render_height)
+                        pixels = malloc(total_bytes);
+
                     if (pixels) {
                         glReadPixels(0, 0, app_data->render_width, app_data->render_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
                         
@@ -833,24 +990,28 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                         g_message("screenshot: has_visible_content=%d at %dx%d", 
                                   found_content, app_data->render_width, app_data->render_height);
                         
-                        // Save as PPM (RGB only)
-                        FILE *f = fopen(app_data->screenshot_path, "wb");
+                        // Save as PPM (RGB only) — write per-row for efficiency
+                        FILE *f = fopen(local_screenshot_path, "wb");
                         if (f) {
                             fprintf(f, "P6\n%d %d\n255\n", app_data->render_width, app_data->render_height);
-                            for (int y = app_data->render_height - 1; y >= 0; y--) {
-                                for (int x = 0; x < app_data->render_width; x++) {
-                                    size_t idx = (size_t)y * (size_t)app_data->render_width * 4 + (size_t)x * 4;
-                                    fputc(pixels[idx], f);     // R
-                                    fputc(pixels[idx+1], f);   // G
-                                    fputc(pixels[idx+2], f);   // B
+                            uint8_t *row_rgb = malloc((size_t)app_data->render_width * 3);
+                            if (row_rgb) {
+                                for (int y = app_data->render_height - 1; y >= 0; y--) {
+                                    for (int x = 0; x < app_data->render_width; x++) {
+                                        size_t src = (size_t)y * (size_t)app_data->render_width * 4 + (size_t)x * 4;
+                                        row_rgb[x * 3 + 0] = pixels[src];
+                                        row_rgb[x * 3 + 1] = pixels[src + 1];
+                                        row_rgb[x * 3 + 2] = pixels[src + 2];
+                                    }
+                                    fwrite(row_rgb, 1, (size_t)app_data->render_width * 3, f);
                                 }
+                                free(row_rgb);
                             }
                             fclose(f);
-                            g_message("screenshot: saved to %s", app_data->screenshot_path);
+                            g_message("screenshot: saved to %s", local_screenshot_path);
                         }
                         free(pixels);
                     }
-                    app_data->screenshot_path[0] = '\0';
                 }
             }
 
@@ -1143,12 +1304,15 @@ on_shutdown(GApplication* application, gpointer user_data)
     presets_clear(app_data);
     g_clear_pointer(&app_data->socket_path, g_free);
     g_mutex_clear(&app_data->preset_dir_lock);
+    g_mutex_clear(&app_data->screenshot_lock);
+    g_mutex_clear(&app_data->last_preset_lock);
 }
 
 int
 main(int argc, char** argv)
 {
-    AppData app_data = {0};
+    /* Heap-allocate: AppData is ~330 KB (quarantine_list alone = 256 KB). */
+    AppData* app_data = g_new0(AppData, 1);
     int monitor_index = 0;
     double opacity = 1.0;
     gboolean shuffle = FALSE;
@@ -1157,6 +1321,7 @@ main(int argc, char** argv)
     char* preset_dir = NULL;
     char* socket_path = NULL;
     int preset_rotation_interval = 30;
+    int fps_cli = 0;
 
     GOptionEntry entries[] = {
         {"monitor", 0, 0, G_OPTION_ARG_INT, &monitor_index, "Monitor index", "INDEX"},
@@ -1167,6 +1332,7 @@ main(int argc, char** argv)
         {"overlay", 0, 0, G_OPTION_ARG_NONE, &overlay, "Enable overlay mode (state + control socket)", NULL},
         {"verbose", 0, 0, G_OPTION_ARG_NONE, &verbose, "Verbose logging", NULL},
         {"preset-rotation-interval", 0, 0, G_OPTION_ARG_INT, &preset_rotation_interval, "Preset rotation interval in seconds", "SECONDS"},
+        {"fps", 0, 0, G_OPTION_ARG_INT, &fps_cli, "Target frame rate (10-144; default 60)", "FPS"},
         {NULL},
     };
 
@@ -1175,48 +1341,60 @@ main(int argc, char** argv)
     if (!g_option_context_parse(context, &argc, &argv, NULL)) {
         g_printerr("Failed to parse command line arguments\n");
         g_option_context_free(context);
+        g_free(app_data);
         return 1;
     }
     g_option_context_free(context);
 
     g_set_prgname("milkdrop");
 
-    app_data.verbose = verbose;
+    app_data->verbose = verbose;
 #if HAVE_PROJECTM
     milkdrop_verbose_gl = verbose;
-    atomic_store(&app_data.projectm_init_aborted, false);
+    atomic_store(&app_data->projectm_init_aborted, false);
 #endif
 
-    app_data.monitor_index = monitor_index;
-    app_data.preset_dir = preset_dir;
-    app_data.presets = NULL;
-    app_data.preset_count = 0;
-    app_data.preset_current = 0;
-    app_data.socket_path = socket_path;
-    app_data.shuffle = (bool)shuffle;
-    atomic_store(&app_data.opacity, (float)CLAMP(opacity, 0.0, 1.0));
-    atomic_store(&app_data.pause_audio, false);
-    atomic_store(&app_data.shutdown_requested, false);
-    atomic_store(&app_data.overlay_enabled, overlay);
-    atomic_store(&app_data.shuffle_runtime, app_data.shuffle);
-    atomic_store(&app_data.preset_dir_pending, false);
-    atomic_store(&app_data.next_preset_pending, false);
-    atomic_store(&app_data.prev_preset_pending, false);
-    app_data.startup_hidden = false;
-    app_data.startup_warmup_drawn = false;
-    app_data.startup_deferred_preset_activation = false;
-    app_data.startup_final_content_active = false;
-    app_data.render_frame_counter = 0;
-    atomic_store(&app_data.fps_runtime, 60);
-    atomic_store(&app_data.fps_last, 0.0f);
-    app_data.fps_applied = 60;
-    app_data.fps_last_pulse_us = 0;
-    atomic_store(&app_data.preset_rotation_interval, CLAMP(preset_rotation_interval, 5, 300));
-    atomic_store(&app_data.control_thread_running, false);
-    app_data.control_fd = -1;
-    app_data.control_thread = NULL;
-    g_mutex_init(&app_data.preset_dir_lock);
-    app_data.pending_preset_dir[0] = '\0';
+    app_data->monitor_index = monitor_index;
+    app_data->preset_dir = preset_dir;
+    app_data->presets = NULL;
+    app_data->preset_count = 0;
+    app_data->preset_current = 0;
+    app_data->socket_path = socket_path;
+    app_data->shuffle = (bool)shuffle;
+    atomic_store(&app_data->opacity, (float)CLAMP(opacity, 0.0, 1.0));
+    atomic_store(&app_data->pause_audio, false);
+    atomic_store(&app_data->shutdown_requested, false);
+    atomic_store(&app_data->overlay_enabled, overlay);
+    atomic_store(&app_data->shuffle_runtime, app_data->shuffle);
+    atomic_store(&app_data->preset_dir_pending, false);
+    atomic_store(&app_data->next_preset_pending, false);
+    atomic_store(&app_data->prev_preset_pending, false);
+    app_data->startup_hidden = false;
+    app_data->startup_warmup_drawn = false;
+    app_data->startup_deferred_preset_activation = false;
+    app_data->startup_final_content_active = false;
+    app_data->render_frame_counter = 0;
+    {
+        int fps_init = 60;
+        if (fps_cli >= 10 && fps_cli <= 144)
+            fps_init = fps_cli;
+        atomic_store(&app_data->fps_runtime, fps_init);
+    }
+    atomic_store(&app_data->fps_last, 0.0f);
+    /* -1 forces first on_render_pulse to install the correct interval; if both
+     * fps_runtime and fps_applied were equal at startup (e.g. 30), the old code
+     * never rescheduled and the timer stayed at the initial 16 ms (~62 Hz). */
+    app_data->fps_applied = -1;
+    app_data->fps_last_pulse_us = 0;
+    atomic_store(&app_data->preset_rotation_interval, CLAMP(preset_rotation_interval, 5, 300));
+    atomic_store(&app_data->control_thread_running, false);
+    app_data->control_fd = -1;
+    app_data->control_thread = NULL;
+    g_mutex_init(&app_data->preset_dir_lock);
+    g_mutex_init(&app_data->preset_queue_lock);
+    g_mutex_init(&app_data->screenshot_lock);
+    g_mutex_init(&app_data->last_preset_lock);
+    app_data->pending_preset_dir[0] = '\0';
 
     /* No explicit app-id: GDK Wayland will use g_get_prgname() ("milkdrop") as
      * the xdg_toplevel app_id.  This ensures Meta.Window.get_wm_class() in the
@@ -1226,10 +1404,11 @@ main(int argc, char** argv)
       G_APPLICATION_NON_UNIQUE
     );
 
-    g_signal_connect(app, "activate", G_CALLBACK(on_activate), &app_data);
-    g_signal_connect(app, "shutdown", G_CALLBACK(on_shutdown), &app_data);
+    g_signal_connect(app, "activate", G_CALLBACK(on_activate), app_data);
+    g_signal_connect(app, "shutdown", G_CALLBACK(on_shutdown), app_data);
 
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
+    g_free(app_data);
     return status;
 }

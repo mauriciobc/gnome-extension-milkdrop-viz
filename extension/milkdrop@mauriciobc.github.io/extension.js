@@ -13,7 +13,7 @@ import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThu
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {RETRY_DELAYS_MS, RELOAD_BACKGROUNDS_DEBOUNCE_MS, CONTROL_SOCKET_RETRY_DELAY_MS, CONTROL_SOCKET_MAX_RETRIES} from './constants.js';
-import {getMilkdropSocketPath, sendMilkdropControlCommand, sendMilkdropControlCommandWithRetry} from './controlClient.js';
+import {getMilkdropSocketPath, sendMilkdropControlCommand, sendMilkdropControlCommandsSequentially} from './controlClient.js';
 import {ManagedWindow} from './managedWindow.js';
 import {PausePolicy} from './pausePolicy.js';
 import {MprisWatcher} from './mprisWatcher.js';
@@ -83,10 +83,11 @@ export default class MilkdropExtension extends Extension {
     }
 
     enable() {
-        if (this._isEnabling || this._isDisabling) {
-            log('[milkdrop] Already in transition state, skipping enable');
+        if (this._isDisabling) {
+            log('[milkdrop] Cannot enable during disable transition');
             return;
         }
+        // Idempotent: re-entering during deferred startup is safe.
         this._isEnabling = true;
 
         this._settings = this.getSettings();
@@ -457,15 +458,23 @@ export default class MilkdropExtension extends Extension {
         this._stdoutStreams.set(monitorIndex, stdoutStream);
         this._subprocesses.set(monitorIndex, subprocess);
 
-        // If pause reasons were set before this renderer existed, it missed the
-        // pause on/off command. Re-apply the current aggregate pause state now.
-        // Use retry version since the control socket may not be ready yet.
+        /* Pause / rotation / shuffle: argv covers preset-rotation-interval and --shuffle,
+         * but pause state depends on fullscreen/mpris and must be pushed live. FPS is
+         * passed as --fps (same default 60 as the Meson smoke test, which does not use
+         * the control socket). */
         const shouldPause = this._pauseReasons.fullscreen ||
                            this._pauseReasons.maximized ||
                            this._pauseReasons.mpris;
-        sendMilkdropControlCommandWithRetry(
-            `pause ${shouldPause ? 'on' : 'off'}`,
+        const rotation = this._settings.get_int('preset-rotation-interval');
+        const shuffleOn = this._settings.get_boolean('shuffle');
+        sendMilkdropControlCommandsSequentially(
+            [
+                `pause ${shouldPause ? 'on' : 'off'}`,
+                `rotation-interval ${rotation}`,
+                `shuffle ${shuffleOn ? 'on' : 'off'}`,
+            ],
             getMilkdropSocketPath(monitorIndex),
+            120,
             CONTROL_SOCKET_MAX_RETRIES,
             CONTROL_SOCKET_RETRY_DELAY_MS
         );
@@ -558,11 +567,13 @@ export default class MilkdropExtension extends Extension {
         const shuffle = this._settings?.get_boolean('shuffle') ?? false;
         const overlay = this._settings?.get_boolean('overlay') ?? false;
         const rotationInterval = this._settings?.get_int('preset-rotation-interval') ?? 30;
+        const fps = this._settings?.get_int('fps') ?? 60;
 
         const args = [
             binaryPath,
             '--monitor', `${monitorIndex}`,
             '--opacity', `${opacity}`,
+            '--fps', `${fps}`,
         ];
 
         if (presetDir.length > 0)
@@ -707,7 +718,7 @@ export default class MilkdropExtension extends Extension {
                 return false;
             if (metaWindow.get_wm_class() === 'milkdrop')
                 return true;
-            return metaWindow.title === 'milkdrop';
+            return metaWindow.title?.startsWith('@milkdrop!') ?? false;
         }
 
         function findRendererActorForMonitor(monitorIndex) {

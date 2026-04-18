@@ -101,6 +101,20 @@ preset_scan_test = executable(
 
 test('presets', preset_scan_test)
 
+cream_preset_scan_test = executable(
+  'test-cream-preset-dir-scan',
+  ['test_cream_preset_dir_scan.c', '../src/presets.c'],
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep, test_gtk_dep],
+)
+
+test(
+  'cream-preset-dir-scan',
+  cream_preset_scan_test,
+  env: ['MILKDROP_TEST_PRESET_DIR=/usr/local/share/projectM/presets/cream-of-the-crop'],
+  timeout: 300,
+)
+
 audio_alignment_test = executable(
   'test-audio-alignment',
   ['test_audio_alignment.c', '../src/audio.c', '../src/audio_recovery.c'],
@@ -148,6 +162,15 @@ presets_edge_test = executable(
 
 test('presets-edge-cases', presets_edge_test)
 
+startup_async_gate_test = executable(
+  'test-startup-async-gate',
+  'test_startup_async_gate.c',
+  include_directories: include_directories('..', '../src'),
+  dependencies: [test_glib_dep],
+)
+
+test('startup-async-gate', startup_async_gate_test)
+
 audio_recovery_test = executable(
   'test-audio-recovery',
   ['test_audio_recovery.c', '../src/audio_recovery.c'],
@@ -190,6 +213,24 @@ test(
   python3,
   args: [files('validate_scaffold.py'), meson.project_source_root()],
 )
+
+# Smoke-run: built milkdrop with --verbose and playlist dir under /usr/local (common install prefix).
+# Skips (exit 77) if the directory or a display is missing — does not fail CI.
+if have_projectm
+  bash = find_program('bash')
+  test(
+    'milkdrop-binary-verbose-local-presets',
+    bash,
+    args: [
+      files('run_milkdrop_verbose_local_presets.sh'),
+      milkdrop_exe,
+    ],
+    depends: milkdrop_exe,
+    env: control_socket_test_env + ['MILKDROP_FORCE_GL_API=1'],
+    is_parallel: false,
+    timeout: 120,
+  )
+endif
 
 # Reference renderer for blur validation tests
 if have_projectm

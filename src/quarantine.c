@@ -1,5 +1,6 @@
 #include "quarantine.h"
 
+#include <stdatomic.h>
 #include <string.h>
 
 #include <glib.h>
@@ -10,18 +11,20 @@ quarantine_add(AppData *d, const char *path)
     if (!d || !path || path[0] == '\0')
         return;
 
+    int count = atomic_load(&d->quarantine_count);
+
     /* Ignore duplicates. */
-    for (int i = 0; i < d->quarantine_count; i++) {
+    for (int i = 0; i < count; i++) {
         if (strcmp(d->quarantine_list[i], path) == 0)
             return;
     }
 
     /* Silently cap — never overflow the fixed array. */
-    if (d->quarantine_count >= MAX_QUARANTINE)
+    if (count >= MAX_QUARANTINE)
         return;
 
-    g_strlcpy(d->quarantine_list[d->quarantine_count], path, MILKDROP_PATH_MAX);
-    d->quarantine_count++;
+    g_strlcpy(d->quarantine_list[count], path, MILKDROP_PATH_MAX);
+    atomic_store(&d->quarantine_count, count + 1);
 }
 
 bool
@@ -30,7 +33,8 @@ quarantine_is_quarantined(const AppData *d, const char *path)
     if (!d || !path)
         return false;
 
-    for (int i = 0; i < d->quarantine_count; i++) {
+    int count = atomic_load(&d->quarantine_count);
+    for (int i = 0; i < count; i++) {
         if (strcmp(d->quarantine_list[i], path) == 0)
             return true;
     }
@@ -59,6 +63,9 @@ quarantine_record_success(AppData *d, const char *path)
     d->consecutive_failures = 0;
     atomic_store(&d->quarantine_all_failed, false);
 
-    if (path && path[0] != '\0')
+    if (path && path[0] != '\0') {
+        g_mutex_lock(&d->last_preset_lock);
         g_strlcpy(d->last_good_preset, path, MILKDROP_PATH_MAX);
+        g_mutex_unlock(&d->last_preset_lock);
+    }
 }
