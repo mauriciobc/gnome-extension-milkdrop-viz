@@ -48,6 +48,7 @@ typedef struct {
     AudioRing ring;
 
     char* preset_dir;
+    char* textures_dir;
     char** presets;
     int preset_count;
     int preset_current;

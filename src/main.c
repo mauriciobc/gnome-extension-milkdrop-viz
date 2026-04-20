@@ -282,7 +282,7 @@ milkdrop_activate_initial_playlist_preset(AppData* app_data)
 static void
 milkdrop_configure_texture_search_paths(AppData* app_data)
 {
-    const char* texture_paths[1] = {0};
+    const char* texture_paths[2] = {0};
     size_t count = 0;
 
     if (!app_data || !app_data->projectm)
@@ -290,8 +290,15 @@ milkdrop_configure_texture_search_paths(AppData* app_data)
 
     if (app_data->preset_dir && app_data->preset_dir[0] != '\0' &&
         g_file_test(app_data->preset_dir, G_FILE_TEST_IS_DIR)) {
-        texture_paths[0] = app_data->preset_dir;
-        count = 1;
+        texture_paths[count++] = app_data->preset_dir;
+
+        g_clear_pointer(&app_data->textures_dir, g_free);
+        app_data->textures_dir = g_build_filename(app_data->preset_dir, "textures", NULL);
+        if (app_data->textures_dir && g_file_test(app_data->textures_dir, G_FILE_TEST_IS_DIR)) {
+            texture_paths[count++] = app_data->textures_dir;
+        } else {
+            g_clear_pointer(&app_data->textures_dir, g_free);
+        }
     }
 
     projectm_set_texture_search_paths(app_data->projectm,
@@ -551,6 +558,7 @@ on_render_pulse(gpointer user_data)
         g_mutex_unlock(&app_data->preset_dir_lock);
 
         g_clear_pointer(&app_data->preset_dir, g_free);
+        g_clear_pointer(&app_data->textures_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
         if (!presets_reload(app_data))
             g_warning("Failed to reload presets from %s", next_dir);
@@ -739,6 +747,7 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         g_mutex_unlock(&app_data->preset_dir_lock);
 
         g_clear_pointer(&app_data->preset_dir, g_free);
+        g_clear_pointer(&app_data->textures_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
         milkdrop_sync_playlist_from_preset_dir(app_data);
     }
@@ -842,6 +851,13 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
              * projectm_opengl_render_frame() targets FBO 0 — wrong buffer → blank/white window. */
             gtk_gl_area_attach_buffers(area);
 
+            /* Clear the framebuffer before rendering (matches reference SDL
+             * implementations: pmSDL.cpp:450-451, frontend-sdl-rust main_loop).
+             * Without clear, stale contents from a previous frame can bleed
+             * through during preset transitions or the first few warmup frames. */
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
             if (app_data->pm_mono_origin_us == 0)
                 app_data->pm_mono_origin_us = g_get_monotonic_time();
             projectm_set_frame_time(
@@ -904,27 +920,38 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             if (must_reattach_buffers)
                 gtk_gl_area_attach_buffers(area);
 
-            GLint draw_fbo = 0;
-            glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+            GLint gtk_fbo = 0;
+            glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &gtk_fbo);
             milkdrop_clear_pending_gl_errors();
 
-            if (draw_fbo != 0) {
+            if (gtk_fbo != 0) {
                 if (app_data->verbose && !milkdrop_logged_render_fbo) {
                     g_message("projectM render: using GtkGLArea FBO %d (not framebuffer 0)",
-                              (int)draw_fbo);
+                              (int)gtk_fbo);
                     milkdrop_logged_render_fbo = TRUE;
                 }
-                projectm_opengl_render_frame_fbo(app_data->projectm, (uint32_t)draw_fbo);
+                projectm_opengl_render_frame_fbo(app_data->projectm, (uint32_t)gtk_fbo);
             } else {
                 projectm_opengl_render_frame(app_data->projectm);
             }
 
-            glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
-            GLint read_fbo = 0;
-            glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
-            if (read_fbo != draw_fbo) {
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)draw_fbo);
-            }
+            /* Restore GTK's FBO immediately after projectM render returns.
+             *
+             * projectM renders to internal FBOs (blur passes, warp mesh,
+             * compositing) then copies the result to our target FBO. However,
+             * it does NOT guarantee which FBO is left bound after return —
+             * CopyTexture::Copy unbinds shaders/textures but not FBOs, and
+             * SpriteManager::Draw may rebind internal FBOs.
+             *
+             * Previously we re-queried GL_DRAW_FRAMEBUFFER_BINDING here,
+             * which could return a projectM-internal FBO instead of GTK's.
+             * All subsequent reads (screenshots, startup pixel probes) then
+             * read from the wrong buffer — the root cause of "reading FBO
+             * too soon" artifacts.
+             *
+             * Using GL_FRAMEBUFFER binds both READ and DRAW targets, ensuring
+             * glReadPixels and glFinish operate on the correct buffer. */
+            glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)gtk_fbo);
 
             GLenum err = GL_NO_ERROR;
             (void)glGetError();
@@ -961,8 +988,8 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                 g_mutex_unlock(&app_data->screenshot_lock);
 
                 if (local_screenshot_path[0] != '\0' && app_data->render_width > 0 && app_data->render_height > 0) {
-                    // Restore framebuffer binding before read (critical!)
-                    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
+                    // Ensure GTK's FBO is bound for pixel read
+                    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)gtk_fbo);
                     glPixelStorei(GL_PACK_ALIGNMENT, 1);
                     
                     /* Guard against integer overflow on huge dimensions. */
@@ -1019,7 +1046,7 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             }
 
             err = glGetError();
-            milkdrop_log_post_render_gl_error(app_data, err, draw_fbo);
+            milkdrop_log_post_render_gl_error(app_data, err, gtk_fbo);
 
             if (!app_data->startup_final_content_active)
                 app_data->startup_warmup_drawn = true;
@@ -1027,7 +1054,7 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             if (app_data->startup_hidden &&
                 app_data->startup_final_content_active &&
                 err == GL_NO_ERROR &&
-                milkdrop_probe_startup_pixels(draw_fbo, app_data->render_width, app_data->render_height)) {
+                milkdrop_probe_startup_pixels(gtk_fbo, app_data->render_width, app_data->render_height)) {
                 milkdrop_mark_startup_hidden(app_data, false);
                 if (app_data->verbose)
                     g_message("startup: first real preset frame is ready; renderer revealed");
@@ -1049,6 +1076,7 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             glUseProgram(0);
             glBindTexture(GL_TEXTURE_2D, 0);
             glActiveTexture(GL_TEXTURE0);
+            glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)gtk_fbo);
             glDisable(GL_BLEND);
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_STENCIL_TEST);
@@ -1304,6 +1332,7 @@ on_shutdown(GApplication* application, gpointer user_data)
     audio_cleanup(app_data);
 
     g_clear_pointer(&app_data->preset_dir, g_free);
+    g_clear_pointer(&app_data->textures_dir, g_free);
     presets_clear(app_data);
     g_clear_pointer(&app_data->socket_path, g_free);
     g_mutex_clear(&app_data->preset_dir_lock);
