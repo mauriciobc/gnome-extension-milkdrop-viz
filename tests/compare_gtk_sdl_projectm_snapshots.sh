@@ -3,8 +3,8 @@
 #
 # Modes:
 #   - Single preset: set MILKDROP_COMPARE_PRESET=/path/to/file.milk (optional MILKDROP_BASELINE_PPM).
-#   - Batch (default): scan preset tree — MILKDROP_COMPARE_PRESET_DIR, else /home/mauriciobc/presets
-#     if it exists, else vendor tests; pick MILKDROP_COMPARE_RANDOM_COUNT (default 5) via pick_random_presets.py.
+#   - Batch (default): scan preset tree — MILKDROP_COMPARE_PRESET_DIR if set, else
+#     ${SRC}/reference_codebases/projectm/presets/tests; pick MILKDROP_COMPARE_RANDOM_COUNT (default 5) via pick_random_presets.py.
 #
 # Args: <reference_renderer> <sdl_preset_snapshot> <source_root>
 # Env: DISPLAY. MILKDROP_COMPARE_RANDOM_SEED for reproducible picks (default 42 in Meson).
@@ -84,17 +84,14 @@ else
         exit 1
     fi
 
-    # Default scan: maintainer tree when present, else vendor tests (CI / other checkouts).
-    MILKDROP_DEFAULT_USER_PRESETS="/home/mauriciobc/presets"
+    # Default scan: explicit dir, else vendor tests (CI / other checkouts).
     if [[ -n "${MILKDROP_COMPARE_PRESET_DIR:-}" ]]; then
         PRESET_DIR="$MILKDROP_COMPARE_PRESET_DIR"
-    elif [[ -d "$MILKDROP_DEFAULT_USER_PRESETS" ]]; then
-        PRESET_DIR="$MILKDROP_DEFAULT_USER_PRESETS"
-        if [[ -z "${MILKDROP_TEXTURE_SEARCH_EXTRA:-}" && -d "${MILKDROP_DEFAULT_USER_PRESETS}/textures" ]]; then
-            export MILKDROP_TEXTURE_SEARCH_EXTRA="${MILKDROP_DEFAULT_USER_PRESETS}/textures"
-        fi
     else
         PRESET_DIR="${SRC}/reference_codebases/projectm/presets/tests"
+    fi
+    if [[ -z "${MILKDROP_TEXTURE_SEARCH_EXTRA:-}" && -d "${PRESET_DIR}/textures" ]]; then
+        export MILKDROP_TEXTURE_SEARCH_EXTRA="${PRESET_DIR}/textures"
     fi
 
     if [[ ! -d "$PRESET_DIR" ]]; then
@@ -103,7 +100,8 @@ else
     fi
 
     N="${MILKDROP_COMPARE_RANDOM_COUNT:-5}"
-    echo "compare_gtk-sdl: picking ${N} preset(s) from ${PRESET_DIR} (seed=${MILKDROP_COMPARE_RANDOM_SEED:-42})"
+    export MILKDROP_COMPARE_RANDOM_SEED="${MILKDROP_COMPARE_RANDOM_SEED:-42}"
+    echo "compare_gtk-sdl: picking ${N} preset(s) from ${PRESET_DIR} (seed=${MILKDROP_COMPARE_RANDOM_SEED})"
 
     mapfile -t PICKS < <(python3 "${SRC}/tests/pick_random_presets.py" "$PRESET_DIR" -n "$N")
     if [[ ${#PICKS[@]} -eq 0 ]]; then

@@ -96,6 +96,7 @@ snap_init(SnapCtx* ctx)
 
     projectm_load_preset_file(ctx->pm, "idle://", false);
     ctx->deferred_preset = TRUE;
+    projectm_playlist_set_shuffle(ctx->playlist, false);
     return TRUE;
 }
 
@@ -135,7 +136,18 @@ snap_write_ppm(const char* path,
         const GLubyte* row = pixels + y * w * 4;
         for (int x = 0; x < w; x++) {
             const unsigned char rgb[3] = {row[x * 4], row[x * 4 + 1], row[x * 4 + 2]};
-            fwrite(rgb, 1, 3, f);
+            size_t nw = fwrite(rgb, 1, 3, f);
+            if (nw != 3) {
+                fprintf(stderr,
+                        "sdl_preset_snapshot: fwrite wrote %zu of 3 bytes to %s\n",
+                        nw,
+                        path);
+                perror("fwrite");
+                fclose(f);
+                remove(path);
+                free(pixels);
+                return FALSE;
+            }
         }
     }
     fclose(f);
@@ -234,8 +246,7 @@ main(int argc,
         }
 
         snap_feed_pcm(&ctx, pcm, 512 * 2);
-        // projectm_pcm_add_float(ctx.pm, pcm, 512, PROJECTM_STEREO);
-        projectm_playlist_set_shuffle(ctx.playlist, false);
+        projectm_pcm_add_float(ctx.pm, pcm, 512, PROJECTM_STEREO);
 
         GLuint fbo = 0, tex = 0;
         glGenFramebuffers(1, &fbo);
@@ -250,13 +261,14 @@ main(int argc,
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo); // Read from fbo for saving
 
-        glDeleteFramebuffers(1, &fbo);
-        glDeleteTextures(1, &tex);
-
         ctx.frame_count++;
+        gboolean wrote_snapshot = FALSE;
         if (ctx.frame_count == ctx.target_frame) {
             if (!snap_write_ppm(ctx.out_path, ctx.width, ctx.height)) {
                 fprintf(stderr, "sdl_preset_snapshot: failed to write %s\n", ctx.out_path);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+                glDeleteFramebuffers(1, &fbo);
+                glDeleteTextures(1, &tex);
                 snap_cleanup(&ctx);
                 SDL_GL_DeleteContext(glctx);
                 SDL_DestroyWindow(window);
@@ -264,8 +276,15 @@ main(int argc,
                 return 1;
             }
             printf("sdl_preset_snapshot: wrote frame %d -> %s\n", ctx.target_frame, ctx.out_path);
-            break;
+            wrote_snapshot = TRUE;
         }
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &fbo);
+        glDeleteTextures(1, &tex);
+
+        if (wrote_snapshot)
+            break;
     }
 
     snap_cleanup(&ctx);

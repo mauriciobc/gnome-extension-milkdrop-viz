@@ -24,8 +24,8 @@ fi
 
 PRESET_DIR="${MILKDROP_COMPARE_PRESET_DIR:-}"
 if [[ -z "$PRESET_DIR" ]]; then
-    if [[ -d /home/mauriciobc/presets ]]; then
-        PRESET_DIR=/home/mauriciobc/presets
+    if [[ -n "${HOME:-}" && -d "${HOME}/presets" ]]; then
+        PRESET_DIR="${HOME}/presets"
     else
         PRESET_DIR="${ROOT}/reference_codebases/projectm/presets/tests"
     fi
@@ -36,8 +36,8 @@ if [[ ! -d "$PRESET_DIR" ]]; then
     exit 1
 fi
 
-if [[ -z "${MILKDROP_TEXTURE_SEARCH_EXTRA:-}" && -d /home/mauriciobc/presets/textures ]]; then
-    export MILKDROP_TEXTURE_SEARCH_EXTRA=/home/mauriciobc/presets/textures
+if [[ -z "${MILKDROP_TEXTURE_SEARCH_EXTRA:-}" && -n "${HOME:-}" && -d "${HOME}/presets/textures" ]]; then
+    export MILKDROP_TEXTURE_SEARCH_EXTRA="${HOME}/presets/textures"
 fi
 
 mkdir -p "$OUT"
@@ -60,10 +60,20 @@ while IFS= read -r milk; do
     tag=$(printf '%02d' "$i")
     ppm="${OUT}/baseline_${tag}.ppm"
     echo "[$tag/$N] $milk"
-    timeout 180s env GDK_BACKEND="$GDK_BACKEND" \
+    if timeout 180s env GDK_BACKEND="$GDK_BACKEND" \
         MILKDROP_TEXTURE_SEARCH_EXTRA="${MILKDROP_TEXTURE_SEARCH_EXTRA:-}" \
-        "$SDL" "$milk" "$ppm" "$FRAME" "$W" "$H" >"${OUT}/render_${tag}.log" 2>&1
-    printf 'baseline_%s.ppm\t%s\n' "$tag" "$milk" >>"$MAN"
+        "$SDL" "$milk" "$ppm" "$FRAME" "$W" "$H" >"${OUT}/render_${tag}.log" 2>&1; then
+        if [[ ! -f "$ppm" ]]; then
+            echo "error: render exited 0 but output missing: $ppm (see ${OUT}/render_${tag}.log)" >&2
+            exit 1
+        fi
+        printf 'baseline_%s.ppm\t%s\n' "$tag" "$milk" >>"$MAN"
+    else
+        rc=$?
+        echo "error: SDL snapshot failed for preset (exit $rc): $milk" >&2
+        echo "error: see log ${OUT}/render_${tag}.log" >&2
+        exit 1
+    fi
 done < <(python3 "${ROOT}/tests/pick_random_presets.py" "$PRESET_DIR" -n "$N" --seed "$SEED")
 
 echo "Wrote $OUT (see MANIFEST.txt)"
