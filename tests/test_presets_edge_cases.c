@@ -198,6 +198,45 @@ test_presets_empty_string_dir(void)
     g_mutex_clear(&app_data.preset_dir_lock);
 }
 
+static void
+test_presets_reload_rejects_overlong_dir_without_clearing_previous_array(void)
+{
+    AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
+
+    g_autofree gchar* dir = make_temp_dir();
+    g_autofree gchar* preset = g_build_filename(dir, "keep.milk", NULL);
+    g_assert_true(g_file_set_contents(preset, "", 0, NULL));
+
+    app_data.preset_dir = g_strdup(dir);
+    g_assert_true(presets_reload(&app_data));
+    g_assert_cmpint(app_data.preset_count, ==, 1);
+    g_assert_cmpstr(presets_current(&app_data), ==, preset);
+
+    g_autofree gchar* overlong_dir = g_malloc0((gsize)MILKDROP_PATH_MAX + 8);
+    memset(overlong_dir, 'x', (size_t)MILKDROP_PATH_MAX);
+    overlong_dir[MILKDROP_PATH_MAX] = '\0';
+
+    g_mutex_lock(&app_data.preset_dir_lock);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+    app_data.preset_dir = g_strdup(overlong_dir);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*preset-dir path too long*");
+    g_assert_false(presets_reload(&app_data));
+    g_test_assert_expected_messages();
+    g_assert_cmpint(app_data.preset_count, ==, 1);
+    g_assert_cmpstr(presets_current(&app_data), ==, preset);
+
+    presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
+    g_unlink(preset);
+    g_rmdir(dir);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -210,6 +249,7 @@ main(int argc, char** argv)
     g_test_add_func("/presets-edge/reload-missing-dir-preserves-array", test_presets_reload_missing_directory_preserves_previous_array);
     g_test_add_func("/presets-edge/null-app-data", test_presets_null_app_data);
     g_test_add_func("/presets-edge/empty-string-dir", test_presets_empty_string_dir);
+    g_test_add_func("/presets-edge/reload-overlong-dir-preserves-array", test_presets_reload_rejects_overlong_dir_without_clearing_previous_array);
 
     return g_test_run();
 }

@@ -37,6 +37,108 @@ typedef struct {
     gboolean                  deferred_preset;
 } SnapCtx;
 
+static void APIENTRY
+gl_debug_log_cb(GLenum source,
+                GLenum type,
+                GLuint id,
+                GLenum severity,
+                GLsizei length,
+                const GLchar* message,
+                const void* user_param)
+{
+    (void)source;
+    (void)type;
+    (void)id;
+    (void)severity;
+    (void)length;
+    const char* tag = user_param ? (const char*)user_param : "gl";
+    fprintf(stderr, "%s debug: %s\n", tag, message ? message : "(null)");
+}
+
+static void
+maybe_enable_gl_debug(const char* tag)
+{
+    const char* enabled = g_getenv("MILKDROP_GL_DEBUG_TRACE");
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return;
+
+    if (epoxy_has_gl_extension("GL_KHR_debug") || epoxy_gl_version() >= 43) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(gl_debug_log_cb, tag);
+    }
+}
+
+static void
+log_gl_context_info(const char* tag)
+{
+    const char* enabled = g_getenv("MILKDROP_GL_DEBUG_TRACE");
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return;
+
+    GLint profile = 0;
+    GLint flags = 0;
+    glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    fprintf(stderr,
+            "%s context: vendor=%s renderer=%s version=%s profile=0x%x flags=0x%x\n",
+            tag,
+            (const char*)glGetString(GL_VENDOR),
+            (const char*)glGetString(GL_RENDERER),
+            (const char*)glGetString(GL_VERSION),
+            (unsigned int)profile,
+            (unsigned int)flags);
+}
+
+static void
+log_fbo_state(const char* tag,
+              GLuint      fbo)
+{
+    const char* enabled = g_getenv("MILKDROP_GL_DEBUG_TRACE");
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return;
+
+    GLint prev_draw = 0;
+    GLint prev_read = 0;
+    GLint draw_buf0 = 0;
+    GLint read_buf = 0;
+    GLint type = 0;
+    GLint name = 0;
+    GLint enc = 0;
+
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &prev_draw);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prev_read);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+    glGetIntegerv(GL_DRAW_BUFFER0, &draw_buf0);
+    glGetIntegerv(GL_READ_BUFFER, &read_buf);
+    glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER,
+                                          GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+                                          &type);
+    glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER,
+                                          GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
+                                          &name);
+    glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER,
+                                          GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,
+                                          &enc);
+    fprintf(stderr,
+            "%s fbo=%u status_draw=0x%x status_read=0x%x draw_buf0=0x%x read_buf=0x%x att_type=0x%x att_name=%d encoding=0x%x\n",
+            tag,
+            (unsigned int)fbo,
+            (unsigned int)glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER),
+            (unsigned int)glCheckFramebufferStatus(GL_READ_FRAMEBUFFER),
+            (unsigned int)draw_buf0,
+            (unsigned int)read_buf,
+            (unsigned int)type,
+            name,
+            (unsigned int)enc);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prev_draw);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)prev_read);
+}
+
 static void*
 sdl_gl_load(const char* name,
             void*       user_data)
@@ -224,6 +326,8 @@ main(int argc,
 
     SDL_GL_MakeCurrent(window, glctx);
     glViewport(0, 0, ctx.width, ctx.height);
+    maybe_enable_gl_debug("sdl-preset-snapshot");
+    log_gl_context_info("sdl-preset-snapshot");
 
     if (!snap_init(&ctx)) {
         SDL_GL_DeleteContext(glctx);
@@ -255,9 +359,43 @@ main(int argc,
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ctx.width, ctx.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+        log_fbo_state("sdl-before-render", fbo);
+        GLenum fbo_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (fbo_status != GL_FRAMEBUFFER_COMPLETE) {
+            fprintf(stderr,
+                    "sdl_preset_snapshot: FBO incomplete before render: 0x%x\n",
+                    (unsigned int)fbo_status);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDeleteFramebuffers(1, &fbo);
+            glDeleteTextures(1, &tex);
+            snap_cleanup(&ctx);
+            SDL_GL_DeleteContext(glctx);
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return 2;
+        }
+
+        while (glGetError() != GL_NO_ERROR) {}
 
         projectm_opengl_render_frame_fbo(ctx.pm, fbo);
         glFinish();
+        log_fbo_state("sdl-after-render", fbo);
+        GLenum render_err = glGetError();
+        if (render_err != GL_NO_ERROR) {
+            fprintf(stderr,
+                    "sdl_preset_snapshot: post-render GL error 0x%x at frame %d for %s\n",
+                    (unsigned int)render_err,
+                    ctx.frame_count + 1,
+                    ctx.preset_file ? ctx.preset_file : "(null)");
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDeleteFramebuffers(1, &fbo);
+            glDeleteTextures(1, &tex);
+            snap_cleanup(&ctx);
+            SDL_GL_DeleteContext(glctx);
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            return 3;
+        }
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo); // Read from fbo for saving
 

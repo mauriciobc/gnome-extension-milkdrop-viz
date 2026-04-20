@@ -2,6 +2,7 @@ cc = meson.get_compiler('c')
 
 test_glib_dep = dependency('glib-2.0', version: '>=2.76')
 test_gtk_dep = dependency('gtk4', version: '>=4.10')
+sdl2_dep = dependency('sdl2', required: false)
 
 # Match milkdrop link flags when tests compile src/audio.c or src/renderer.c with renderer_cargs.
 test_src_link_deps = [glib_dep, gtk_dep]
@@ -53,6 +54,42 @@ if have_projectm
     ],
     is_parallel: false,
     timeout: 60,
+  )
+
+  gdk_glcontext_projectm_test = executable(
+    'test-gdk-glcontext-projectm',
+    'test_gdk_glcontext_projectm.c',
+    include_directories: include_directories('..', '../src'),
+    dependencies: gtk_glarea_projectm_deps,
+  )
+  test(
+    'gdk-glcontext-projectm',
+    gdk_glcontext_projectm_test,
+    env: [
+      'MILKDROP_PM_TEST_PRESET=' + _pm_test_preset,
+      'MILKDROP_FORCE_GL_API=1',
+    ],
+    is_parallel: false,
+    timeout: 60,
+  )
+endif
+
+if have_projectm and sdl2_dep.found()
+  m_dep = cc.find_library('m', required: true)
+  sdl_preset_snapshot = executable(
+    'sdl_preset_snapshot',
+    'sdl_preset_snapshot.c',
+    include_directories: include_directories('..', '../src'),
+    dependencies: [glib_dep, epoxy_dep, sdl2_dep, projectm_dep, projectm_playlist_dep, m_dep],
+    install: false,
+  )
+
+  poc_sdl_gtk_copy_present = executable(
+    'poc-sdl-gtk-copy-present',
+    'poc_sdl_gtk_copy_present.c',
+    include_directories: include_directories('..', '../src'),
+    dependencies: [glib_dep, gtk_dep, epoxy_dep, sdl2_dep, projectm_dep, m_dep],
+    install: false,
   )
 endif
 

@@ -30,6 +30,26 @@ scan_should_stop(const AppData* app_data)
     return app_data && atomic_load(&app_data->preset_scan_stop);
 }
 
+static bool
+copy_preset_dir_snapshot(const char* preset_dir, char* buffer, gsize buffer_size)
+{
+    if (!buffer || buffer_size == 0)
+        return false;
+
+    buffer[0] = '\0';
+    if (!preset_dir)
+        return true;
+
+    gsize copied = g_strlcpy(buffer, preset_dir, buffer_size);
+    if (copied >= buffer_size) {
+        g_warning("presets: preset-dir path too long (%" G_GSIZE_FORMAT " bytes)", copied);
+        buffer[0] = '\0';
+        return false;
+    }
+
+    return true;
+}
+
 void
 presets_clear(AppData* app_data)
 {
@@ -106,11 +126,13 @@ presets_reload(AppData* app_data)
         return false;
 
     char dir_buf[MILKDROP_PATH_MAX];
-    dir_buf[0] = '\0';
+    bool dir_ok = true;
     g_mutex_lock(&app_data->preset_dir_lock);
-    if (app_data->preset_dir)
-        g_strlcpy(dir_buf, app_data->preset_dir, sizeof(dir_buf));
+    dir_ok = copy_preset_dir_snapshot(app_data->preset_dir, dir_buf, sizeof(dir_buf));
     g_mutex_unlock(&app_data->preset_dir_lock);
+
+    if (!dir_ok)
+        return false;
 
     if (dir_buf[0] == '\0')
     {
@@ -172,14 +194,19 @@ scan_once(AppData* app_data)
     uint32_t seq_snapshot = atomic_load(&app_data->preset_scan_seq);
 
     char scan_dir[MILKDROP_PATH_MAX];
-    scan_dir[0] = '\0';
+    bool dir_ok = true;
     g_mutex_lock(&app_data->preset_dir_lock);
-    if (app_data->preset_dir)
-        g_strlcpy(scan_dir, app_data->preset_dir, sizeof(scan_dir));
+    dir_ok = copy_preset_dir_snapshot(app_data->preset_dir, scan_dir, sizeof(scan_dir));
     g_mutex_unlock(&app_data->preset_dir_lock);
 
     if (scan_should_stop(app_data))
         return true;
+
+    if (!dir_ok) {
+        /* Treat overlong preset-dir the same way as any other invalid directory:
+         * keep current state and settle without spinning forever. */
+        return atomic_load(&app_data->preset_scan_seq) == seq_snapshot;
+    }
 
     if (scan_dir[0] == '\0' || !g_file_test(scan_dir, G_FILE_TEST_IS_DIR)) {
         /* No valid directory — only treat as done if seq is still current. */

@@ -203,6 +203,17 @@ milkdrop_clear_pending_gl_errors(void)
     return err;
 }
 
+static void
+milkdrop_bind_framebuffer_for_readback(GLint fbo)
+{
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)fbo);
+    if (fbo != 0)
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+    else
+        glReadBuffer(GL_BACK);
+}
+
 static bool
 milkdrop_probe_startup_pixels(GLint draw_fbo,
                               int   width,
@@ -222,7 +233,7 @@ milkdrop_probe_startup_pixels(GLint draw_fbo,
     if (draw_fbo == 0 || width <= 0 || height <= 0)
         return false;
 
-    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
+    milkdrop_bind_framebuffer_for_readback(draw_fbo);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
     for (size_t i = 0; i < G_N_ELEMENTS(probe_points); i++) {
@@ -540,14 +551,8 @@ static gboolean
 milkdrop_idle_surface_queue_render(gpointer user_data)
 {
     AppData* app_data = user_data;
-    if (app_data->window) {
-        GtkNative* native = gtk_widget_get_native(GTK_WIDGET(app_data->window));
-        if (native) {
-            GdkSurface* surface = gtk_native_get_surface(native);
-            if (surface)
-                gdk_surface_queue_render(surface);
-        }
-    }
+    if (app_data && app_data->gl_area)
+        gtk_gl_area_queue_render(app_data->gl_area);
     atomic_store(&app_data->idle_surface_queued, false);
     return G_SOURCE_REMOVE;
 }
@@ -1053,9 +1058,10 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
              * read from the wrong buffer — the root cause of "reading FBO
              * too soon" artifacts.
              *
-             * Using GL_FRAMEBUFFER binds both READ and DRAW targets, ensuring
-             * glReadPixels and glFinish operate on the correct buffer. */
-            glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)gtk_fbo);
+             * Restore READ and DRAW explicitly because glReadPixels depends on
+             * the read target and projectM may leave READ_FRAMEBUFFER or the
+             * read buffer selector pointing at an internal attachment. */
+            milkdrop_bind_framebuffer_for_readback(gtk_fbo);
 
             GLenum err = GL_NO_ERROR;
             (void)glGetError();
@@ -1092,20 +1098,45 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                 g_mutex_unlock(&app_data->screenshot_lock);
 
                 if (local_screenshot_path[0] != '\0' && app_data->render_width > 0 && app_data->render_height > 0) {
-                    // Ensure GTK's FBO is bound for pixel read
-                    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)gtk_fbo);
+                    GLint vp[4] = {0};
+                    glGetIntegerv(GL_VIEWPORT, vp);
+                    int fb_w = vp[2] > 0 ? vp[2] : app_data->render_width;
+                    int fb_h = vp[3] > 0 ? vp[3] : app_data->render_height;
+
+                    if (fb_w <= 0 || fb_h <= 0) {
+                        g_warning("screenshot: invalid framebuffer size %dx%d (viewport=%d,%d %dx%d)",
+                                  fb_w, fb_h, vp[0], vp[1], vp[2], vp[3]);
+                    } else {
+                    GLint read_fbo = 0;
+                    GLint draw_fbo = 0;
+                    GLint read_buffer = 0;
+                    GLenum read_status = GL_FRAMEBUFFER_UNDEFINED;
+
+                    /* Ensure GTK's FBO is bound for pixel read. */
+                    milkdrop_bind_framebuffer_for_readback(gtk_fbo);
                     glPixelStorei(GL_PACK_ALIGNMENT, 1);
+                    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
+                    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+                    glGetIntegerv(GL_READ_BUFFER, &read_buffer);
+                    read_status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
                     
                     /* Guard against integer overflow on huge dimensions. */
-                    size_t row_bytes = (size_t)app_data->render_width * 4u;
-                    size_t total_bytes = row_bytes * (size_t)app_data->render_height;
+                    size_t row_bytes = (size_t)fb_w * 4u;
+                    size_t total_bytes = row_bytes * (size_t)fb_h;
                     GLubyte *pixels = NULL;
-                    if (row_bytes / 4u == (size_t)app_data->render_width &&
-                        total_bytes / row_bytes == (size_t)app_data->render_height)
+                    if (row_bytes / 4u == (size_t)fb_w &&
+                        total_bytes / row_bytes == (size_t)fb_h)
                         pixels = malloc(total_bytes);
 
                     if (pixels) {
-                        glReadPixels(0, 0, app_data->render_width, app_data->render_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+                        milkdrop_clear_pending_gl_errors();
+                        glReadPixels(0, 0, fb_w, fb_h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+                        GLenum readback_err = glGetError();
+                        if (readback_err != GL_NO_ERROR)
+                            g_warning("screenshot: glReadPixels failed with err=0x%x (gtk_fbo=%d read_fbo=%d draw_fbo=%d read_buffer=0x%x read_status=0x%x viewport=%d,%d %dx%d)",
+                                      readback_err, (int)gtk_fbo, (int)read_fbo, (int)draw_fbo,
+                                      (unsigned int)read_buffer, (unsigned int)read_status,
+                                      vp[0], vp[1], vp[2], vp[3]);
                         
                         // Check probe points like test does
                         static const struct { float x; float y; } probe_points[] = {
@@ -1113,31 +1144,34 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                         };
                         int found_content = 0;
                         for (size_t i = 0; i < 5; i++) {
-                            int px = (int)(probe_points[i].x * (float)(app_data->render_width - 1));
-                            int py = (int)(probe_points[i].y * (float)(app_data->render_height - 1));
-                            size_t idx = (size_t)py * (size_t)app_data->render_width * 4 + (size_t)px * 4;
+                            int px = (int)(probe_points[i].x * (float)(fb_w - 1));
+                            int py = (int)(probe_points[i].y * (float)(fb_h - 1));
+                            size_t idx = (size_t)py * (size_t)fb_w * 4 + (size_t)px * 4;
                             if (pixels[idx] > 0 || pixels[idx+1] > 0 || pixels[idx+2] > 0) {
                                 found_content = 1;
                                 break;
                             }
                         }
-                        g_message("screenshot: has_visible_content=%d at %dx%d", 
-                                  found_content, app_data->render_width, app_data->render_height);
+                        g_message("screenshot: has_visible_content=%d at %dx%d (render=%dx%d, gtk_fbo=%d read_fbo=%d draw_fbo=%d read_buffer=0x%x read_status=0x%x)",
+                                  found_content, fb_w, fb_h,
+                                  app_data->render_width, app_data->render_height,
+                                  (int)gtk_fbo, (int)read_fbo, (int)draw_fbo,
+                                  (unsigned int)read_buffer, (unsigned int)read_status);
                         
                         // Save as PPM (RGB only) — write per-row for efficiency
                         FILE *f = fopen(local_screenshot_path, "wb");
                         if (f) {
-                            fprintf(f, "P6\n%d %d\n255\n", app_data->render_width, app_data->render_height);
-                            uint8_t *row_rgb = malloc((size_t)app_data->render_width * 3);
+                            fprintf(f, "P6\n%d %d\n255\n", fb_w, fb_h);
+                            uint8_t *row_rgb = malloc((size_t)fb_w * 3);
                             if (row_rgb) {
-                                for (int y = app_data->render_height - 1; y >= 0; y--) {
-                                    for (int x = 0; x < app_data->render_width; x++) {
-                                        size_t src = (size_t)y * (size_t)app_data->render_width * 4 + (size_t)x * 4;
+                                for (int y = fb_h - 1; y >= 0; y--) {
+                                    for (int x = 0; x < fb_w; x++) {
+                                        size_t src = (size_t)y * (size_t)fb_w * 4 + (size_t)x * 4;
                                         row_rgb[x * 3 + 0] = pixels[src];
                                         row_rgb[x * 3 + 1] = pixels[src + 1];
                                         row_rgb[x * 3 + 2] = pixels[src + 2];
                                     }
-                                    fwrite(row_rgb, 1, (size_t)app_data->render_width * 3, f);
+                                    fwrite(row_rgb, 1, (size_t)fb_w * 3, f);
                                 }
                                 free(row_rgb);
                             }
@@ -1145,6 +1179,7 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                             g_message("screenshot: saved to %s", local_screenshot_path);
                         }
                         free(pixels);
+                    }
                     }
                 }
             }
@@ -1180,7 +1215,7 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             glUseProgram(0);
             glBindTexture(GL_TEXTURE_2D, 0);
             glActiveTexture(GL_TEXTURE0);
-            glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)gtk_fbo);
+            milkdrop_bind_framebuffer_for_readback(gtk_fbo);
             glDisable(GL_BLEND);
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_STENCIL_TEST);

@@ -1,0 +1,128 @@
+================================================================================
+Auditoria de conformidade (código): gnome-extension-milkdrop-viz vs frontend-sdl-rust
+Data: 2026-04-20
+Fontes: apenas código-fonte local, clone upstream, headers /usr/include/projectM-4,
+        crate projectm-3.1.2 em ~/.cargo/registry (via cargo fetch do clone).
+================================================================================
+
+1) VERSÕES CONGELADAS
+---------------------
+- frontend-sdl-rust (master ao clonar): commit ffffaafebbcbb395abbede058f7d09f79ad6452b
+- Crate Rust "projectm" (Cargo.lock do upstream): 3.1.2
+- Crate "projectm-sys" (transitivo): 1.2.2
+- Sistema (pkg-config): projectM-4 = 4.1.0
+
+Nota: número do crate Rust "projectm" não é a versão da biblioteca C; o binding
+liga à lib instalada. Comparar comportamento exige mesma libprojectM nos dois
+binários.
+
+2) MATRIZ API — REFERÊNCIA (Rust) vs LOCAL (C)
+----------------------------------------------
+
+Inicialização GL + projectM
+  Ref: src/app.rs — GL 3.3 Core, debug context; ProjectM::create(); Playlist::create
+  Loc: src/main.c — GtkGLArea + realize; projectm_create(); projectm_playlist_create()
+  Alinhamento: ambos criam instância e playlist após contexto GL. Local usa C API
+  direta; ref usa crate.
+
+Tamanho da janela
+  Ref: src/app/video.rs — set_window_size(width, height) a partir do SDL Window
+  Loc: src/renderer.c renderer_apply_resize + src/main.c — projectm_set_window_size
+  Alinhamento: equivalente (origem: SDL vs GTK scale*widget).
+
+Loop por frame (ordem)
+  Ref: src/app/main_loop.rs
+        process_frame_samples (pcm) OU dummy_audio → pm.render_frame() → gl_swap_window()
+  Loc: src/main.c on_render (~860+)
+        attach_buffers → glClear → projectm_set_frame_time → projectm_pcm_add_float
+        → (sync settings) → projectm_opengl_render_frame_fbo ou _render_frame
+  Alinhamento: PCM antes do render — SIM.
+  Diferenças de plataforma: local faz clear explícito, set_frame_time explícito,
+  render para FBO do GtkGLArea (não FB0), glFinish após render, restauração de
+  estado GL; ref usa framebuffer padrão e swap.
+
+Áudio → projectm_pcm_add_float
+  Ref: src/app/audio.rs process_frame_samples — lê SDL em buffer f32, chama
+        pcm_add_float(&buf[..samples_read], CHANNELS)
+  Loc: src/renderer.c renderer_frame_prep + src/main.c — ring read;
+        projectm_pcm_add_float(..., frames, PROJECTM_STEREO) com frames limitado
+        por pcm_max_samples_per_channel
+  Ver seção 3 (semântica).
+
+Render OpenGL
+  Ref: projectm crate core.rs — render_frame() chama só projectm_opengl_render_frame
+  Loc: src/main.c — projectm_opengl_render_frame_fbo se GL_DRAW_FRAMEBUFFER_BINDING != 0
+  Alinhamento API: ref equivale ao ramo FB0 local; ramo FBO é exigência GTK.
+
+Parâmetros (config inicial / runtime)
+  Ref: src/app/config.rs apply_config — set_fps, add_preset_path (playlist),
+        set_texture_search_paths, set_beat_sensitivity, set_preset_duration
+        (shuffle comentado no ref)
+  Loc: src/main.c init + bloco runtime no render — set_fps, set_preset_duration,
+        set_beat_sensitivity, mesh_size, aspect_correction, hard/soft cut params,
+        playlist shuffle, texture paths (milkdrop_set_texture_paths_for_preset etc.)
+  Alinhamento: subconjunto comum (fps, presets via playlist, texturas, beat, duração).
+  Local define parâmetros extra (mesh, aspect, cortes) — não contradiz a ref.
+
+Playlist
+  Ref: src/app/playlist.rs — add_path recursivo, play_next/prev/random
+  Loc: src/presets.c — varredura recursiva .milk, ordenação strcmp;
+        src/main.c — projectm_playlist_add_presets em chunks, callbacks falha/switch
+  Alinhamento: ambos alimentam a API de playlist; estratégia de listagem (add_path
+  único vs scan + add_presets) difere mas é equivalente funcional se paths forem
+  os mesmos.
+
+3) SEMÂNTICA projectm_pcm_add_float
+-----------------------------------
+Header C (/usr/include/projectM-4/audio.h):
+  count = "number of audio samples in a channel" (por canal, não total de floats).
+
+Crate projectm-3.1.2 src/core.rs Projectm::pcm_add_float:
+  samples_per_channel = samples.len() / channels as usize
+  ffi::projectm_pcm_add_float(..., samples_per_channel as u32, channels)
+
+Código local (src/main.c):
+  frames = stereo_frames = floats_copied / 2, truncado a pcm_max_samples_per_channel
+  projectm_pcm_add_float(..., frames, PROJECTM_STEREO)
+
+Conclusão: ALINHADO. "Frames" estéreo = amostras por canal; o binding Rust divide
+len pelo número de canais para obter o mesmo valor.
+
+4) projectm_set_frame_time vs render_frame (crate)
+--------------------------------------------------
+- Crate projectm: render_frame() apenas chama projectm_opengl_render_frame; NÃO
+  chama projectm_set_frame_time.
+- frontend-sdl-rust main_loop: não invoca set_frame_time no código da app.
+
+Header parameters.h (lib 4.x):
+  projectm_set_frame_time(..., double seconds_since_first_frame)
+  Valores < 0 usam relógio do sistema (default -1.0 na doc do header).
+
+Código local (src/main.c): define tempo explícito com monotonic time desde o
+primeiro frame (>= 0).
+
+Conclusão: DIVERGÊNCIA INTENCIONAL/ACEITÁVEL. A referência Rust deixa o default
+da lib (tempo por relógio interno). O milkdrop fixa tempo monotónico explícito,
+o que satisfaz o contrato da API para animação determinística e evita saltos se
+assumido de forma consistente entre frames.
+
+5) VERIFICAÇÃO OPCIONAL (harness no repositório)
+------------------------------------------------
+- tests/reference_renderer.c — baseline Gtk/GLArea; referenciado em tests/meson.build
+- tests/sdl_preset_snapshot.c — snapshot SDL + preset fixo; usado em scripts de
+  baseline (tests/compare_gtk_sdl_projectm_snapshots.sh, tools/create_sdl_snapshot_baselines.sh)
+Comparação automática com o binário Rust frontend-sdl-rust não faz parte deste
+relatório; exigiria build do Rust com a mesma libprojectM e harness comum de PCM.
+
+6) SÍNTESE
+----------
+- Ordem PCM → render: conforme padrão da referência.
+- Contagem PCM: conforme contrato C e implementação do crate Rust.
+- Render: ref usa FB0; projeto local usa FBO GtkGLArea — esperado, não falha de API.
+- Tempo de frame: ref não define; local define monotónico — ambos válidos face a
+  parameters.h.
+- Versões: crate 3.1.2 + lib 4.1.0 no sistema; alinhar lib ao testar lado a lado.
+
+Entregável: este ficheiro (reports/compliance_frontend_sdl_rust_audit.txt).
+
+================================================================================

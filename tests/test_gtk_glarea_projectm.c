@@ -17,6 +17,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
+#include <epoxy/egl.h>
 #include <epoxy/gl.h>
 
 #include <projectM-4/core.h>
@@ -30,16 +31,130 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <dlfcn.h>
 
 #define PM_VISUAL_PULSE_MS 16
 #define PM_STARTUP_MAX_FRAMES 180
 #define PM_STARTUP_REQUIRED_CONTENT_FRAMES 2
+
+static void APIENTRY
+gl_debug_log_cb(GLenum source,
+                GLenum type,
+                GLuint id,
+                GLenum severity,
+                GLsizei length,
+                const GLchar* message,
+                const void* user_param)
+{
+    (void)source;
+    (void)type;
+    (void)id;
+    (void)severity;
+    (void)length;
+    const char* tag = user_param ? (const char*)user_param : "gl";
+    g_message("%s debug: %s", tag, message ? message : "(null)");
+}
+
+static void
+maybe_enable_gl_debug(const char* tag)
+{
+    const char* enabled = g_getenv("MILKDROP_GL_DEBUG_TRACE");
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return;
+
+    if (epoxy_has_gl_extension("GL_KHR_debug") || epoxy_gl_version() >= 43) {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(gl_debug_log_cb, tag);
+    }
+}
+
+static void
+log_gl_context_info(const char* tag)
+{
+    const char* enabled = g_getenv("MILKDROP_GL_DEBUG_TRACE");
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return;
+
+    GLint profile = 0;
+    GLint flags = 0;
+    glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    g_message("%s context: vendor=%s renderer=%s version=%s profile=0x%x flags=0x%x",
+              tag,
+              (const char*)glGetString(GL_VENDOR),
+              (const char*)glGetString(GL_RENDERER),
+              (const char*)glGetString(GL_VERSION),
+              (unsigned int)profile,
+              (unsigned int)flags);
+}
+
+static void
+log_fbo_state(const char* tag,
+              GLuint      fbo)
+{
+    const char* enabled = g_getenv("MILKDROP_GL_DEBUG_TRACE");
+    if (!enabled || strcmp(enabled, "1") != 0)
+        return;
+
+    GLint prev_draw = 0;
+    GLint prev_read = 0;
+    GLint draw_buf0 = 0;
+    GLint read_buf = 0;
+    GLint type = 0;
+    GLint name = 0;
+    GLint enc = 0;
+
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &prev_draw);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prev_read);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+    glGetIntegerv(GL_DRAW_BUFFER0, &draw_buf0);
+    glGetIntegerv(GL_READ_BUFFER, &read_buf);
+    glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER,
+                                          GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+                                          &type);
+    glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER,
+                                          GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
+                                          &name);
+    glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER,
+                                          GL_COLOR_ATTACHMENT0,
+                                          GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,
+                                          &enc);
+    g_message("%s fbo=%u status_draw=0x%x status_read=0x%x draw_buf0=0x%x read_buf=0x%x att_type=0x%x att_name=%d encoding=0x%x",
+              tag,
+              (unsigned int)fbo,
+              (unsigned int)glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER),
+              (unsigned int)glCheckFramebufferStatus(GL_READ_FRAMEBUFFER),
+              (unsigned int)draw_buf0,
+              (unsigned int)read_buf,
+              (unsigned int)type,
+              name,
+              (unsigned int)enc);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prev_draw);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)prev_read);
+}
+
+static void*
+gtk_gl_load(const char* name,
+            void*       user_data)
+{
+    (void)user_data;
+    void* func = (void*)eglGetProcAddress(name);
+    if (!func)
+        func = dlsym(RTLD_DEFAULT, name);
+    return func;
+}
 
 typedef struct {
     GtkApplication*   app;
     GtkGLArea*        gl_area;
     projectm_handle   pm;
     void*             playlist;
+    int               resize_width;
+    int               resize_height;
     int               frame;
     gint64            mono_origin_us;
     guint             visual_pulse_id;
@@ -169,6 +284,7 @@ load_test_preset_via_playlist(PmCtx* ctx, const char* preset_path)
 
     g_autofree gchar* preset_dir = g_path_get_dirname(preset_path);
     const char* tex_paths[] = {preset_dir, "/usr/local/share/projectM/textures"};
+    const char* direct_load = g_getenv("MILKDROP_PM_TEST_DIRECT_LOAD");
 
     projectm_set_texture_search_paths(ctx->pm, tex_paths, 2u);
 
@@ -177,6 +293,12 @@ load_test_preset_via_playlist(PmCtx* ctx, const char* preset_path)
 
     if (!projectm_playlist_add_preset(ctx->playlist, preset_path, true))
         return FALSE;
+
+    if (direct_load && strcmp(direct_load, "1") == 0) {
+        projectm_load_preset_file(ctx->pm, preset_path, false);
+        ctx->startup_final_content_active = TRUE;
+        return TRUE;
+    }
 
     projectm_load_preset_file(ctx->pm, "idle://", false);
     ctx->startup_deferred_preset_activation = TRUE;
@@ -231,7 +353,13 @@ on_realize_pm(GtkGLArea* area, gpointer user_data)
         return;
     }
 
-    ctx->pm = projectm_create();
+    maybe_enable_gl_debug("gtk-glarea-projectm");
+    log_gl_context_info("gtk-glarea-projectm");
+
+    if (g_getenv("MILKDROP_PM_TEST_EXPLICIT_LOAD_PROC"))
+        ctx->pm = projectm_create_with_opengl_load_proc(gtk_gl_load, NULL);
+    else
+        ctx->pm = projectm_create();
     if (!ctx->pm) {
         g_warning("projectm_create failed");
         ctx->init_ok          = FALSE;
@@ -276,6 +404,8 @@ on_resize_pm(GtkGLArea* area, int width, int height, gpointer user_data)
 {
     (void)area;
     PmCtx* ctx = user_data;
+    ctx->resize_width = width;
+    ctx->resize_height = height;
     if (!ctx->pm || width < 2 || height < 2)
         return;
 
@@ -343,6 +473,8 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 {
     (void)context;
     PmCtx* ctx = user_data;
+    const char* use_intermediate_fbo = g_getenv("MILKDROP_PM_TEST_INTERMEDIATE_FBO");
+    const char* skip_attach = g_getenv("MILKDROP_PM_TEST_SKIP_ATTACH_BEFORE_RENDER");
 
     if (!ctx->realize_finished) {
         queue_next_gl_render(ctx);
@@ -364,14 +496,26 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         return TRUE;
     }
 
-    gtk_gl_area_attach_buffers(area);
+    gboolean attach_before_render = !(skip_attach &&
+                                      strcmp(skip_attach, "1") == 0 &&
+                                      use_intermediate_fbo &&
+                                      strcmp(use_intermediate_fbo, "1") == 0);
 
-    /* Usar o viewport que o GtkGLArea acabou de aplicar (resize → glViewport), não
-     * gtk_widget_get_width×scale — em alguns backends os números divergem. */
     GLint vp[4] = {0};
-    glGetIntegerv(GL_VIEWPORT, vp);
-    int fb_w = vp[2];
-    int fb_h = vp[3];
+    int fb_w = 0;
+    int fb_h = 0;
+    if (attach_before_render) {
+        gtk_gl_area_attach_buffers(area);
+
+        /* Usar o viewport que o GtkGLArea acabou de aplicar (resize → glViewport), não
+         * gtk_widget_get_width×scale — em alguns backends os números divergem. */
+        glGetIntegerv(GL_VIEWPORT, vp);
+        fb_w = vp[2];
+        fb_h = vp[3];
+    } else {
+        fb_w = ctx->resize_width;
+        fb_h = ctx->resize_height;
+    }
     if (fb_w < 4 || fb_h < 4) {
         queue_next_gl_render(ctx);
         return TRUE;
@@ -398,29 +542,86 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     projectm_playlist_set_shuffle(ctx->playlist, FALSE);
 
     GLint draw_fbo = 0;
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+    if (attach_before_render)
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+    GLuint render_fbo = (GLuint)draw_fbo;
+    GLuint intermediate_fbo = 0;
+    GLuint intermediate_tex = 0;
+
+    if (use_intermediate_fbo && strcmp(use_intermediate_fbo, "1") == 0) {
+        glGenFramebuffers(1, &intermediate_fbo);
+        glGenTextures(1, &intermediate_tex);
+        glBindTexture(GL_TEXTURE_2D, intermediate_tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fb_w, fb_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glBindFramebuffer(GL_FRAMEBUFFER, intermediate_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, intermediate_tex, 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            g_warning("gtk-glarea-projectm: intermediate FBO incomplete");
+            if (!ctx->visual_mode) {
+                ctx->pass     = FALSE;
+                ctx->finished = TRUE;
+                g_application_quit(G_APPLICATION(ctx->app));
+                return TRUE;
+            }
+        } else {
+            render_fbo = intermediate_fbo;
+        }
+    }
+
+    log_fbo_state("gtk-before-render-target", render_fbo);
+    if (draw_fbo != 0)
+        log_fbo_state("gtk-before-render-draw", (GLuint)draw_fbo);
 
     /* Limpar erros GL pendentes antes do render */
     while (glGetError() != GL_NO_ERROR) {}
 
-    if (draw_fbo != 0)
-        projectm_opengl_render_frame_fbo(ctx->pm, (uint32_t)draw_fbo);
+    if (render_fbo != 0)
+        projectm_opengl_render_frame_fbo(ctx->pm, (uint32_t)render_fbo);
     else
         projectm_opengl_render_frame(ctx->pm);
 
     /* Synchronize multi-pass blur rendering (matches production code in src/main.c) */
     glFinish();
 
+    if (!attach_before_render) {
+        gtk_gl_area_attach_buffers(area);
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+        log_fbo_state("gtk-after-attach-draw", (GLuint)draw_fbo);
+    }
+
+    log_fbo_state("gtk-after-render-target", render_fbo);
+    log_fbo_state("gtk-after-render-draw", (GLuint)draw_fbo);
+
+    if (intermediate_fbo != 0) {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, intermediate_fbo);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)draw_fbo);
+        glBlitFramebuffer(0, 0, fb_w, fb_h,
+                          0, 0, fb_w, fb_h,
+                          GL_COLOR_BUFFER_BIT,
+                          GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, intermediate_fbo);
+    }
+
     /* Estado que o GTK valida apos o sinal render; projectM pode alterar. */
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
 
     /* projectM muda READ/DRAW FBOs; restaurar antes da leitura */
-    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)draw_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, intermediate_fbo != 0 ? intermediate_fbo : (GLuint)draw_fbo);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
     GLenum gl_err = glGetError();
     if (gl_err != GL_NO_ERROR) {
+        g_warning("gtk-glarea-projectm: post-render GL error 0x%x (draw_fbo=%d, fb=%dx%d)",
+                  gl_err, (int)draw_fbo, fb_w, fb_h);
+        if (intermediate_fbo != 0) {
+            glDeleteFramebuffers(1, &intermediate_fbo);
+            glDeleteTextures(1, &intermediate_tex);
+        }
         if (!ctx->visual_mode) {
             ctx->pass      = FALSE;
             ctx->finished  = TRUE;
@@ -443,6 +644,10 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     ctx->frame++;
 
     if (!ctx->visual_mode && ctx->consecutive_content_frames >= PM_STARTUP_REQUIRED_CONTENT_FRAMES) {
+        if (intermediate_fbo != 0) {
+            glDeleteFramebuffers(1, &intermediate_fbo);
+            glDeleteTextures(1, &intermediate_tex);
+        }
         ctx->pass     = TRUE;
         ctx->finished = TRUE;
         g_application_quit(G_APPLICATION(ctx->app));
@@ -450,10 +655,19 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
     }
 
     if (!ctx->visual_mode && ctx->frame >= PM_STARTUP_MAX_FRAMES) {
+        if (intermediate_fbo != 0) {
+            glDeleteFramebuffers(1, &intermediate_fbo);
+            glDeleteTextures(1, &intermediate_tex);
+        }
         ctx->pass     = FALSE;
         ctx->finished = TRUE;
         g_application_quit(G_APPLICATION(ctx->app));
         return TRUE;
+    }
+
+    if (intermediate_fbo != 0) {
+        glDeleteFramebuffers(1, &intermediate_fbo);
+        glDeleteTextures(1, &intermediate_tex);
     }
 
     queue_next_gl_render(ctx);
@@ -476,6 +690,12 @@ static void
 activate_pm_common(GtkApplication* app, PmCtx* ctx)
 {
     ctx->app = app;
+    const char* env_w = g_getenv("MILKDROP_PM_TEST_WINDOW_WIDTH");
+    const char* env_h = g_getenv("MILKDROP_PM_TEST_WINDOW_HEIGHT");
+    int default_w = ctx->visual_mode ? 520 : 200;
+    int default_h = ctx->visual_mode ? 360 : 160;
+    int window_w = env_w && env_w[0] ? atoi(env_w) : default_w;
+    int window_h = env_h && env_h[0] ? atoi(env_h) : default_h;
 
     GtkWidget* win = gtk_application_window_new(app);
     GtkWidget* gl  = gtk_gl_area_new();
@@ -494,9 +714,11 @@ activate_pm_common(GtkApplication* app, PmCtx* ctx)
     gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(gl), FALSE);
     gtk_gl_area_set_has_stencil_buffer(GTK_GL_AREA(gl), FALSE);
 
-    gtk_window_set_default_size(GTK_WINDOW(win),
-                                ctx->visual_mode ? 520 : 200,
-                                ctx->visual_mode ? 360 : 160);
+    if (window_w < 64)
+        window_w = default_w;
+    if (window_h < 64)
+        window_h = default_h;
+    gtk_window_set_default_size(GTK_WINDOW(win), window_w, window_h);
     gtk_window_set_child(GTK_WINDOW(win), gl);
 
     ctx->gl_area = GTK_GL_AREA(gl);
