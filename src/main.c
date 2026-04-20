@@ -52,37 +52,33 @@ milkdrop_str_contains_ci(const char* haystack,
 
 /**
  * Heuristic: projectM logs texture/sprite/image I/O without a stable prefix.
- * We surface these at g_warning so missing textures are visible without --verbose.
+ * We surface failure messages at g_warning so missing textures are visible
+ * without --verbose, but avoid promoting successful-load messages (e.g.
+ * "[TextureManager] Loaded texture \"noise_lq\"") which would be false alarms.
  */
 static gboolean
-milkdrop_projectm_message_is_texture_io(const char* msg)
+milkdrop_projectm_message_is_texture_failure(const char* msg)
 {
-    static const char* const needles[] = {
-        "texture",
-        "sprite",
-        "jpeg",
-        "jpg",
-        "png",
-        ".jpg",
-        ".png",
-        ".bmp",
-        ".tga",
+    static const char* const failure_needles[] = {
+        "failed to find",
         "failed to load",
+        "failed to create",
         "could not load",
+        "could not open",
         "unable to load",
         "unable to open",
-        "could not open",
         "cannot open",
         "file not found",
         "no such file",
         "missing image",
+        "missing texture",
     };
 
     if (!msg)
         return FALSE;
 
-    for (size_t i = 0; i < G_N_ELEMENTS(needles); i++) {
-        if (milkdrop_str_contains_ci(msg, needles[i]))
+    for (size_t i = 0; i < G_N_ELEMENTS(failure_needles); i++) {
+        if (milkdrop_str_contains_ci(msg, failure_needles[i]))
             return TRUE;
     }
     return FALSE;
@@ -95,7 +91,7 @@ milkdrop_projectm_log(const char*           message,
 {
     AppData* app_data = user_data;
     gboolean verbose  = app_data && app_data->verbose;
-    gboolean texture_io = message && milkdrop_projectm_message_is_texture_io(message);
+    gboolean texture_fail = message && milkdrop_projectm_message_is_texture_failure(message);
 
     if (!message)
         return;
@@ -106,8 +102,8 @@ milkdrop_projectm_log(const char*           message,
         g_warning("milkdrop: projectM: %s", message);
     else if (level >= PROJECTM_LOG_LEVEL_WARN)
         g_warning("milkdrop: projectM: %s", message);
-    else if (texture_io && level >= PROJECTM_LOG_LEVEL_INFO)
-        g_warning("milkdrop: texture load: %s", message);
+    else if (texture_fail && level >= PROJECTM_LOG_LEVEL_INFO)
+        g_warning("milkdrop: missing texture: %s", message);
     else if (verbose)
         g_message("milkdrop: projectM: %s", message);
 }
