@@ -1,0 +1,9 @@
+# SDL snapshot baselines — 2026-04-18T22:01:02-03:00
+# frame=48 size=320x240 MILKDROP_FIXED_FRAME_TIME=1 seed=42
+# preset_dir=/home/mauriciobc/presets
+
+baseline_01.ppm	/home/mauriciobc/presets/presets/Incubo_'s DeepMash Series #11.milk
+baseline_02.ppm	/home/mauriciobc/presets/presets-cream-of-the-crop/Sparkle/Explosions/fleekus flokus - ap3 roam2 as fuck would have it nz+ jaos prasm turdth.milk
+baseline_03.ppm	/home/mauriciobc/presets/presets-cream-of-the-crop/Sparkle/Explosions/bdrv + al Rovastar - Fractopia bdrv132456 mix bleuarg - divulgatticae ye olde rotgasm nz.milk
+baseline_04.ppm	/home/mauriciobc/presets/presets-cream-of-the-crop/Waveform/Spectrum/ok, asshole, why don't you like milkdrop more.milk
+baseline_05.ppm	/home/mauriciobc/presets/presets-cream-of-the-crop/Dancer/Murky Mirror/martin - elusive impressions mix2 - flacc mess roam3.milk

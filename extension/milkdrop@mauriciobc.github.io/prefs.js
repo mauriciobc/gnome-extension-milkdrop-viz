@@ -264,6 +264,75 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         settings.bind('media-aware', mediaAwareRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviorGroup.add(mediaAwareRow);
 
+        // ── Transitions ──────────────────────────────────────────────────────
+        const transGroup = new Adw.PreferencesGroup({title: 'Transitions'});
+        page.add(transGroup);
+
+        const beatSensRow = new Adw.ActionRow({
+            title: 'Beat Sensitivity',
+            subtitle: 'How strongly projectM reacts to beat detection (0.0–5.0)',
+            activatable: false,
+        });
+        const beatSensScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 5.0, 0.1);
+        beatSensScale.set_hexpand(true);
+        beatSensScale.set_digits(1);
+        beatSensScale.set_valign(Gtk.Align.CENTER);
+        settings.bind('beat-sensitivity', beatSensScale, 'value', Gio.SettingsBindFlags.DEFAULT);
+        beatSensRow.add_suffix(beatSensScale);
+        transGroup.add(beatSensRow);
+
+        const softCutRow = new Adw.SpinRow({
+            title: 'Soft Cut Duration',
+            subtitle: 'Seconds for a smooth preset cross-fade (1–30)',
+            adjustment: new Gtk.Adjustment({
+                value: 3,
+                lower: 1,
+                upper: 30,
+                step_increment: 1,
+                page_increment: 5,
+            }),
+            digits: 0,
+        });
+        settings.bind('soft-cut-duration', softCutRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        transGroup.add(softCutRow);
+
+        const hardCutExpander = new Adw.ExpanderRow({
+            title: 'Hard Cuts',
+            subtitle: 'Abrupt preset transitions on strong beats',
+            show_enable_switch: true,
+        });
+        settings.bind('hard-cut-enabled', hardCutExpander, 'enable-expansion',
+                      Gio.SettingsBindFlags.DEFAULT);
+        transGroup.add(hardCutExpander);
+
+        const hardCutSensRow = new Adw.ActionRow({
+            title: 'Sensitivity',
+            subtitle: 'Beat strength required to trigger a hard cut (0.0–5.0)',
+            activatable: false,
+        });
+        const hardCutSensScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 5.0, 0.1);
+        hardCutSensScale.set_hexpand(true);
+        hardCutSensScale.set_digits(1);
+        hardCutSensScale.set_valign(Gtk.Align.CENTER);
+        settings.bind('hard-cut-sensitivity', hardCutSensScale, 'value', Gio.SettingsBindFlags.DEFAULT);
+        hardCutSensRow.add_suffix(hardCutSensScale);
+        hardCutExpander.add_row(hardCutSensRow);
+
+        const hardCutDurRow = new Adw.SpinRow({
+            title: 'Minimum Duration',
+            subtitle: 'Seconds a preset must play before a hard cut (1–120)',
+            adjustment: new Gtk.Adjustment({
+                value: 20,
+                lower: 1,
+                upper: 120,
+                step_increment: 1,
+                page_increment: 10,
+            }),
+            digits: 0,
+        });
+        settings.bind('hard-cut-duration', hardCutDurRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        hardCutExpander.add_row(hardCutDurRow);
+
         // ── Presets ──────────────────────────────────────────────────────────
         const presetGroup = new Adw.PreferencesGroup({title: 'Presets'});
         page.add(presetGroup);

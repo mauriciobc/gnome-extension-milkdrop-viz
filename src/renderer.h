@@ -41,3 +41,13 @@ void renderer_frame_prep(AppData*           app,
                          float*             pcm_buf,
                          size_t             pcm_cap,
                          RendererFramePrep* out);
+
+/*
+ * renderer_measure_render_fps - update the measured FPS from a completed render.
+ *
+ * Uses @frame_time_us as the timestamp of a real rendered frame, not just the
+ * render pulse timer. Returns the FPS value projectM should see: measured FPS
+ * once available, otherwise the configured target FPS as a startup fallback.
+ */
+int renderer_measure_render_fps(AppData* app,
+                                gint64   frame_time_us);

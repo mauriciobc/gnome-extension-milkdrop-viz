@@ -113,6 +113,22 @@ test_overlay_command_updates_atomic(void)
 }
 
 static void
+test_fps_command_updates_atomic(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.fps_runtime, 60);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "fps 30\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_cmpint(atomic_load(&app_data.fps_runtime), ==, 30);
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
 test_preset_dir_command_sets_pending(void)
 {
     AppData app_data = {0};
@@ -263,6 +279,86 @@ test_multiple_commands_sequence(void)
     g_mutex_clear(&app_data.preset_dir_lock);
 }
 
+static void
+test_beat_sensitivity_command_updates_atomic(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.beat_sensitivity, 1.0f);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "beat-sensitivity 2.5\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_cmpfloat(atomic_load(&app_data.beat_sensitivity), ==, 2.5f);
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
+test_hard_cut_enabled_command_updates_atomic(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.hard_cut_enabled, false);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "hard-cut-enabled on\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_true(atomic_load(&app_data.hard_cut_enabled));
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
+test_hard_cut_sensitivity_command_updates_atomic(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.hard_cut_sensitivity, 2.0f);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "hard-cut-sensitivity 3.0\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_cmpfloat(atomic_load(&app_data.hard_cut_sensitivity), ==, 3.0f);
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
+test_hard_cut_duration_command_updates_atomic(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.hard_cut_duration, 20.0);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "hard-cut-duration 15.0\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_cmpfloat(atomic_load(&app_data.hard_cut_duration), ==, 15.0);
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
+static void
+test_soft_cut_duration_command_updates_atomic(void)
+{
+    AppData app_data = {0};
+    atomic_store(&app_data.soft_cut_duration, 3.0);
+
+    g_assert_true(control_init(&app_data));
+
+    g_autofree gchar* resp = send_control_command(app_data.socket_path, "soft-cut-duration 5.0\n");
+    g_assert_true(g_str_has_prefix(resp, "ok"));
+    g_assert_cmpfloat(atomic_load(&app_data.soft_cut_duration), ==, 5.0);
+
+    control_cleanup(&app_data);
+    g_free(app_data.socket_path);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -273,6 +369,7 @@ main(int argc, char** argv)
     g_test_add_func("/control-state/pause-off", test_pause_off_command_updates_atomic);
     g_test_add_func("/control-state/shuffle", test_shuffle_command_updates_atomic);
     g_test_add_func("/control-state/overlay", test_overlay_command_updates_atomic);
+    g_test_add_func("/control-state/fps", test_fps_command_updates_atomic);
     g_test_add_func("/control-state/preset-dir-pending", test_preset_dir_command_sets_pending);
     g_test_add_func("/control-state/next-preset-pending", test_next_command_sets_pending);
     g_test_add_func("/control-state/previous-preset-pending", test_previous_command_sets_pending);
@@ -280,6 +377,11 @@ main(int argc, char** argv)
     g_test_add_func("/control-state/invalid-command", test_invalid_command_returns_error);
     g_test_add_func("/control-state/parse-and-apply-cycle", test_full_parse_and_apply_cycle);
     g_test_add_func("/control-state/multiple-commands-sequence", test_multiple_commands_sequence);
+    g_test_add_func("/control-state/beat-sensitivity", test_beat_sensitivity_command_updates_atomic);
+    g_test_add_func("/control-state/hard-cut-enabled", test_hard_cut_enabled_command_updates_atomic);
+    g_test_add_func("/control-state/hard-cut-sensitivity", test_hard_cut_sensitivity_command_updates_atomic);
+    g_test_add_func("/control-state/hard-cut-duration", test_hard_cut_duration_command_updates_atomic);
+    g_test_add_func("/control-state/soft-cut-duration", test_soft_cut_duration_command_updates_atomic);
 
     return g_test_run();
 }

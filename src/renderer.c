@@ -69,3 +69,35 @@ renderer_frame_prep(AppData*           app,
     (void)pcm_cap;
 #endif
 }
+
+int
+renderer_measure_render_fps(AppData* app,
+                            gint64   frame_time_us)
+{
+    if (!app)
+        return 60;
+
+    int target_fps = atomic_load(&app->fps_runtime);
+    if (target_fps <= 0)
+        target_fps = 60;
+
+    if (frame_time_us <= 0)
+        return target_fps;
+
+    if (app->fps_last_render_us > 0) {
+        gint64 delta_us = frame_time_us - app->fps_last_render_us;
+        if (delta_us > 0) {
+            float measured = (float)(1000000.0 / (double)delta_us);
+            atomic_store(&app->fps_last, measured);
+
+            int measured_int = (int)(measured + 0.5f);
+            if (measured_int < 1)
+                measured_int = 1;
+            app->fps_last_render_us = frame_time_us;
+            return measured_int;
+        }
+    }
+
+    app->fps_last_render_us = frame_time_us;
+    return target_fps;
+}

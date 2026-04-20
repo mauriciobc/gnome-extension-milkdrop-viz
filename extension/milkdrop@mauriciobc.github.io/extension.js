@@ -375,6 +375,36 @@ export default class MilkdropExtension extends Extension {
             this._broadcastControlCommand(`rotation-interval ${value}`);
             return;
         }
+
+        if (key === 'beat-sensitivity') {
+            const value = this._settings.get_double('beat-sensitivity');
+            this._broadcastControlCommand(`beat-sensitivity ${value}`);
+            return;
+        }
+
+        if (key === 'hard-cut-enabled') {
+            const enabled = this._settings.get_boolean('hard-cut-enabled');
+            this._broadcastControlCommand(`hard-cut-enabled ${enabled ? 'on' : 'off'}`);
+            return;
+        }
+
+        if (key === 'hard-cut-sensitivity') {
+            const value = this._settings.get_double('hard-cut-sensitivity');
+            this._broadcastControlCommand(`hard-cut-sensitivity ${value}`);
+            return;
+        }
+
+        if (key === 'hard-cut-duration') {
+            const value = this._settings.get_double('hard-cut-duration');
+            this._broadcastControlCommand(`hard-cut-duration ${value}`);
+            return;
+        }
+
+        if (key === 'soft-cut-duration') {
+            const value = this._settings.get_double('soft-cut-duration');
+            this._broadcastControlCommand(`soft-cut-duration ${value}`);
+            return;
+        }
     }
 
     _sendControlCommand(command, monitorIndex = 0) {
@@ -568,6 +598,11 @@ export default class MilkdropExtension extends Extension {
         const overlay = this._settings?.get_boolean('overlay') ?? false;
         const rotationInterval = this._settings?.get_int('preset-rotation-interval') ?? 30;
         const fps = this._settings?.get_int('fps') ?? 60;
+        const beatSensitivity = this._settings?.get_double('beat-sensitivity') ?? 1.0;
+        const hardCutEnabled = this._settings?.get_boolean('hard-cut-enabled') ?? false;
+        const hardCutSensitivity = this._settings?.get_double('hard-cut-sensitivity') ?? 2.0;
+        const hardCutDuration = this._settings?.get_double('hard-cut-duration') ?? 20.0;
+        const softCutDuration = this._settings?.get_double('soft-cut-duration') ?? 3.0;
 
         const args = [
             binaryPath,
@@ -586,6 +621,14 @@ export default class MilkdropExtension extends Extension {
             args.push('--overlay');
 
         args.push('--preset-rotation-interval', `${rotationInterval}`);
+        args.push('--beat-sensitivity', `${beatSensitivity}`);
+
+        if (hardCutEnabled)
+            args.push('--hard-cut-enabled');
+
+        args.push('--hard-cut-sensitivity', `${hardCutSensitivity}`);
+        args.push('--hard-cut-duration', `${hardCutDuration}`);
+        args.push('--soft-cut-duration', `${softCutDuration}`);
 
         return args;
     }

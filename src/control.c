@@ -147,6 +147,26 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         atomic_store(&app_data->preset_rotation_interval, CLAMP(command->int_value, 5, 300));
         g_strlcpy(response, "ok rotation-interval\n", response_size);
         return TRUE;
+    case CONTROL_CMD_BEAT_SENSITIVITY:
+        atomic_store(&app_data->beat_sensitivity, command->float_value);
+        g_strlcpy(response, "ok beat-sensitivity\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_HARD_CUT_ENABLED:
+        atomic_store(&app_data->hard_cut_enabled, command->bool_value);
+        g_strlcpy(response, "ok hard-cut-enabled\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_HARD_CUT_SENSITIVITY:
+        atomic_store(&app_data->hard_cut_sensitivity, command->float_value);
+        g_strlcpy(response, "ok hard-cut-sensitivity\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_HARD_CUT_DURATION:
+        atomic_store(&app_data->hard_cut_duration, command->double_value);
+        g_strlcpy(response, "ok hard-cut-duration\n", response_size);
+        return TRUE;
+    case CONTROL_CMD_SOFT_CUT_DURATION:
+        atomic_store(&app_data->soft_cut_duration, command->double_value);
+        g_strlcpy(response, "ok soft-cut-duration\n", response_size);
+        return TRUE;
     case CONTROL_CMD_SAVE_STATE: {
         /* Snapshot and JSON-escape last_good_preset under lock. */
         char preset_snapshot[MILKDROP_PATH_MAX];
@@ -359,6 +379,51 @@ control_parse_command(const char* line, ControlCommand* out_command)
 
         out_command->type = CONTROL_CMD_ROTATION_INTERVAL;
         out_command->int_value = (int)parsed;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "beat-sensitivity") == 0 && argc == 2) {
+        double parsed = 0.0;
+        if (!parse_double_range(argv[1], 0.0, 5.0, &parsed))
+            return CONTROL_PARSE_INVALID;
+        out_command->type = CONTROL_CMD_BEAT_SENSITIVITY;
+        out_command->float_value = (float)parsed;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "hard-cut-enabled") == 0 && argc == 2) {
+        bool enabled = false;
+        if (!parse_on_off(argv[1], &enabled))
+            return CONTROL_PARSE_INVALID;
+        out_command->type = CONTROL_CMD_HARD_CUT_ENABLED;
+        out_command->bool_value = enabled;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "hard-cut-sensitivity") == 0 && argc == 2) {
+        double parsed = 0.0;
+        if (!parse_double_range(argv[1], 0.0, 5.0, &parsed))
+            return CONTROL_PARSE_INVALID;
+        out_command->type = CONTROL_CMD_HARD_CUT_SENSITIVITY;
+        out_command->float_value = (float)parsed;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "hard-cut-duration") == 0 && argc == 2) {
+        double parsed = 0.0;
+        if (!parse_double_range(argv[1], 1.0, 120.0, &parsed))
+            return CONTROL_PARSE_INVALID;
+        out_command->type = CONTROL_CMD_HARD_CUT_DURATION;
+        out_command->double_value = parsed;
+        return CONTROL_PARSE_OK;
+    }
+
+    if (g_strcmp0(argv[0], "soft-cut-duration") == 0 && argc == 2) {
+        double parsed = 0.0;
+        if (!parse_double_range(argv[1], 1.0, 30.0, &parsed))
+            return CONTROL_PARSE_INVALID;
+        out_command->type = CONTROL_CMD_SOFT_CUT_DURATION;
+        out_command->double_value = parsed;
         return CONTROL_PARSE_OK;
     }
 

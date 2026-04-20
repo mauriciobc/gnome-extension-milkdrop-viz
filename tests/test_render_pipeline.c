@@ -193,6 +193,50 @@ test_prep_ring_not_read_when_no_draw(void)
     g_assert_cmpuint((guint)prep.floats_copied, ==, 4u);
     g_assert_cmpfloat(pcm[0], ==, 9.0f);
 }
+
+static void
+test_measure_render_fps_uses_target_before_second_frame(void)
+{
+    AppData app = {0};
+    atomic_store(&app.fps_runtime, 72);
+    atomic_store(&app.fps_last, 0.0f);
+
+    int fps_for_projectm = renderer_measure_render_fps(&app, 1000000);
+
+    g_assert_cmpint(fps_for_projectm, ==, 72);
+    g_assert_cmpfloat(atomic_load(&app.fps_last), ==, 0.0f);
+    g_assert_cmpint((int)app.fps_last_render_us, ==, 1000000);
+}
+
+static void
+test_measure_render_fps_uses_measured_render_delta(void)
+{
+    AppData app = {0};
+    atomic_store(&app.fps_runtime, 144);
+    atomic_store(&app.fps_last, 0.0f);
+    app.fps_last_render_us = 1000000;
+
+    int fps_for_projectm = renderer_measure_render_fps(&app, 1016667);
+
+    g_assert_cmpint(fps_for_projectm, ==, 60);
+    g_assert_cmpfloat_with_epsilon(atomic_load(&app.fps_last), 59.9988f, 0.1f);
+    g_assert_cmpint((int)app.fps_last_render_us, ==, 1016667);
+}
+
+static void
+test_measure_render_fps_ignores_non_forward_time(void)
+{
+    AppData app = {0};
+    atomic_store(&app.fps_runtime, 55);
+    atomic_store(&app.fps_last, 21.0f);
+    app.fps_last_render_us = 1000000;
+
+    int fps_for_projectm = renderer_measure_render_fps(&app, 1000000);
+
+    g_assert_cmpint(fps_for_projectm, ==, 55);
+    g_assert_cmpfloat(atomic_load(&app.fps_last), ==, 21.0f);
+    g_assert_cmpint((int)app.fps_last_render_us, ==, 1000000);
+}
 #endif /* HAVE_PROJECTM */
 
 static void
@@ -249,6 +293,9 @@ main(int argc, char** argv)
     g_test_add_func("/render-pipeline/prep-null-projectm", test_prep_null_projectm_no_draw);
     g_test_add_func("/render-pipeline/prep-ring-not-read-without-draw", test_prep_ring_not_read_when_no_draw);
     g_test_add_func("/render-pipeline/prep-drain-large-ring", test_prep_drain_large_ring);
+    g_test_add_func("/render-pipeline/measure-fps-first-frame-fallback", test_measure_render_fps_uses_target_before_second_frame);
+    g_test_add_func("/render-pipeline/measure-fps-measured-delta", test_measure_render_fps_uses_measured_render_delta);
+    g_test_add_func("/render-pipeline/measure-fps-non-forward-time", test_measure_render_fps_ignores_non_forward_time);
 #else
     g_test_add_func("/render-pipeline/prep-without-projectm-build", test_prep_no_projectm_build);
 #endif

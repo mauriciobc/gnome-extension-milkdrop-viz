@@ -1,0 +1,93 @@
+--- reference_codebases/projectm/src/libprojectM/Renderer/Framebuffer.hpp
++++ reference_codebases/projectm/src/libprojectM/Renderer/Framebuffer.hpp
+@@ -79,7 +79,8 @@
+      * Unbind all framebuffers.
+      * Future draw and read operations will happen on the window surface again.
+      */
+     static void Unbind();
++    static void SetDefault(uint32_t fbo);
+ 
+     /**
+--- reference_codebases/projectm/src/libprojectM/Renderer/Framebuffer.cpp
++++ reference_codebases/projectm/src/libprojectM/Renderer/Framebuffer.cpp
+@@ -3,6 +3,8 @@
+ namespace libprojectM {
+ namespace Renderer {
+ 
++static uint32_t s_defaultFBO = 0;
++
+ Framebuffer::Framebuffer()
+ {
+     m_framebufferIds.resize(1);
+@@ -73,9 +75,14 @@
+     m_drawFramebuffer = framebufferIndex;
+ }
+ 
++void Framebuffer::SetDefault(uint32_t fbo)
++{
++    s_defaultFBO = fbo;
++}
++
+ void Framebuffer::Unbind()
+ {
+-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
++    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_defaultFBO);
+ }
+ 
+ bool Framebuffer::SetSize(int width, int height)
+@@ -98,7 +105,7 @@
+             glFramebufferTexture2D(GL_FRAMEBUFFER, texture.first, GL_TEXTURE_2D, texture.second->Texture()->TextureID(), 0);
+         }
+     }
+-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
++    glBindFramebuffer(GL_FRAMEBUFFER, s_defaultFBO);
+ 
+     return true;
+ }
+@@ -212,7 +219,7 @@
+         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachmentIndex, GL_TEXTURE_2D, texture->TextureID(), 0);
+     }
+     UpdateDrawBuffers(framebufferIndex);
+-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
++    glBindFramebuffer(GL_FRAMEBUFFER, s_defaultFBO);
+ }
+ 
+ void Framebuffer::RemoveColorAttachment(int framebufferIndex, int attachmentIndex)
+@@ -253,7 +260,7 @@
+         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->TextureID(), 0);
+     }
+     UpdateDrawBuffers(framebufferIndex);
+-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
++    glBindFramebuffer(GL_FRAMEBUFFER, s_defaultFBO);
+ }
+ 
+ void Framebuffer::RemoveDepthAttachment(int framebufferIndex)
+@@ -278,7 +285,7 @@
+         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texture->TextureID(), 0);
+     }
+     UpdateDrawBuffers(framebufferIndex);
+-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
++    glBindFramebuffer(GL_FRAMEBUFFER, s_defaultFBO);
+ }
+ 
+ void Framebuffer::RemoveStencilAttachment(int framebufferIndex)
+@@ -303,7 +310,7 @@
+         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texture->TextureID(), 0);
+     }
+     UpdateDrawBuffers(framebufferIndex);
+-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
++    glBindFramebuffer(GL_FRAMEBUFFER, s_defaultFBO);
+ }
+ 
+ void Framebuffer::RemoveDepthStencilAttachment(int framebufferIndex)
+--- reference_codebases/projectm/src/libprojectM/ProjectM.cpp
++++ reference_codebases/projectm/src/libprojectM/ProjectM.cpp
+@@ -115,6 +115,8 @@
+ 
+ void ProjectM::RenderFrame(uint32_t targetFramebufferObject /*= 0*/)
+ {
++    Renderer::Framebuffer::SetDefault(targetFramebufferObject);
++    
+     // Don't render if window area is zero.
+     if (m_windowWidth == 0 || m_windowHeight == 0)
+     {

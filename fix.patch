@@ -1,0 +1,31 @@
+--- reference_codebases/projectm/vendor/hlslparser/src/GLSLGenerator.cpp
++++ reference_codebases/projectm/vendor/hlslparser/src/GLSLGenerator.cpp
+@@ -1717,14 +1717,26 @@
+ void GLSLGenerator::OutputDeclarationAssignment(HLSLDeclaration* declaration)
+ {
+    m_writer.Write( " = " );
+    if( declaration->type.array )
+    {
+        m_writer.Write( "%s[]( ", GetTypeName( declaration->type ) );
+-       OutputExpressionList( declaration->assignment );
++       if (IsVectorType(declaration->type.baseType) && declaration->assignment && !IsVectorType(declaration->assignment->expressionType.baseType)) {
++           int dim = GetVectorDimension(declaration->type.baseType);
++           HLSLExpression* expr = declaration->assignment;
++           bool first = true;
++           while (expr != NULL) {
++               if (!first) m_writer.Write(", ");
++               first = false;
++               m_writer.Write("%s(", GetTypeName(declaration->type));
++               for (int i = 0; i < dim && expr != NULL; ++i) {
++                   if (i > 0) m_writer.Write(", ");
++                   OutputExpression(expr, &kFloatType);
++                   expr = expr->nextExpression;
++               }
++               m_writer.Write(")");
++           }
++       } else {
++           OutputExpressionList( declaration->assignment );
++       }
+        m_writer.Write( " )" );
+    }
+    else

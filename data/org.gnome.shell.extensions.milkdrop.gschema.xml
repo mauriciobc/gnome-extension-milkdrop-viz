@@ -70,6 +70,40 @@
       <description>Target frames per second for the renderer. Changes are applied live via the control socket.</description>
     </key>
 
+    <key name="beat-sensitivity" type="d">
+      <default>1.0</default>
+      <range min="0.0" max="5.0"/>
+      <summary>Beat sensitivity</summary>
+      <description>How strongly projectM reacts to beat detection. Applied live via the control socket.</description>
+    </key>
+
+    <key name="hard-cut-enabled" type="b">
+      <default>false</default>
+      <summary>Enable hard cuts</summary>
+      <description>When true, projectM performs abrupt preset transitions on strong beats.</description>
+    </key>
+
+    <key name="hard-cut-sensitivity" type="d">
+      <default>2.0</default>
+      <range min="0.0" max="5.0"/>
+      <summary>Hard cut sensitivity</summary>
+      <description>Beat strength required to trigger a hard cut. Only meaningful when hard cuts are enabled.</description>
+    </key>
+
+    <key name="hard-cut-duration" type="d">
+      <default>20.0</default>
+      <range min="1.0" max="120.0"/>
+      <summary>Hard cut duration</summary>
+      <description>Minimum seconds a preset must display before a hard cut is allowed. Applied live via the control socket.</description>
+    </key>
+
+    <key name="soft-cut-duration" type="d">
+      <default>3.0</default>
+      <range min="1.0" max="30.0"/>
+      <summary>Soft cut duration</summary>
+      <description>Duration in seconds for a smooth preset cross-fade transition. Applied live via the control socket.</description>
+    </key>
+
     <key name="all-monitors" type="b">
       <default>false</default>
       <summary>Show visualizer on all connected monitors</summary>

@@ -1,0 +1,50 @@
+diff --git a/vendor/hlslparser/src/GLSLGenerator.cpp b/vendor/hlslparser/src/GLSLGenerator.cpp
+index c913e8268..6e3eb36a2 100644
+--- a/vendor/hlslparser/src/GLSLGenerator.cpp
++++ b/vendor/hlslparser/src/GLSLGenerator.cpp
+@@ -2019,7 +2019,7 @@ void GLSLGenerator::OutputEntryCaller(HLSLFunction* entryFunction)
+     for(HLSLDeclaration *declaration : globalVarsAssignments)
+     {
+         m_writer.BeginLine(1, declaration->fileName, declaration->line);
+-        OutputDeclarationBody( declaration->type, GetSafeIdentifierName( declaration->name ) );
++        m_writer.Write("%s", GetSafeIdentifierName( declaration->name ));
+ 
+         OutputDeclarationAssignment(declaration);
+         m_writer.EndLine(";");
+@@ -2116,7 +2116,35 @@ void GLSLGenerator::OutputDeclarationAssignment(HLSLDeclaration* declaration)
+    if( declaration->type.array )
+    {
+        m_writer.Write( "%s[]( ", GetTypeName( declaration->type ) );
+-       OutputExpressionList( declaration->assignment );
++       
++       if (IsVectorType(declaration->type.baseType) && declaration->assignment && !IsVectorType(declaration->assignment->expressionType.baseType)) {
++           int dim = 0;
++           switch (declaration->type.baseType) {
++               case HLSLBaseType_Float2: dim = 2; break;
++               case HLSLBaseType_Float3: dim = 3; break;
++               case HLSLBaseType_Float4: dim = 4; break;
++               case HLSLBaseType_Int2: dim = 2; break;
++               case HLSLBaseType_Int3: dim = 3; break;
++               case HLSLBaseType_Int4: dim = 4; break;
++               default: dim = 4; break;
++           }
++           HLSLExpression* expr = declaration->assignment;
++           bool first = true;
++           while (expr != NULL) {
++               if (!first) m_writer.Write(", ");
++               first = false;
++               m_writer.Write("%s(", GetTypeName(declaration->type));
++               for (int i = 0; i < dim && expr != NULL; ++i) {
++                   if (i > 0) m_writer.Write(", ");
++                   OutputExpression(expr);
++                   expr = expr->nextExpression;
++               }
++               m_writer.Write(")");
++           }
++       } else {
++           OutputExpressionList( declaration->assignment );
++       }
++       
+        m_writer.Write( " )" );
+    }
+    else

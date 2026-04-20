@@ -107,9 +107,15 @@ typedef struct {
     _Atomic float fps_last;
     /* Preset rotation interval in seconds (written by control thread, read by GL thread). */
     _Atomic int preset_rotation_interval;
+    /* Beat / transition settings — control thread writes, GL thread reads. */
+    _Atomic float  beat_sensitivity;       /* 0.0–5.0, default 1.0 */
+    _Atomic bool   hard_cut_enabled;       /* default false */
+    _Atomic float  hard_cut_sensitivity;   /* 0.0–5.0, default 2.0 */
+    _Atomic double hard_cut_duration;      /* 1.0–120.0 s, default 20.0 */
+    _Atomic double soft_cut_duration;      /* 1.0–30.0 s, default 3.0 */
     /* GL-thread-only fields for FPS tracking and timer rescheduling. */
     int    fps_applied;        /* last fps_runtime used for g_timeout interval; -1 until first pulse */
-    gint64 fps_last_pulse_us;  /* g_get_monotonic_time() of the previous render pulse */
+    gint64 fps_last_render_us; /* g_get_monotonic_time() of the previous rendered frame */
 
     /* Sync tracking to avoid per-frame API calls when values haven't changed.
      * All fields are GL-thread-only (no atomics needed). */
@@ -118,11 +124,19 @@ typedef struct {
     int   last_synced_interval;
     int   last_synced_render_width;
     int   last_synced_render_height;
+    int   last_synced_projectm_fps;  /* last fps value sent to projectM via projectm_set_fps() */
+    float  last_synced_beat_sensitivity;
+    bool   last_synced_hard_cut_enabled;
+    float  last_synced_hard_cut_sensitivity;
+    double last_synced_hard_cut_duration;
+    double last_synced_soft_cut_duration;
     int   render_call_count;  /* periodic render() log counter */
     int   pulse_frame_count;  /* periodic pulse log counter */
 
     /* Render-time PCM buffer — GL thread only, avoids per-frame 64 KB stack alloc. */
     float pcm_render_buf[MILKDROP_RING_CAPACITY];
+    /* Cached result of projectm_pcm_get_max_samples(); 0 until projectM init. */
+    unsigned int pcm_max_samples_per_channel;
 
     /* Audio recovery state machine. */
 #define AUDIO_MAX_RESTARTS 5

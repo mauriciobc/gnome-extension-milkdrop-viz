@@ -194,6 +194,144 @@ test_parse_fps_out_of_range_high(void)
 }
 
 static void
+test_parse_beat_sensitivity_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("beat-sensitivity 2.5\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_BEAT_SENSITIVITY);
+    g_assert_cmpfloat_with_epsilon(command.float_value, 2.5f, 0.001f);
+}
+
+static void
+test_parse_beat_sensitivity_out_of_range_low(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("beat-sensitivity -0.1\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_beat_sensitivity_out_of_range_high(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("beat-sensitivity 5.1\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_hard_cut_enabled_on(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("hard-cut-enabled on\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_HARD_CUT_ENABLED);
+    g_assert_true(command.bool_value);
+}
+
+static void
+test_parse_hard_cut_enabled_off(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("hard-cut-enabled off\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_HARD_CUT_ENABLED);
+    g_assert_false(command.bool_value);
+}
+
+static void
+test_parse_hard_cut_enabled_invalid(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("hard-cut-enabled yes\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_hard_cut_sensitivity_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("hard-cut-sensitivity 3.0\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_HARD_CUT_SENSITIVITY);
+    g_assert_cmpfloat_with_epsilon(command.float_value, 3.0f, 0.001f);
+}
+
+static void
+test_parse_hard_cut_sensitivity_out_of_range_low(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("hard-cut-sensitivity -0.1\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_hard_cut_sensitivity_out_of_range_high(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("hard-cut-sensitivity 5.1\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_hard_cut_duration_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("hard-cut-duration 15.0\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_HARD_CUT_DURATION);
+    g_assert_cmpfloat_with_epsilon(command.double_value, 15.0, 0.001);
+}
+
+static void
+test_parse_hard_cut_duration_out_of_range_low(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("hard-cut-duration 0.5\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_hard_cut_duration_out_of_range_high(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("hard-cut-duration 121.0\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_soft_cut_duration_command(void)
+{
+    ControlCommand command = {0};
+    ControlParseResult result = control_parse_command("soft-cut-duration 5.0\n", &command);
+
+    g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
+    g_assert_cmpint(command.type, ==, CONTROL_CMD_SOFT_CUT_DURATION);
+    g_assert_cmpfloat_with_epsilon(command.double_value, 5.0, 0.001);
+}
+
+static void
+test_parse_soft_cut_duration_out_of_range_low(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("soft-cut-duration 0.5\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
+test_parse_soft_cut_duration_out_of_range_high(void)
+{
+    ControlCommand command = {0};
+    g_assert_cmpint(control_parse_command("soft-cut-duration 31.0\n", &command),
+                    ==, CONTROL_PARSE_INVALID);
+}
+
+static void
 test_parse_status_response_fps(void)
 {
     const char* response =
@@ -276,6 +414,21 @@ main(int argc, char** argv)
     g_test_add_func("/control/parse-fps", test_parse_fps_command);
     g_test_add_func("/control/parse-fps-low", test_parse_fps_out_of_range_low);
     g_test_add_func("/control/parse-fps-high", test_parse_fps_out_of_range_high);
+    g_test_add_func("/control/parse-beat-sensitivity", test_parse_beat_sensitivity_command);
+    g_test_add_func("/control/parse-beat-sensitivity-low", test_parse_beat_sensitivity_out_of_range_low);
+    g_test_add_func("/control/parse-beat-sensitivity-high", test_parse_beat_sensitivity_out_of_range_high);
+    g_test_add_func("/control/parse-hard-cut-enabled-on", test_parse_hard_cut_enabled_on);
+    g_test_add_func("/control/parse-hard-cut-enabled-off", test_parse_hard_cut_enabled_off);
+    g_test_add_func("/control/parse-hard-cut-enabled-invalid", test_parse_hard_cut_enabled_invalid);
+    g_test_add_func("/control/parse-hard-cut-sensitivity", test_parse_hard_cut_sensitivity_command);
+    g_test_add_func("/control/parse-hard-cut-sensitivity-low", test_parse_hard_cut_sensitivity_out_of_range_low);
+    g_test_add_func("/control/parse-hard-cut-sensitivity-high", test_parse_hard_cut_sensitivity_out_of_range_high);
+    g_test_add_func("/control/parse-hard-cut-duration", test_parse_hard_cut_duration_command);
+    g_test_add_func("/control/parse-hard-cut-duration-low", test_parse_hard_cut_duration_out_of_range_low);
+    g_test_add_func("/control/parse-hard-cut-duration-high", test_parse_hard_cut_duration_out_of_range_high);
+    g_test_add_func("/control/parse-soft-cut-duration", test_parse_soft_cut_duration_command);
+    g_test_add_func("/control/parse-soft-cut-duration-low", test_parse_soft_cut_duration_out_of_range_low);
+    g_test_add_func("/control/parse-soft-cut-duration-high", test_parse_soft_cut_duration_out_of_range_high);
 
     return g_test_run();
 }

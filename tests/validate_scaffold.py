@@ -69,6 +69,11 @@ def main() -> int:
         "media-aware": "b",
         "all-monitors": "b",
         "fps": "i",
+        "beat-sensitivity": "d",
+        "hard-cut-enabled": "b",
+        "hard-cut-sensitivity": "d",
+        "hard-cut-duration": "d",
+        "soft-cut-duration": "d",
         "last-preset": "s",
         "was-paused": "b",
     }

@@ -487,6 +487,30 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
     projectm_set_preset_duration(app_data->projectm,
                                 (double)atomic_load(&app_data->preset_rotation_interval));
 
+    int init_fps = atomic_load(&app_data->fps_runtime);
+    if (init_fps <= 0)
+        init_fps = 60;
+    projectm_set_fps(app_data->projectm, init_fps);
+    app_data->last_synced_projectm_fps = init_fps;
+
+    app_data->pcm_max_samples_per_channel = projectm_pcm_get_max_samples();
+
+    projectm_set_beat_sensitivity(app_data->projectm,
+                                  atomic_load(&app_data->beat_sensitivity));
+    projectm_set_hard_cut_enabled(app_data->projectm,
+                                  atomic_load(&app_data->hard_cut_enabled));
+    projectm_set_hard_cut_sensitivity(app_data->projectm,
+                                      atomic_load(&app_data->hard_cut_sensitivity));
+    projectm_set_hard_cut_duration(app_data->projectm,
+                                   atomic_load(&app_data->hard_cut_duration));
+    projectm_set_soft_cut_duration(app_data->projectm,
+                                   atomic_load(&app_data->soft_cut_duration));
+    app_data->last_synced_beat_sensitivity     = atomic_load(&app_data->beat_sensitivity);
+    app_data->last_synced_hard_cut_enabled     = atomic_load(&app_data->hard_cut_enabled);
+    app_data->last_synced_hard_cut_sensitivity = atomic_load(&app_data->hard_cut_sensitivity);
+    app_data->last_synced_hard_cut_duration    = atomic_load(&app_data->hard_cut_duration);
+    app_data->last_synced_soft_cut_duration    = atomic_load(&app_data->soft_cut_duration);
+
     return TRUE;
 }
 #endif
@@ -538,16 +562,6 @@ on_render_pulse(gpointer user_data)
             return G_SOURCE_REMOVE;
         }
 
-        /* Update measured FPS for the status command. */
-        gint64 now_us = g_get_monotonic_time();
-        if (app_data->fps_last_pulse_us > 0) {
-            gint64 delta_us = now_us - app_data->fps_last_pulse_us;
-            if (delta_us > 0) {
-                float measured = (float)(1000000.0 / (double)delta_us);
-                atomic_store(&app_data->fps_last, measured);
-            }
-        }
-        app_data->fps_last_pulse_us = now_us;
     }
 
 #if !HAVE_PROJECTM
@@ -694,6 +708,8 @@ on_unrealize(GtkGLArea* area, gpointer user_data)
     app_data->last_synced_interval = 0;
     app_data->last_synced_render_width = 0;
     app_data->last_synced_render_height = 0;
+    app_data->last_synced_projectm_fps = -1;
+    app_data->fps_last_render_us = 0;
     app_data->render_call_count = 0;
     app_data->pulse_frame_count = 0;
 #endif
@@ -864,11 +880,16 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                 app_data->projectm,
                 (g_get_monotonic_time() - app_data->pm_mono_origin_us) / 1000000.0);
 
-            if (prep.would_feed_pcm)
+            if (prep.would_feed_pcm) {
+                guint frames = prep.stereo_frames;
+                if (app_data->pcm_max_samples_per_channel > 0 &&
+                    frames > app_data->pcm_max_samples_per_channel)
+                    frames = app_data->pcm_max_samples_per_channel;
                 projectm_pcm_add_float(app_data->projectm,
                                        app_data->pcm_render_buf,
-                                       prep.stereo_frames,
+                                       frames,
                                        PROJECTM_STEREO);
+            }
 
             {
                 bool current_shuffle = atomic_load(&app_data->shuffle_runtime);
@@ -885,6 +906,54 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
                     projectm_set_preset_duration(app_data->projectm,
                                                 (double)current_interval);
                     app_data->last_synced_interval = current_interval;
+                }
+            }
+
+            {
+                float cur = atomic_load(&app_data->beat_sensitivity);
+                if (cur != app_data->last_synced_beat_sensitivity) {
+                    projectm_set_beat_sensitivity(app_data->projectm, cur);
+                    app_data->last_synced_beat_sensitivity = cur;
+                }
+            }
+
+            {
+                bool cur = atomic_load(&app_data->hard_cut_enabled);
+                if (cur != app_data->last_synced_hard_cut_enabled) {
+                    projectm_set_hard_cut_enabled(app_data->projectm, cur);
+                    app_data->last_synced_hard_cut_enabled = cur;
+                }
+            }
+
+            {
+                float cur = atomic_load(&app_data->hard_cut_sensitivity);
+                if (cur != app_data->last_synced_hard_cut_sensitivity) {
+                    projectm_set_hard_cut_sensitivity(app_data->projectm, cur);
+                    app_data->last_synced_hard_cut_sensitivity = cur;
+                }
+            }
+
+            {
+                double cur = atomic_load(&app_data->hard_cut_duration);
+                if (cur != app_data->last_synced_hard_cut_duration) {
+                    projectm_set_hard_cut_duration(app_data->projectm, cur);
+                    app_data->last_synced_hard_cut_duration = cur;
+                }
+            }
+
+            {
+                double cur = atomic_load(&app_data->soft_cut_duration);
+                if (cur != app_data->last_synced_soft_cut_duration) {
+                    projectm_set_soft_cut_duration(app_data->projectm, cur);
+                    app_data->last_synced_soft_cut_duration = cur;
+                }
+            }
+
+            {
+                int current_fps = renderer_measure_render_fps(app_data, g_get_monotonic_time());
+                if (current_fps != app_data->last_synced_projectm_fps) {
+                    projectm_set_fps(app_data->projectm, current_fps);
+                    app_data->last_synced_projectm_fps = current_fps;
                 }
             }
 
@@ -1354,6 +1423,11 @@ main(int argc, char** argv)
     char* socket_path = NULL;
     int preset_rotation_interval = 30;
     int fps_cli = 0;
+    double beat_sensitivity_cli = 1.0;
+    gboolean hard_cut_enabled_cli = FALSE;
+    double hard_cut_sensitivity_cli = 2.0;
+    double hard_cut_duration_cli = 20.0;
+    double soft_cut_duration_cli = 3.0;
 
     GOptionEntry entries[] = {
         {"monitor", 0, 0, G_OPTION_ARG_INT, &monitor_index, "Monitor index", "INDEX"},
@@ -1365,6 +1439,11 @@ main(int argc, char** argv)
         {"verbose", 0, 0, G_OPTION_ARG_NONE, &verbose, "Verbose logging", NULL},
         {"preset-rotation-interval", 0, 0, G_OPTION_ARG_INT, &preset_rotation_interval, "Preset rotation interval in seconds", "SECONDS"},
         {"fps", 0, 0, G_OPTION_ARG_INT, &fps_cli, "Target frame rate (10-144; default 60)", "FPS"},
+        {"beat-sensitivity", 0, 0, G_OPTION_ARG_DOUBLE, &beat_sensitivity_cli, "Beat sensitivity (0.0-5.0; default 1.0)", "VALUE"},
+        {"hard-cut-enabled", 0, 0, G_OPTION_ARG_NONE, &hard_cut_enabled_cli, "Enable hard preset cuts on strong beats", NULL},
+        {"hard-cut-sensitivity", 0, 0, G_OPTION_ARG_DOUBLE, &hard_cut_sensitivity_cli, "Hard cut sensitivity (0.0-5.0; default 2.0)", "VALUE"},
+        {"hard-cut-duration", 0, 0, G_OPTION_ARG_DOUBLE, &hard_cut_duration_cli, "Min seconds between hard cuts (1-120; default 20)", "SECONDS"},
+        {"soft-cut-duration", 0, 0, G_OPTION_ARG_DOUBLE, &soft_cut_duration_cli, "Soft cut cross-fade duration (1-30; default 3)", "SECONDS"},
         {NULL},
     };
 
@@ -1418,8 +1497,14 @@ main(int argc, char** argv)
      * fps_runtime and fps_applied were equal at startup (e.g. 30), the old code
      * never rescheduled and the timer stayed at the initial 16 ms (~62 Hz). */
     app_data->fps_applied = -1;
-    app_data->fps_last_pulse_us = 0;
+    app_data->fps_last_render_us = 0;
+    app_data->last_synced_projectm_fps = -1;  /* force projectm_set_fps() on first render */
     atomic_store(&app_data->preset_rotation_interval, CLAMP(preset_rotation_interval, 5, 300));
+    atomic_store(&app_data->beat_sensitivity, (float)CLAMP(beat_sensitivity_cli, 0.0, 5.0));
+    atomic_store(&app_data->hard_cut_enabled, (bool)hard_cut_enabled_cli);
+    atomic_store(&app_data->hard_cut_sensitivity, (float)CLAMP(hard_cut_sensitivity_cli, 0.0, 5.0));
+    atomic_store(&app_data->hard_cut_duration, CLAMP(hard_cut_duration_cli, 1.0, 120.0));
+    atomic_store(&app_data->soft_cut_duration, CLAMP(soft_cut_duration_cli, 1.0, 30.0));
     atomic_store(&app_data->control_thread_running, false);
     app_data->control_fd = -1;
     app_data->control_thread = NULL;

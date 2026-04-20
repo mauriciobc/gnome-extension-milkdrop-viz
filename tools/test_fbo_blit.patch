@@ -1,0 +1,31 @@
+--- tests/reference_renderer.c
++++ tests/reference_renderer.c
+@@ -111,10 +111,35 @@
+ 
+     if (draw_fbo != 0) {
+-        projectm_opengl_render_frame_fbo(data->projectm, (uint32_t)draw_fbo);
+-        GLenum gl_err = glGetError();
+-        if (gl_err != GL_NO_ERROR) {
+-            g_print("GL ERROR AFTER RENDER: 0x%x\n", gl_err);
+-        }
++        GLuint fbo, tex;
++        glGenFramebuffers(1, &fbo);
++        glGenTextures(1, &tex);
++        glBindTexture(GL_TEXTURE_2D, tex);
++        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, data->width, data->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
++        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
++        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
++        
++        projectm_opengl_render_frame_fbo(data->projectm, fbo);
++        glFinish();
++        
++        // Blit back to GTK's FBO
++        glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
++        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
++        glBlitFramebuffer(0, 0, data->width, data->height,
++                          0, 0, data->width, data->height,
++                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
++                          
++        glDeleteFramebuffers(1, &fbo);
++        glDeleteTextures(1, &tex);
+     }

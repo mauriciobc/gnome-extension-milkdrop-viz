@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/projectM-visualizer/projectm-eval.git
+revision = master
+depth = 1
+
+[provide]
+dependency_names = projectM-Eval

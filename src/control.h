@@ -14,6 +14,11 @@ typedef enum {
 	CONTROL_CMD_PREV_PRESET,
 	CONTROL_CMD_FPS,
 	CONTROL_CMD_ROTATION_INTERVAL,
+	CONTROL_CMD_BEAT_SENSITIVITY,
+	CONTROL_CMD_HARD_CUT_ENABLED,
+	CONTROL_CMD_HARD_CUT_SENSITIVITY,
+	CONTROL_CMD_HARD_CUT_DURATION,
+	CONTROL_CMD_SOFT_CUT_DURATION,
 	CONTROL_CMD_SAVE_STATE,
 	CONTROL_CMD_RESTORE_STATE,
 	CONTROL_CMD_SCREENSHOT,
@@ -38,6 +43,8 @@ typedef struct {
 	bool pause_enabled;
 	bool bool_value;
 	int  int_value;
+	float  float_value;   /* beat-sensitivity, hard-cut-sensitivity */
+	double double_value;  /* hard-cut-duration, soft-cut-duration */
 	char text_value[MILKDROP_PATH_MAX];
 	char screenshot_path[MILKDROP_PATH_MAX];
 } ControlCommand;

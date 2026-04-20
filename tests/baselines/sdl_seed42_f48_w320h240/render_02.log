@@ -1,0 +1,3 @@
+libdecor-gtk-WARNING: Failed to initialize GTK
+Failed to load plugin 'libdecor-gtk.so': failed to init
+sdl_preset_snapshot: wrote frame 48 -> /home/mauriciobc/Documentos/Code/gnome-extension-milkdrop-viz/tests/baselines/sdl_seed42_f48_w320h240/baseline_02.ppm
