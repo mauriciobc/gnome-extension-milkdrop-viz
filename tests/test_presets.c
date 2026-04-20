@@ -15,6 +15,7 @@ static void
 test_presets_reload_filters_and_sorts(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     g_autofree gchar* dir = make_temp_dir();
     g_autofree gchar* p1 = g_build_filename(dir, "zeta.milk", NULL);
     g_autofree gchar* p2 = g_build_filename(dir, "alpha.milk", NULL);
@@ -32,7 +33,10 @@ test_presets_reload_filters_and_sorts(void)
     g_assert_cmpstr(presets_current(&app_data), ==, p2);
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
 
     g_unlink(p1);
     g_unlink(p2);
@@ -44,6 +48,7 @@ static void
 test_presets_reload_scans_subdirectories(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     g_autofree gchar* dir = make_temp_dir();
     g_autofree gchar* nested = g_build_filename(dir, "pack", "set-a", NULL);
     g_autofree gchar* top_level = g_build_filename(dir, "root.milk", NULL);
@@ -63,7 +68,10 @@ test_presets_reload_scans_subdirectories(void)
     g_assert_true(g_strv_contains((const gchar* const*)app_data.presets, nested_milk));
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
 
     g_unlink(top_level);
     g_unlink(nested_milk);
@@ -78,19 +86,24 @@ static void
 test_presets_reload_handles_missing_directory(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     app_data.preset_dir = g_strdup("/tmp/milkdrop-no-such-presets-dir");
 
     g_assert_false(presets_reload(&app_data));
     g_assert_null(app_data.presets);
     g_assert_cmpint(app_data.preset_count, ==, 0);
 
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
 }
 
 static void
 test_presets_reload_ignores_folders_starting_with_bang(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     g_autofree gchar* dir = make_temp_dir();
     g_autofree gchar* valid_preset = g_build_filename(dir, "valid.milk", NULL);
     g_autofree gchar* bang_dir = g_build_filename(dir, "!Transitions", NULL);
@@ -108,7 +121,10 @@ test_presets_reload_ignores_folders_starting_with_bang(void)
     g_assert_false(g_strv_contains((const gchar* const*)app_data.presets, bang_preset));
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
 
     g_unlink(valid_preset);
     g_unlink(bang_preset);

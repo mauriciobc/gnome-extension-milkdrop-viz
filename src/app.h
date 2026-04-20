@@ -98,8 +98,15 @@ typedef struct {
     /* Background preset scanning queue */
     GMutex preset_queue_lock;
     GPtrArray* preset_load_queue;
+    GThread* preset_scan_thread;
     _Atomic bool is_scanning_presets;
+    _Atomic bool preset_scan_stop;
     _Atomic bool pending_preset_flush;
+    /** Set by presets_start_async_scan when a new request arrives while a worker is already running.
+     *  The worker checks this on exit and restarts if true. */
+    _Atomic bool rescan_requested;
+    /** Incremented on each async scan request; worker discards stale results if this changes mid-scan. */
+    _Atomic uint32_t preset_scan_seq;
 
     /* Target frame rate set via control socket (written by control thread, read by GL thread). */
     _Atomic int fps_runtime;

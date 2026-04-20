@@ -79,7 +79,9 @@ test_preset_reload_failure_preserves_state(void)
     gchar* preset_file = g_build_filename(valid_dir, "test.milk", NULL);
     g_file_set_contents(preset_file, "", 0, NULL);
 
+    g_mutex_lock(&app_data.preset_dir_lock);
     app_data.preset_dir = g_strdup(valid_dir);
+    g_mutex_unlock(&app_data.preset_dir_lock);
     g_assert_true(presets_reload(&app_data));
     g_assert_cmpint(app_data.preset_count, ==, 1);
 
@@ -93,25 +95,80 @@ test_preset_reload_failure_preserves_state(void)
     /* Simulates render pulse: exchange flag, copy path, reload. */
     if (atomic_exchange(&app_data.preset_dir_pending, false)) {
         char next_dir[sizeof(app_data.pending_preset_dir)] = {0};
+        char prev_dir[MILKDROP_PATH_MAX] = {0};
         g_mutex_lock(&app_data.preset_dir_lock);
         g_strlcpy(next_dir, app_data.pending_preset_dir, sizeof(next_dir));
+        if (app_data.preset_dir)
+            g_strlcpy(prev_dir, app_data.preset_dir, sizeof(prev_dir));
         g_mutex_unlock(&app_data.preset_dir_lock);
 
+        g_mutex_lock(&app_data.preset_dir_lock);
         g_clear_pointer(&app_data.preset_dir, g_free);
         app_data.preset_dir = g_strdup(next_dir);
+        g_mutex_unlock(&app_data.preset_dir_lock);
         if (!presets_reload(&app_data)) {
-            /* Reload failed — state is mutated but presets are cleared. */
-            g_assert_null(app_data.presets);
-            g_assert_cmpint(app_data.preset_count, ==, 0);
+            g_mutex_lock(&app_data.preset_dir_lock);
+            g_clear_pointer(&app_data.preset_dir, g_free);
+            app_data.preset_dir = g_strdup(prev_dir);
+            g_mutex_unlock(&app_data.preset_dir_lock);
+
+            /* Reload failed — caller restores preset_dir and keeps prior preset catalog. */
+            g_assert_nonnull(app_data.presets);
+            g_assert_cmpint(app_data.preset_count, ==, 1);
+            g_assert_cmpstr(presets_current(&app_data), ==, preset_file);
         }
     }
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
     g_unlink(preset_file);
     g_rmdir(valid_dir);
     g_free(preset_file);
     g_free(valid_dir);
+    g_mutex_clear(&app_data.preset_dir_lock);
+}
+
+static void
+test_projectm_dir_change_invalid_preserves_previous_state(void)
+{
+    AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
+
+    const char* valid_dir = "/tmp/milkdrop-valid-projectm-presets";
+    const char* bad_path = "/nonexistent/projectm-preset-dir";
+    const char* textures_dir = "/tmp/milkdrop-textures";
+
+    g_mutex_lock(&app_data.preset_dir_lock);
+    app_data.preset_dir = g_strdup(valid_dir);
+    g_strlcpy(app_data.pending_preset_dir, bad_path, sizeof(app_data.pending_preset_dir));
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    app_data.textures_dir = g_strdup(textures_dir);
+    atomic_store(&app_data.preset_dir_pending, true);
+
+    if (atomic_exchange(&app_data.preset_dir_pending, false)) {
+        char next_dir[sizeof(app_data.pending_preset_dir)] = {0};
+
+        g_mutex_lock(&app_data.preset_dir_lock);
+        g_strlcpy(next_dir, app_data.pending_preset_dir, sizeof(next_dir));
+        g_mutex_unlock(&app_data.preset_dir_lock);
+
+        if (!presets_apply_dir_change(&app_data, next_dir)) {
+            /* Mirrors the HAVE_PROJECTM render path: destructive work only happens on success. */
+        } else {
+            g_clear_pointer(&app_data.textures_dir, g_free);
+        }
+    }
+
+    g_assert_cmpstr(app_data.preset_dir, ==, valid_dir);
+    g_assert_cmpstr(app_data.textures_dir, ==, textures_dir);
+    g_assert_false(atomic_load(&app_data.preset_dir_pending));
+
+    g_clear_pointer(&app_data.textures_dir, g_free);
+    g_mutex_lock(&app_data.preset_dir_lock);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
     g_mutex_clear(&app_data.preset_dir_lock);
 }
 
@@ -183,6 +240,8 @@ main(int argc, char** argv)
     g_test_add_func("/tick/pending-dir-mutex-copy", test_pending_preset_dir_mutex_protected_copy);
     g_test_add_func("/tick/opacity-atomic-rw", test_opacity_atomic_read_write);
     g_test_add_func("/tick/preset-reload-failure-state", test_preset_reload_failure_preserves_state);
+    g_test_add_func("/tick/projectm-invalid-dir-preserves-state",
+                    test_projectm_dir_change_invalid_preserves_previous_state);
     g_test_add_func("/tick/render-queue-continue", test_tick_queues_render_unconditionally);
     g_test_add_func("/tick/concurrent-pending-no-race", test_concurrent_pending_flag_no_race);
     g_test_add_func("/tick/next-previous-pending-exchange", test_next_previous_pending_atomic_exchange);

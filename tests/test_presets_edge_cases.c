@@ -15,6 +15,7 @@ static void
 test_presets_current_negative_index(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     g_autofree gchar* dir = make_temp_dir();
     g_autofree gchar* p1 = g_build_filename(dir, "alpha.milk", NULL);
     g_file_set_contents(p1, "", 0, NULL);
@@ -29,7 +30,10 @@ test_presets_current_negative_index(void)
     g_assert_null(presets_current(&app_data));
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
     g_unlink(p1);
     g_rmdir(dir);
 }
@@ -38,6 +42,7 @@ static void
 test_presets_current_out_of_range_index(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     g_autofree gchar* dir = make_temp_dir();
     g_autofree gchar* p1 = g_build_filename(dir, "alpha.milk", NULL);
     g_file_set_contents(p1, "", 0, NULL);
@@ -52,7 +57,10 @@ test_presets_current_out_of_range_index(void)
     g_assert_null(presets_current(&app_data));
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
     g_unlink(p1);
     g_rmdir(dir);
 }
@@ -61,6 +69,7 @@ static void
 test_presets_reload_empty_directory(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     g_autofree gchar* dir = make_temp_dir();
 
     /* Directory exists but has no .milk files. */
@@ -76,7 +85,10 @@ test_presets_reload_empty_directory(void)
     g_assert_null(presets_current(&app_data));
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
     g_unlink(junk);
     g_rmdir(dir);
 }
@@ -85,6 +97,7 @@ static void
 test_presets_reload_overwrites_previous_array(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
 
     /* First directory with 2 presets. */
     g_autofree gchar* dir1 = make_temp_dir();
@@ -102,8 +115,10 @@ test_presets_reload_overwrites_previous_array(void)
     g_autofree gchar* p2a = g_build_filename(dir2, "zzz.milk", NULL);
     g_file_set_contents(p2a, "", 0, NULL);
 
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
     app_data.preset_dir = g_strdup(dir2);
+    g_mutex_unlock(&app_data.preset_dir_lock);
     g_assert_true(presets_reload(&app_data));
     g_assert_cmpint(app_data.preset_count, ==, 1);
     g_assert_cmpstr(app_data.presets[0], ==, p2a);
@@ -113,12 +128,48 @@ test_presets_reload_overwrites_previous_array(void)
     g_assert_cmpstr(presets_current(&app_data), ==, p2a);
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
     g_unlink(p1a);
     g_unlink(p1b);
     g_rmdir(dir1);
     g_unlink(p2a);
     g_rmdir(dir2);
+}
+
+static void
+test_presets_reload_missing_directory_preserves_previous_array(void)
+{
+    AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
+
+    g_autofree gchar* dir = make_temp_dir();
+    g_autofree gchar* preset = g_build_filename(dir, "keep.milk", NULL);
+    g_file_set_contents(preset, "", 0, NULL);
+
+    app_data.preset_dir = g_strdup(dir);
+    g_assert_true(presets_reload(&app_data));
+    g_assert_cmpint(app_data.preset_count, ==, 1);
+    g_assert_cmpstr(presets_current(&app_data), ==, preset);
+
+    g_mutex_lock(&app_data.preset_dir_lock);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+    app_data.preset_dir = g_strdup("/tmp/milkdrop-no-such-presets-dir");
+    g_mutex_unlock(&app_data.preset_dir_lock);
+
+    g_assert_false(presets_reload(&app_data));
+    g_assert_cmpint(app_data.preset_count, ==, 1);
+    g_assert_cmpstr(presets_current(&app_data), ==, preset);
+
+    presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
+    g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
+    g_unlink(preset);
+    g_rmdir(dir);
 }
 
 static void
@@ -133,6 +184,7 @@ static void
 test_presets_empty_string_dir(void)
 {
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     app_data.preset_dir = g_strdup("");
 
     /* Empty string should be treated as "no presets" — returns true
@@ -140,7 +192,10 @@ test_presets_empty_string_dir(void)
     g_assert_true(presets_reload(&app_data));
     g_assert_cmpint(app_data.preset_count, ==, 0);
 
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
 }
 
 int
@@ -152,6 +207,7 @@ main(int argc, char** argv)
     g_test_add_func("/presets-edge/current-out-of-range", test_presets_current_out_of_range_index);
     g_test_add_func("/presets-edge/empty-directory", test_presets_reload_empty_directory);
     g_test_add_func("/presets-edge/reload-overwrites-array", test_presets_reload_overwrites_previous_array);
+    g_test_add_func("/presets-edge/reload-missing-dir-preserves-array", test_presets_reload_missing_directory_preserves_previous_array);
     g_test_add_func("/presets-edge/null-app-data", test_presets_null_app_data);
     g_test_add_func("/presets-edge/empty-string-dir", test_presets_empty_string_dir);
 

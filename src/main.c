@@ -280,16 +280,22 @@ milkdrop_configure_texture_search_paths(AppData* app_data)
 {
     const char* texture_paths[2] = {0};
     size_t count = 0;
+    char        preset_dir_buf[MILKDROP_PATH_MAX];
 
     if (!app_data || !app_data->projectm)
         return;
 
-    if (app_data->preset_dir && app_data->preset_dir[0] != '\0' &&
-        g_file_test(app_data->preset_dir, G_FILE_TEST_IS_DIR)) {
-        texture_paths[count++] = app_data->preset_dir;
+    preset_dir_buf[0] = '\0';
+    g_mutex_lock(&app_data->preset_dir_lock);
+    if (app_data->preset_dir)
+        g_strlcpy(preset_dir_buf, app_data->preset_dir, sizeof(preset_dir_buf));
+    g_mutex_unlock(&app_data->preset_dir_lock);
+
+    if (preset_dir_buf[0] != '\0' && g_file_test(preset_dir_buf, G_FILE_TEST_IS_DIR)) {
+        texture_paths[count++] = preset_dir_buf;
 
         g_clear_pointer(&app_data->textures_dir, g_free);
-        app_data->textures_dir = g_build_filename(app_data->preset_dir, "textures", NULL);
+        app_data->textures_dir = g_build_filename(preset_dir_buf, "textures", NULL);
         if (app_data->textures_dir && g_file_test(app_data->textures_dir, G_FILE_TEST_IS_DIR)) {
             texture_paths[count++] = app_data->textures_dir;
         } else {
@@ -347,13 +353,21 @@ milkdrop_on_preset_switched(bool         is_hard_cut,
 static void
 milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
 {
+    char dir_snapshot[MILKDROP_PATH_MAX];
+
     if (!app_data || !app_data->projectm || !app_data->projectm_playlist) {
         g_warning("milkdrop_sync_playlist_from_preset_dir: null check failed");
         return;
     }
 
+    dir_snapshot[0] = '\0';
+    g_mutex_lock(&app_data->preset_dir_lock);
+    if (app_data->preset_dir)
+        g_strlcpy(dir_snapshot, app_data->preset_dir, sizeof(dir_snapshot));
+    g_mutex_unlock(&app_data->preset_dir_lock);
+
     g_message("playlist: syncing from preset_dir=%s",
-              app_data->preset_dir ? app_data->preset_dir : "(null)");
+              dir_snapshot[0] != '\0' ? dir_snapshot : "(null)");
 
     milkdrop_configure_texture_search_paths(app_data);
 
@@ -366,8 +380,8 @@ milkdrop_sync_playlist_from_preset_dir(AppData* app_data)
     projectm_load_preset_file(app_data->projectm, "idle://", false);
     milkdrop_reset_startup_gate(app_data, false);
 
-    if (app_data->preset_dir && app_data->preset_dir[0] != '\0') {
-        g_message("playlist: starting async scan for %s", app_data->preset_dir);
+    if (dir_snapshot[0] != '\0') {
+        g_message("playlist: starting async scan for %s", dir_snapshot);
         presets_start_async_scan(app_data);
     } else {
         g_warning("playlist: preset_dir is empty or null, skipping scan");
@@ -489,6 +503,9 @@ milkdrop_try_init_projectm(GtkGLArea* area, AppData* app_data)
     projectm_set_fps(app_data->projectm, init_fps);
     app_data->last_synced_projectm_fps = init_fps;
 
+    projectm_set_mesh_size(app_data->projectm, 32, 24);
+    projectm_set_aspect_correction(app_data->projectm, true);
+
     app_data->pcm_max_samples_per_channel = projectm_pcm_get_max_samples();
 
     projectm_set_beat_sensitivity(app_data->projectm,
@@ -563,15 +580,27 @@ on_render_pulse(gpointer user_data)
 #if !HAVE_PROJECTM
     if (atomic_exchange(&app_data->preset_dir_pending, false)) {
         char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
+        char prev_dir[MILKDROP_PATH_MAX] = {0};
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
+        if (app_data->preset_dir)
+            g_strlcpy(prev_dir, app_data->preset_dir, sizeof(prev_dir));
         g_mutex_unlock(&app_data->preset_dir_lock);
 
+        g_mutex_lock(&app_data->preset_dir_lock);
         g_clear_pointer(&app_data->preset_dir, g_free);
-        g_clear_pointer(&app_data->textures_dir, g_free);
         app_data->preset_dir = g_strdup(next_dir);
-        if (!presets_reload(app_data))
+        g_mutex_unlock(&app_data->preset_dir_lock);
+
+        if (!presets_reload(app_data)) {
+            g_mutex_lock(&app_data->preset_dir_lock);
+            g_clear_pointer(&app_data->preset_dir, g_free);
+            app_data->preset_dir = prev_dir[0] != '\0' ? g_strdup(prev_dir) : NULL;
+            g_mutex_unlock(&app_data->preset_dir_lock);
             g_warning("Failed to reload presets from %s", next_dir);
+        } else {
+            g_clear_pointer(&app_data->textures_dir, g_free);
+        }
     }
 #endif
 
@@ -753,15 +782,22 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
 
     if (atomic_exchange(&app_data->preset_dir_pending, false)) {
         char next_dir[sizeof(app_data->pending_preset_dir)] = {0};
+        char prev_dir[MILKDROP_PATH_MAX] = {0};
 
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(next_dir, app_data->pending_preset_dir, sizeof(next_dir));
+        if (app_data->preset_dir)
+            g_strlcpy(prev_dir, app_data->preset_dir, sizeof(prev_dir));
         g_mutex_unlock(&app_data->preset_dir_lock);
 
-        g_clear_pointer(&app_data->preset_dir, g_free);
-        g_clear_pointer(&app_data->textures_dir, g_free);
-        app_data->preset_dir = g_strdup(next_dir);
-        milkdrop_sync_playlist_from_preset_dir(app_data);
+        if (!presets_apply_dir_change(app_data, next_dir)) {
+            g_warning("Rejected preset-dir change to invalid path %s; keeping %s",
+                      next_dir,
+                      prev_dir[0] != '\0' ? prev_dir : "(empty)");
+        } else {
+            g_clear_pointer(&app_data->textures_dir, g_free);
+            milkdrop_sync_playlist_from_preset_dir(app_data);
+        }
     }
 
     bool must_reattach_buffers = false;
@@ -946,10 +982,13 @@ on_render(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
             }
 
             {
-                int current_fps = renderer_measure_render_fps(app_data, g_get_monotonic_time());
-                if (current_fps != app_data->last_synced_projectm_fps) {
-                    projectm_set_fps(app_data->projectm, current_fps);
-                    app_data->last_synced_projectm_fps = current_fps;
+                (void)renderer_measure_render_fps(app_data, g_get_monotonic_time());
+                int target_fps = atomic_load(&app_data->fps_runtime);
+                if (target_fps <= 0) target_fps = 60;
+                
+                if (target_fps != app_data->last_synced_projectm_fps) {
+                    projectm_set_fps(app_data->projectm, target_fps);
+                    app_data->last_synced_projectm_fps = target_fps;
                 }
             }
 
@@ -1368,6 +1407,7 @@ static void
 on_activate(GApplication* application, gpointer user_data)
 {
     AppData* app_data = user_data;
+    char dir0[MILKDROP_PATH_MAX];
 
     if (app_data->window) {
         gtk_window_present(app_data->window);
@@ -1376,10 +1416,13 @@ on_activate(GApplication* application, gpointer user_data)
 
     app_data->app = GTK_APPLICATION(application);
 
-    if (app_data->preset_dir && !presets_reload(app_data))
-        g_warning("Failed to scan presets in %s", app_data->preset_dir);
+    dir0[0] = '\0';
+    g_mutex_lock(&app_data->preset_dir_lock);
+    if (app_data->preset_dir)
+        g_strlcpy(dir0, app_data->preset_dir, sizeof(dir0));
+    g_mutex_unlock(&app_data->preset_dir_lock);
 
-    app_data->startup_hidden = app_data->preset_count > 0;
+    app_data->startup_hidden = dir0[0] != '\0' && g_file_test(dir0, G_FILE_TEST_IS_DIR);
 
     build_window(app_data);
 
@@ -1403,12 +1446,16 @@ on_shutdown(GApplication* application, gpointer user_data)
 
     control_cleanup(app_data);
     audio_cleanup(app_data);
+    presets_cleanup_async(app_data);
 
+    g_mutex_lock(&app_data->preset_dir_lock);
     g_clear_pointer(&app_data->preset_dir, g_free);
+    g_mutex_unlock(&app_data->preset_dir_lock);
     g_clear_pointer(&app_data->textures_dir, g_free);
     presets_clear(app_data);
     g_clear_pointer(&app_data->socket_path, g_free);
     g_mutex_clear(&app_data->preset_dir_lock);
+    g_mutex_clear(&app_data->preset_queue_lock);
     g_mutex_clear(&app_data->screenshot_lock);
     g_mutex_clear(&app_data->last_preset_lock);
 }
@@ -1463,6 +1510,9 @@ main(int argc, char** argv)
 
     g_set_prgname("milkdrop");
 
+    g_mutex_init(&app_data->preset_dir_lock);
+    g_mutex_init(&app_data->preset_queue_lock);
+
     app_data->verbose = verbose;
 #if HAVE_PROJECTM
     milkdrop_verbose_gl = verbose;
@@ -1470,7 +1520,9 @@ main(int argc, char** argv)
 #endif
 
     app_data->monitor_index = monitor_index;
+    g_mutex_lock(&app_data->preset_dir_lock);
     app_data->preset_dir = preset_dir;
+    g_mutex_unlock(&app_data->preset_dir_lock);
     app_data->presets = NULL;
     app_data->preset_count = 0;
     app_data->preset_current = 0;
@@ -1484,6 +1536,10 @@ main(int argc, char** argv)
     atomic_store(&app_data->preset_dir_pending, false);
     atomic_store(&app_data->next_preset_pending, false);
     atomic_store(&app_data->prev_preset_pending, false);
+    atomic_store(&app_data->is_scanning_presets, false);
+    atomic_store(&app_data->preset_scan_stop, false);
+    atomic_store(&app_data->pending_preset_flush, false);
+    atomic_store(&app_data->rescan_requested, false);
     app_data->startup_hidden = false;
     app_data->startup_warmup_drawn = false;
     app_data->startup_deferred_preset_activation = false;
@@ -1512,8 +1568,6 @@ main(int argc, char** argv)
     atomic_store(&app_data->control_thread_running, false);
     app_data->control_fd = -1;
     app_data->control_thread = NULL;
-    g_mutex_init(&app_data->preset_dir_lock);
-    g_mutex_init(&app_data->preset_queue_lock);
     g_mutex_init(&app_data->screenshot_lock);
     g_mutex_init(&app_data->last_preset_lock);
     app_data->pending_preset_dir[0] = '\0';

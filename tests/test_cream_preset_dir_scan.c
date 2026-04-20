@@ -24,6 +24,7 @@ test_scan_full_preset_tree_matches_installed_pack(void)
     }
 
     AppData app_data = {0};
+    g_mutex_init(&app_data.preset_dir_lock);
     app_data.preset_dir = g_strdup(dir);
 
     gboolean ok = presets_reload(&app_data);
@@ -34,7 +35,10 @@ test_scan_full_preset_tree_matches_installed_pack(void)
     g_message("scanned %d presets under %s", app_data.preset_count, dir);
 
     presets_clear(&app_data);
+    g_mutex_lock(&app_data.preset_dir_lock);
     g_clear_pointer(&app_data.preset_dir, g_free);
+    g_mutex_unlock(&app_data.preset_dir_lock);
+    g_mutex_clear(&app_data.preset_dir_lock);
 }
 
 int
