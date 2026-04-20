@@ -1215,6 +1215,8 @@ on_create_context_with_debug(GtkGLArea* area, gpointer user_data)
     (void)user_data;
     GError* error = NULL;
     GdkGLContext* context = NULL;
+    int required_major = 0, required_minor = 0;
+    GdkGLAPI allowed_apis = 0;
 
     GdkSurface* surface = gtk_native_get_surface(GTK_NATIVE(gtk_widget_get_root(GTK_WIDGET(area))));
     if (!surface) {
@@ -1230,6 +1232,15 @@ on_create_context_with_debug(GtkGLArea* area, gpointer user_data)
             g_error_free(error);
         return NULL;
     }
+
+    gtk_gl_area_get_required_version(area, &required_major, &required_minor);
+    allowed_apis = gtk_gl_area_get_allowed_apis(area);
+    g_message("MILKDROP_GL_DEBUG: Applying GLArea settings: version=%d.%d, apis=%d",
+              required_major, required_minor, (int)allowed_apis);
+
+    gdk_gl_context_set_required_version(context, required_major, required_minor);
+    if (allowed_apis != 0)
+        gdk_gl_context_set_allowed_apis(context, allowed_apis);
 
     /* Enable debug context - this enables synchronous error checking and
      * allows GL debug callback registration via KHR_debug/ARB_debug_output. */
@@ -1313,10 +1324,7 @@ build_window(AppData* app_data)
     /* projectM 4.x requires OpenGL 3.3 core profile */
     gtk_gl_area_set_required_version(GTK_GL_AREA(gl_area), 3, 3);
 #if GTK_CHECK_VERSION(4, 12, 0)
-    /* projectM precisa de OpenGL desktop; se o fundo ficar preto, experimente
-     * MILKDROP_FORCE_GL_API=1 no ambiente do renderer. */
-    if (g_getenv("MILKDROP_FORCE_GL_API"))
-        gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_area), GDK_GL_API_GL);
+    gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_area), GDK_GL_API_GL);
 #endif
 
     /* Enable GL debug context for troubleshooting driver/Mesa issues.
