@@ -161,11 +161,17 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         };
         syncMonitorSensitivity();
         const allMonitorsSignalId = settings.connect('changed::all-monitors', syncMonitorSensitivity);
+        let shuffleSignalId = 0;
+        let presetDirSignalId = 0;
 
         // Cleanup on window destroy
         window.connect('destroy', () => {
             if (allMonitorsSignalId)
                 settings.disconnect(allMonitorsSignalId);
+            if (shuffleSignalId)
+                settings.disconnect(shuffleSignalId);
+            if (presetDirSignalId)
+                settings.disconnect(presetDirSignalId);
         });
 
         const opacityRow = new Adw.ActionRow({
@@ -214,7 +220,7 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         rotationRow.connect('notify::selected', () => {
             settings.set_boolean('shuffle', rotationRow.selected === 1);
         });
-        settings.connect('changed::shuffle', () => {
+        shuffleSignalId = settings.connect('changed::shuffle', () => {
             const expected = settings.get_boolean('shuffle') ? 1 : 0;
             if (rotationRow.selected !== expected)
                 rotationRow.selected = expected;
@@ -352,7 +358,7 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         });
         dirLabel.add_css_class('dim-label');
 
-        settings.connect('changed::preset-dir', () => {
+        presetDirSignalId = settings.connect('changed::preset-dir', () => {
             dirLabel.set_label(settings.get_string('preset-dir') || '(default)');
         });
 

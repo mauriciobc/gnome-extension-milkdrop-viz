@@ -38,6 +38,7 @@ export default class MilkdropExtension extends Extension {
         this._settings = null;
         this._settingsSignalIds = [];
         this._wmSignalIds = [];
+        this._windowCreatedId = 0;
 
         // Multi-process support: Maps indexed by monitor index
         this._launchers = new Map();           // monitorIndex -> Gio.SubprocessLauncher
@@ -62,6 +63,11 @@ export default class MilkdropExtension extends Extension {
 
         this._anchorRetrySourceIds = new Set();
         this._anchorPending = new Map();      // monitorIndex -> boolean
+
+        // Circuit breaker: track consecutive abnormal renderer deaths
+        this._consecutiveAbnormalDeaths = 0;
+        this._lastDeathTimestamp = 0;
+        this._circuitBreakerOpen = false;
 
         // State tracking for actor lifecycle management
         this._actorReparentState = new Map();
@@ -90,6 +96,10 @@ export default class MilkdropExtension extends Extension {
         // Idempotent: re-entering during deferred startup is safe.
         this._isEnabling = true;
 
+        // Reset circuit breaker on fresh enable
+        this._circuitBreakerOpen = false;
+        this._consecutiveAbnormalDeaths = 0;
+
         this._settings = this.getSettings();
 
         this._connectSettingsSignals();
@@ -117,6 +127,23 @@ export default class MilkdropExtension extends Extension {
                 this._onWindowMapped(window);
             })
         );
+
+        // Set DESKTOP window type as early as possible — on window-created,
+        // not on map.  Mutter starts sending toplevel configure events as
+        // soon as the Meta.Window exists (type=NORMAL).  Each configure event
+        // causes GTK4 to resize the widget, which triggers
+        // milkdrop_maybe_resize_picture → offscreen_renderer_create_target →
+        // FBO_INCOMPLETE_ATTACHMENT transiently.  Setting DESKTOP on
+        // window-created suppresses those configure events before they start.
+        const shellMajor = parseInt(Config.PACKAGE_VERSION.split('.')[0], 10);
+        if (shellMajor >= 49 && _isWayland()) {
+            this._windowCreatedId = global.display.connect(
+                'window-created',
+                (_display, window) => {
+                    this._onWindowCreated(window);
+                }
+            );
+        }
     }
 
     _setupBackgroundOverrides() {
@@ -238,7 +265,7 @@ export default class MilkdropExtension extends Extension {
     }
 
     disable() {
-        if (this._isDisabling || this._isEnabling) {
+        if (this._isDisabling) {
             log('[milkdrop] Already in transition state, skipping disable');
             return;
         }
@@ -413,6 +440,10 @@ export default class MilkdropExtension extends Extension {
 
     _spawnProcess(monitorIndex = 0) {
         log(`[milkdrop] _spawnProcess called for monitor ${monitorIndex}`);
+        if (this._circuitBreakerOpen) {
+            log(`[milkdrop] _spawnProcess: circuit breaker is open, skipping spawn for monitor ${monitorIndex}`);
+            return;
+        }
         if (this._subprocesses.has(monitorIndex)) {
             log(`[milkdrop] _spawnProcess: subprocess already exists for monitor ${monitorIndex}, returning`);
             return;
@@ -432,12 +463,14 @@ export default class MilkdropExtension extends Extension {
         const launcher = new Gio.SubprocessLauncher({
             flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
         });
-        /* F3a: force GTK4's OpenGL renderer to avoid Mesa's vkps rw-semaphore
-         * deadlock that causes the renderer to enter an uninterruptible D-state
-         * when the Vulkan presentation path races with the DRM kernel writer. */
-        launcher.setenv('GSK_RENDERER', 'gl', true);
+        /* F3a: use Cairo to avoid GSK's GL context racing with SDL2's offscreen
+         * GL context during projectM shader compilation, which causes
+         * repeatable SIGSEGVs in Mesa Gallium. */
+        launcher.setenv('GSK_RENDERER', 'cairo', true);
         /* GtkGLArea pode escolher GLES; projectM precisa de OpenGL desktop (GLSL 330). */
         launcher.setenv('MILKDROP_FORCE_GL_API', '1', true);
+        /* Mesa Intel GPU: force OpenGL Compatibility profile for projectM shaders */
+        launcher.setenv('MESA_GL_VERSION_OVERRIDE', '3.3Compatibility', true);
         this._launchers.set(monitorIndex, launcher);
 
         log(`[milkdrop] isWayland=${isWayland}, shellMajor=${shellMajor}`);
@@ -445,14 +478,15 @@ export default class MilkdropExtension extends Extension {
         let waylandClient = null;
         try {
             if (isWayland) {
+                const metaContext = global.display.get_context();
                 if (shellMajor < 49) {
                     log('[milkdrop] Using legacy WaylandClient.new path');
-                    waylandClient = Meta.WaylandClient.new(global.context, launcher);
+                    waylandClient = Meta.WaylandClient.new(metaContext, launcher);
                     subprocess = waylandClient.spawnv(global.display, argv);
                     this._waylandClients.set(monitorIndex, waylandClient);
                 } else {
                     log('[milkdrop] Using new_subprocess path');
-                    waylandClient = Meta.WaylandClient.new_subprocess(global.context, launcher, argv);
+                    waylandClient = Meta.WaylandClient.new_subprocess(metaContext, launcher, argv);
                     if (!waylandClient) {
                         log('[milkdrop] Meta.WaylandClient.new_subprocess returned null');
                         subprocess = null;
@@ -497,12 +531,18 @@ export default class MilkdropExtension extends Extension {
                            this._pauseReasons.mpris;
         const rotation = this._settings.get_int('preset-rotation-interval');
         const shuffleOn = this._settings.get_boolean('shuffle');
+        const initialCommands = [
+            `pause ${shouldPause ? 'on' : 'off'}`,
+            `rotation-interval ${rotation}`,
+            `shuffle ${shuffleOn ? 'on' : 'off'}`,
+        ];
+        const lastPreset = this._settings.get_string('last-preset');
+        if (lastPreset) {
+            const wasPaused = this._settings.get_boolean('was-paused');
+            initialCommands.push(`restore-state ${GLib.shell_quote(lastPreset)} ${wasPaused ? '1' : '0'}`);
+        }
         sendMilkdropControlCommandsSequentially(
-            [
-                `pause ${shouldPause ? 'on' : 'off'}`,
-                `rotation-interval ${rotation}`,
-                `shuffle ${shuffleOn ? 'on' : 'off'}`,
-            ],
+            initialCommands,
             getMilkdropSocketPath(monitorIndex),
             120,
             CONTROL_SOCKET_MAX_RETRIES,
@@ -517,10 +557,26 @@ export default class MilkdropExtension extends Extension {
         const spawnedSubprocess = subprocess;
         const spawnedCancellable = stdoutCancellable;
         spawnedSubprocess.wait_async(spawnedCancellable, (proc, res) => {
-            let exitCode = -1;
+            let exitCode = 0;
+            let exitedNormally = false;
+            let termSignal = 0;
             try {
                 proc.wait_finish(res);
-                exitCode = proc.get_exit_status();
+                /* GLib 2.70+: get_if_exited() avoids the g_return_if_fail
+                 * in get_exit_status() when the process died abnormally. */
+                if (typeof proc.get_if_exited === 'function') {
+                    exitedNormally = proc.get_if_exited();
+                    if (exitedNormally)
+                        exitCode = proc.get_exit_status();
+                    else if (typeof proc.get_term_sig === 'function')
+                        termSignal = proc.get_term_sig();
+                } else {
+                    /* Fallback for older GLib: use get_successful() as a proxy
+                     * for normal exit. If false, assume non-zero exit. */
+                    exitedNormally = proc.get_successful() || false;
+                    if (exitedNormally)
+                        exitCode = proc.get_exit_status();
+                }
             } catch (error) {
                 if (!error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
                     log(`[milkdrop] renderer wait failed: ${error}`);
@@ -545,7 +601,29 @@ export default class MilkdropExtension extends Extension {
                 this._pausePolicies.delete(monitorIndex);
             }
 
-            if (this._settings?.get_boolean('enabled') && exitCode !== 0)
+            const now = Date.now();
+            const rapidDeath = (now - this._lastDeathTimestamp) < 10000;
+            this._lastDeathTimestamp = now;
+
+            if (!exitedNormally || exitCode !== 0) {
+                if (rapidDeath) {
+                    this._consecutiveAbnormalDeaths++;
+                    log(`[milkdrop] renderer abnormal death #${this._consecutiveAbnormalDeaths} (signal=${termSignal}, code=${exitCode})`);
+                } else {
+                    this._consecutiveAbnormalDeaths = 1;
+                    log(`[milkdrop] renderer died after stable run (signal=${termSignal}, code=${exitCode})`);
+                }
+            } else {
+                this._consecutiveAbnormalDeaths = 0;
+            }
+
+            if (this._consecutiveAbnormalDeaths >= 5) {
+                log('[milkdrop] CIRCUIT BREAKER: renderer died 5 times rapidly. Stopping respawns. Disable and re-enable the extension to retry.');
+                this._circuitBreakerOpen = true;
+                return;
+            }
+
+            if (this._settings?.get_boolean('enabled'))
                 this._scheduleRetry(monitorIndex);
         });
     }
@@ -678,6 +756,36 @@ export default class MilkdropExtension extends Extension {
         );
     }
 
+    _saveStateSync(monitorIndex) {
+        const socketPath = getMilkdropSocketPath(monitorIndex);
+        try {
+            const socket = new Gio.Socket({
+                family: Gio.SocketFamily.UNIX,
+                type: Gio.SocketType.STREAM,
+                protocol: Gio.SocketProtocol.DEFAULT,
+            });
+            socket.connect(Gio.UnixSocketAddress.new(socketPath), null);
+            socket.send(new TextEncoder().encode('save-state\n'), null);
+            const buf = new Uint8Array(4096);
+            const nread = socket.receive(buf, null);
+            socket.close();
+            if (nread <= 0)
+                return;
+            let state;
+            try {
+                state = JSON.parse(new TextDecoder().decode(buf.subarray(0, nread)).trim());
+            } catch (_e) {
+                return;
+            }
+            if (typeof state.preset === 'string')
+                this._settings.set_string('last-preset', state.preset);
+            if (typeof state.paused === 'number')
+                this._settings.set_boolean('was-paused', state.paused !== 0);
+        } catch (error) {
+            log(`[milkdrop] _saveStateSync failed for monitor ${monitorIndex}: ${error.message}`);
+        }
+    }
+
     _stopProcess(monitorIndex) {
         this._removeRetrySource(monitorIndex);
 
@@ -687,6 +795,8 @@ export default class MilkdropExtension extends Extension {
 
         const subprocess = this._subprocesses.get(monitorIndex);
         if (subprocess) {
+            if (this._settings)
+                this._saveStateSync(monitorIndex);
             try {
                 subprocess.force_exit();
             } catch (error) {
@@ -1088,8 +1198,13 @@ export default class MilkdropExtension extends Extension {
         const maxAttempts = 15;
         if (attempt >= maxAttempts) {
             log(`[milkdrop] owns_window still false after retries for monitor ${monitorIndex}; anchoring if title/wm_class match`);
-            if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop')
+            if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop') {
+                if (!window.get_compositor_private()) {
+                    log(`[milkdrop] max-retries anchor: compositor_private null for monitor ${monitorIndex}, giving up`);
+                    return;
+                }
                 this._anchorWindow(window);
+            }
             return;
         }
 
@@ -1110,6 +1225,11 @@ export default class MilkdropExtension extends Extension {
             if (!_isWayland() || !waylandClient) {
                 // If not on Wayland or no wayland client, use title/wm_class
                 if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop') {
+                    if (!window.get_compositor_private()) {
+                        log(`[milkdrop] X11 anchor: compositor_private null for monitor ${monitorIndex}; retrying`);
+                        this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
+                        return GLib.SOURCE_REMOVE;
+                    }
                     this._anchorWindow(window);
                 }
                 return GLib.SOURCE_REMOVE;
@@ -1117,13 +1237,24 @@ export default class MilkdropExtension extends Extension {
 
             try {
                 if (waylandClient.owns_window(window)) {
+                    if (!window.get_compositor_private()) {
+                        log(`[milkdrop] owns_window true but compositor_private null for monitor ${monitorIndex}; retrying`);
+                        this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
+                        return GLib.SOURCE_REMOVE;
+                    }
                     this._anchorWindow(window);
                     return GLib.SOURCE_REMOVE;
                 }
             } catch (e) {
                 log(`[milkdrop] owns_window retry error for monitor ${monitorIndex}, anchoring by title/wm_class: ${e}`);
-                if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop')
+                if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop') {
+                    if (!window.get_compositor_private()) {
+                        log(`[milkdrop] fallback anchor: compositor_private null for monitor ${monitorIndex}; retrying`);
+                        this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
+                        return GLib.SOURCE_REMOVE;
+                    }
                     this._anchorWindow(window);
+                }
                 return GLib.SOURCE_REMOVE;
             }
 
@@ -1131,6 +1262,29 @@ export default class MilkdropExtension extends Extension {
             return GLib.SOURCE_REMOVE;
         });
         this._anchorRetrySourceIds.add(sid);
+    }
+
+    /**
+     * Handle window-created: set DESKTOP type before Mutter sends configure events.
+     * This fires when the Meta.Window is created — before map, before configure.
+     */
+    _onWindowCreated(window) {
+        if (!window || this._isDisabling)
+            return;
+
+        // Check all our Wayland clients to find the owner
+        for (const waylandClient of this._waylandClients.values()) {
+            try {
+                if (waylandClient.owns_window(window)) {
+                    window.hide_from_window_list();
+                    window.set_type(Meta.WindowType.DESKTOP);
+                    log('[milkdrop] Early DESKTOP type set on window-created');
+                    return;
+                }
+            } catch (_e) {
+                // owns_window may fail transiently; fall through
+            }
+        }
     }
 
     _onWindowMapped(window) {
@@ -1187,8 +1341,23 @@ export default class MilkdropExtension extends Extension {
     }
 
     _anchorWindow(window) {
-        const monitorIndex = window.get_monitor();
+        let monitorIndex = window.get_monitor();
+        if (monitorIndex < 0)
+            monitorIndex = 0;
         this._anchorPending.set(monitorIndex, false);
+
+        // Shell 49+: canonical background window type setup
+        // Fallback — normally _onWindowCreated() sets this before map.
+        // Kept for X11 and for the owns_window-retry code path.
+        const shellMajor = parseInt(Config.PACKAGE_VERSION.split('.')[0], 10);
+        if (shellMajor >= 49) {
+            try {
+                window.hide_from_window_list();
+                window.set_type(Meta.WindowType.DESKTOP);
+            } catch (e) {
+                log(`[milkdrop] Shell 49+ window setup failed: ${e}`);
+            }
+        }
 
         // Validate window before proceeding
         if (!this._isWindowValid(window)) {
@@ -1224,8 +1393,15 @@ export default class MilkdropExtension extends Extension {
             },
         });
 
-        // Get monitor geometry for anchoring
-        const geometry = global.display.get_monitor_geometry(monitorIndex);
+        // Get monitor geometry for anchoring (fallback to monitor 0 for virtual monitors)
+        let geometry = global.display.get_monitor_geometry(monitorIndex);
+        if (!geometry || geometry.width <= 0 || geometry.height <= 0) {
+            const fallbackMonitor = Main.layoutManager.monitors[0];
+            if (fallbackMonitor) {
+                geometry = fallbackMonitor.geometry;
+                log(`[milkdrop] Falling back to monitor 0 geometry: ${geometry.width}x${geometry.height}`);
+            }
+        }
         if (!geometry || geometry.width <= 0 || geometry.height <= 0) {
             log(`[milkdrop] ERROR: Invalid monitor geometry for anchoring on monitor ${monitorIndex}`);
             managed.disable();
@@ -1246,6 +1422,7 @@ export default class MilkdropExtension extends Extension {
 
         // Store the managed window
         this._managedWindows.set(monitorIndex, managed);
+        this._consecutiveAbnormalDeaths = 0;
         log(`[milkdrop] renderer window anchored successfully on monitor ${monitorIndex} (using ManagedWindow)`);
 
         // Trigger wallpaper injection after window is anchored
@@ -1335,6 +1512,11 @@ export default class MilkdropExtension extends Extension {
         for (const id of this._wmSignalIds)
             global.window_manager.disconnect(id);
         this._wmSignalIds = [];
+
+        if (this._windowCreatedId) {
+            global.display.disconnect(this._windowCreatedId);
+            this._windowCreatedId = 0;
+        }
     }
 
     _disconnectSettingsSignals() {
