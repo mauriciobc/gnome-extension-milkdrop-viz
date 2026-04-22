@@ -1,9 +1,22 @@
 # Runtime logs
-nested_shell.log
-nested_shell_direct.log
+*.log
+nested*.log
+milkdrop.log
+shell_output.log
 
 # Nested GNOME Shell dev session (local only)
 .nested-shell/
+
+# Development artifacts
+*.patch
+*.orig
+run_nested*.sh
+test_*.sh
+test_via_dbus.sh
+refactor.md
+
+# Issue evidence bundles
+logs/evidence-*/
 
 # Python
 __pycache__/
