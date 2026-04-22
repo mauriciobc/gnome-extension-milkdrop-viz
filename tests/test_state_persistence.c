@@ -31,18 +31,19 @@ test_parse_restore_state_command(void)
 }
 
 /**
- * Test restore-state with JSON argument
+ * Test restore-state with path and paused flag
  */
 static void
-test_parse_restore_state_with_json(void)
+test_parse_restore_state_with_path(void)
 {
     ControlCommand command = {0};
-    const char *input = "restore-state {\"preset\":\"/path/to/preset.milk\",\"paused\":1}\n";
+    const char *input = "restore-state '/path/to/preset.milk' 1\n";
     ControlParseResult result = control_parse_command(input, &command);
 
     g_assert_cmpint(result, ==, CONTROL_PARSE_OK);
     g_assert_cmpint(command.type, ==, CONTROL_CMD_RESTORE_STATE);
-    g_assert_cmpstr(command.text_value, ==, "{preset:/path/to/preset.milk,paused:1}");
+    g_assert_cmpstr(command.text_value, ==, "/path/to/preset.milk");
+    g_assert_cmpint(command.int_value, ==, 1);
 }
 
 /**
@@ -80,7 +81,7 @@ main(int argc, char *argv[])
 
     g_test_add_func("/state/save-state-parse", test_parse_save_state_command);
     g_test_add_func("/state/restore-state-parse", test_parse_restore_state_command);
-    g_test_add_func("/state/restore-state-with-json", test_parse_restore_state_with_json);
+    g_test_add_func("/state/restore-state-with-path", test_parse_restore_state_with_path);
     g_test_add_func("/state/title-encoding-format", test_title_encoding_format);
 
     return g_test_run();

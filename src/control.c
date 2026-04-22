@@ -186,8 +186,15 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
         return TRUE;
     }
     case CONTROL_CMD_RESTORE_STATE:
-        // TODO: Implement full state restore
-        g_strlcpy(response, "ok restore (partial)\n", response_size);
+        if (command->text_value[0] != '\0') {
+            g_mutex_lock(&app_data->last_preset_lock);
+            g_strlcpy(app_data->restore_preset_path, command->text_value,
+                      sizeof(app_data->restore_preset_path));
+            app_data->restore_preset_paused = command->int_value != 0;
+            g_mutex_unlock(&app_data->last_preset_lock);
+            atomic_store(&app_data->restore_state_pending, true);
+        }
+        g_strlcpy(response, "ok restore-state\n", response_size);
         return TRUE;
     case CONTROL_CMD_SCREENSHOT:
         /* Write path under lock; GL thread copies it out before use. */
@@ -434,8 +441,16 @@ control_parse_command(const char* line, ControlCommand* out_command)
 
     if (g_strcmp0(argv[0], "restore-state") == 0 && argc >= 1) {
         out_command->type = CONTROL_CMD_RESTORE_STATE;
-        if (argc >= 2)
+        if (argc >= 2) {
+            if (strlen(argv[1]) >= sizeof(out_command->text_value))
+                return CONTROL_PARSE_PATH_TOO_LONG;
             g_strlcpy(out_command->text_value, argv[1], sizeof(out_command->text_value));
+        }
+        if (argc >= 3) {
+            long flag = 0;
+            if (parse_long_range(argv[2], 0, 1, &flag))
+                out_command->int_value = (int)flag;
+        }
         return CONTROL_PARSE_OK;
     }
 
