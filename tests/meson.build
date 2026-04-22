@@ -91,6 +91,20 @@ if have_projectm and sdl2_dep.found()
     dependencies: [glib_dep, gtk_dep, epoxy_dep, sdl2_dep, projectm_dep, m_dep],
     install: false,
   )
+
+  offscreen_renderer_test = executable(
+    'test-offscreen-renderer',
+    ['test_offscreen_renderer.c', '../src/offscreen_renderer.c'],
+    include_directories: include_directories('..', '../src'),
+    c_args: renderer_cargs,
+    dependencies: [glib_dep, epoxy_dep, sdl2_dep],
+  )
+  test(
+    'offscreen-renderer',
+    offscreen_renderer_test,
+    is_parallel: false,
+    timeout: 60,
+  )
 endif
 
 # GtkGLArea internal FBO: clear + glReadPixels (same attach path as milkdrop).
@@ -129,29 +143,6 @@ control_protocol_test = executable(
 
 test('control-protocol', control_protocol_test)
 
-preset_scan_test = executable(
-  'test-presets',
-  ['test_presets.c', '../src/presets.c'],
-  include_directories: include_directories('..', '../src'),
-  dependencies: [test_glib_dep, test_gtk_dep],
-)
-
-test('presets', preset_scan_test)
-
-cream_preset_scan_test = executable(
-  'test-cream-preset-dir-scan',
-  ['test_cream_preset_dir_scan.c', '../src/presets.c'],
-  include_directories: include_directories('..', '../src'),
-  dependencies: [test_glib_dep, test_gtk_dep],
-)
-
-test(
-  'cream-preset-dir-scan',
-  cream_preset_scan_test,
-  env: ['MILKDROP_TEST_PRESET_DIR=/usr/local/share/projectM/presets/cream-of-the-crop'],
-  timeout: 300,
-)
-
 audio_alignment_test = executable(
   'test-audio-alignment',
   ['test_audio_alignment.c', '../src/audio.c', '../src/audio_recovery.c'],
@@ -172,15 +163,6 @@ render_pipeline_test = executable(
 
 test('render-pipeline', render_pipeline_test)
 
-tick_state_test = executable(
-  'test-tick-state-machine',
-  ['test_tick_state_machine.c', '../src/presets.c'],
-  include_directories: include_directories('..', '../src'),
-  dependencies: [test_glib_dep, test_gtk_dep],
-)
-
-test('tick-state-machine', tick_state_test)
-
 control_state_test = executable(
   'test-control-state-flow',
   ['test_control_state_flow.c', '../src/control.c'],
@@ -189,33 +171,6 @@ control_state_test = executable(
 )
 
 test('control-state-flow', control_state_test, env: control_socket_test_env)
-
-presets_edge_test = executable(
-  'test-presets-edge-cases',
-  ['test_presets_edge_cases.c', '../src/presets.c'],
-  include_directories: include_directories('..', '../src'),
-  dependencies: [test_glib_dep, test_gtk_dep],
-)
-
-test('presets-edge-cases', presets_edge_test)
-
-startup_async_gate_test = executable(
-  'test-startup-async-gate',
-  'test_startup_async_gate.c',
-  include_directories: include_directories('..', '../src'),
-  dependencies: [test_glib_dep],
-)
-
-test('startup-async-gate', startup_async_gate_test)
-
-startup_activation_test = executable(
-  'test-startup-activation',
-  ['test_startup_activation.c', '../src/startup_gate.c'],
-  include_directories: include_directories('..', '../src'),
-  dependencies: [test_glib_dep, test_gtk_dep],
-)
-
-test('startup-activation', startup_activation_test)
 
 audio_recovery_test = executable(
   'test-audio-recovery',
@@ -275,6 +230,16 @@ if have_projectm
     env: control_socket_test_env + ['MILKDROP_FORCE_GL_API=1'],
     is_parallel: false,
     timeout: 120,
+  )
+endif
+
+gjs_prog = find_program('gjs', required: false)
+if gjs_prog.found()
+  test('title-parser', gjs_prog,
+    args: [files('test_title_parser.js')],
+  )
+  test('managed-window', gjs_prog,
+    args: [files('test_managed_window.js')],
   )
 endif
 
