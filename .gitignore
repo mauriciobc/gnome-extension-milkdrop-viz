@@ -18,6 +18,12 @@ refactor.md
 # Issue evidence bundles
 logs/evidence-*/
 
+# Build artifacts in extension dir
+extension/*/bin/
+
+# Misc runtime files
+nested_log.txt
+
 # Python
 __pycache__/
 *.pyc
