@@ -606,9 +606,16 @@ on_render_pm(GtkGLArea* area, GdkGLContext* context, gpointer user_data)
         glBindFramebuffer(GL_FRAMEBUFFER, intermediate_fbo);
     }
 
-    /* Estado que o GTK valida apos o sinal render; projectM pode alterar. */
+    /* Restore GL state that projectM may have altered; GTK validates these after
+     * the render signal. Mirrors the required 7-item block from the compliance doc
+     * (docs/research/06-gtk4-glarea-projectm-integration.md, GL state policy). */
+    glUseProgram(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_STENCIL_TEST);
+    glDisable(GL_SCISSOR_TEST);
 
     /* projectM muda READ/DRAW FBOs; restaurar antes da leitura */
     glBindFramebuffer(GL_FRAMEBUFFER, intermediate_fbo != 0 ? intermediate_fbo : (GLuint)draw_fbo);

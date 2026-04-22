@@ -16,6 +16,7 @@ glib_dep = dependency('glib-2.0', version: '>=2.76')
 gio_dep = dependency('gio-2.0', version: '>=2.76')
 epoxy_dep = dependency('epoxy', version: '>=1.5')
 egl_dep = dependency('egl')
+sdl2_dep = dependency('sdl2', required: get_option('projectm'))
 
 projectm_dep = dependency('projectM-4', required: get_option('projectm'))
 projectm_playlist_dep = dependency('projectM-4-playlist', required: get_option('projectm'))
@@ -42,7 +43,7 @@ endif
 
 renderer_deps = [gtk_dep, glib_dep, gio_dep, epoxy_dep, egl_dep]
 if have_projectm
-  renderer_deps += [projectm_dep, projectm_playlist_dep]
+  renderer_deps += [projectm_dep, projectm_playlist_dep, sdl2_dep]
 endif
 if have_pipewire
   renderer_deps += [pw_dep, spa_dep]

@@ -26,12 +26,6 @@ renderer_apply_resize(AppData* app_data,
                   app_data->render_width, app_data->render_height);
     }
 
-#if HAVE_PROJECTM
-    if (app_data->projectm)
-        projectm_set_window_size(app_data->projectm,
-                                 (size_t)app_data->render_width,
-                                 (size_t)app_data->render_height);
-#endif
 }
 
 void

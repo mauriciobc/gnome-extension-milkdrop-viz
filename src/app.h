@@ -8,6 +8,8 @@
 
 #include <gtk/gtk.h>
 
+typedef struct _OffscreenRenderer OffscreenRenderer;
+
 /* Max bytes for preset-dir control paths (incl. trailing NUL in buffers). */
 #ifdef PATH_MAX
 #define MILKDROP_PATH_MAX PATH_MAX
@@ -21,8 +23,10 @@
 
 #if HAVE_PROJECTM
 #include <projectM-4/projectM.h>
+#include <projectM-4/playlist.h>
 #else
 typedef void* projectm_handle;
+typedef void* projectm_playlist_handle;
 #endif
 
 #define MILKDROP_RING_CAPACITY 16384u
@@ -36,22 +40,20 @@ typedef struct {
 typedef struct {
     GtkApplication* app;
     GtkWindow* window;
-    GtkGLArea* gl_area;
+    GtkPicture* picture;
+    OffscreenRenderer* offscreen;
     /** g_timeout_add: ~60 Hz; GdkFrameClock tick para de disparar com janela “parada” atrás. */
     guint render_pulse_source_id;
 
     projectm_handle projectm;
-    void* projectm_playlist;
-    /** HAVE_PROJECTM: skip further init attempts until next GtkGLArea realize after irrecoverable failure. */
+    projectm_playlist_handle playlist;
+    /** HAVE_PROJECTM: skip further init attempts after irrecoverable offscreen renderer failure. */
     _Atomic bool projectm_init_aborted;
 
     AudioRing ring;
 
     char* preset_dir;
     char* textures_dir;
-    char** presets;
-    int preset_count;
-    int preset_current;
     char* socket_path;
     int monitor_index;
     bool shuffle;
@@ -78,35 +80,8 @@ typedef struct {
 
     gboolean verbose;
 
-    _Atomic bool idle_surface_queued;
-
-    /* Startup gating for hidden-until-ready renderer reveal. GL thread only. */
-    bool startup_hidden;
-    bool startup_warmup_drawn;
-    bool startup_deferred_preset_activation;
-    bool startup_waiting_for_preset_switch;
-    bool startup_final_content_active;
-    /* GL thread: first async scan chunk already ran milkdrop_reset_startup_gate(..., true).
-     * Without this, every subsequent batch re-triggers initial preset activation at position 0. */
-    bool startup_async_first_chunk_done;
-    uint64_t render_frame_counter;
-    gint64 startup_init_time_us;  /* Timestamp when startup gate was set */
-
     GMutex preset_dir_lock;
     char pending_preset_dir[MILKDROP_PATH_MAX];
-
-    /* Background preset scanning queue */
-    GMutex preset_queue_lock;
-    GPtrArray* preset_load_queue;
-    GThread* preset_scan_thread;
-    _Atomic bool is_scanning_presets;
-    _Atomic bool preset_scan_stop;
-    _Atomic bool pending_preset_flush;
-    /** Set by presets_start_async_scan when a new request arrives while a worker is already running.
-     *  The worker checks this on exit and restarts if true. */
-    _Atomic bool rescan_requested;
-    /** Incremented on each async scan request; worker discards stale results if this changes mid-scan. */
-    _Atomic uint32_t preset_scan_seq;
 
     /* Target frame rate set via control socket (written by control thread, read by GL thread). */
     _Atomic int fps_runtime;
@@ -137,8 +112,8 @@ typedef struct {
     float  last_synced_hard_cut_sensitivity;
     double last_synced_hard_cut_duration;
     double last_synced_soft_cut_duration;
-    int   render_call_count;  /* periodic render() log counter */
     int   pulse_frame_count;  /* periodic pulse log counter */
+    int   render_frame_counter; /* frames successfully rendered; guards projectm_load_preset_file warmup */
 
     /* Render-time PCM buffer — GL thread only, avoids per-frame 64 KB stack alloc. */
     float pcm_render_buf[MILKDROP_RING_CAPACITY];
@@ -160,6 +135,12 @@ typedef struct {
     GMutex last_preset_lock;
     char   last_good_preset[MILKDROP_PATH_MAX];
     _Atomic bool quarantine_all_failed;
+
+    /* restore-state: control thread writes path+paused under last_preset_lock,
+     * then sets the atomic flag; GL thread consumes on next render tick. */
+    char         restore_preset_path[MILKDROP_PATH_MAX];
+    bool         restore_preset_paused;
+    _Atomic bool restore_state_pending;
 
     /* Screenshot request — control thread writes path+flag, GL thread reads.
      * screenshot_path is guarded by screenshot_lock (same pattern as preset_dir_lock). */
