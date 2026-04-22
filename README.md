@@ -90,6 +90,31 @@ Helper scripts:
 ./tools/install.sh
 ./tools/uninstall.sh
 ./tools/reload.sh
+./tools/collect_issue_evidence.sh --since "30 minutes ago"
+```
+
+## Collect Runtime Evidence
+
+When the extension or renderer is failing in-session, collect a bounded evidence bundle before changing code:
+
+```bash
+./tools/collect_issue_evidence.sh --since "30 minutes ago" --core-limit 5
+```
+
+The script writes a timestamped bundle under `logs/` with:
+
+- environment and GSettings snapshot
+- recent `journalctl --user` output
+- filtered Milkdrop and GNOME Shell excerpts
+- `coredumpctl list milkdrop` output
+- detailed `coredumpctl info` files for the newest matching crashes
+
+Useful variants:
+
+```bash
+./tools/collect_issue_evidence.sh --boot
+./tools/collect_issue_evidence.sh --since "2 hours ago" --core-limit 10
+./tools/collect_issue_evidence.sh --output-dir ./logs/manual-capture
 ```
 
 ## Test

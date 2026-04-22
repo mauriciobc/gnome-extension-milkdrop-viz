@@ -1,187 +1,168 @@
-# AGENTS.md — gnome-extension-milkdrop-viz
+# AGENTS.md - gnome-extension-milkdrop-viz
 
-## Architecture
+## Purpose
 
-Two-process model:
-- **C renderer** (`src/`): PipeWire audio capture, ring buffer, projectM rendering, control socket
-- **GJS extension** (`extension/`): GNOME Shell lifecycle, process supervision, settings routing, compositor anchoring
+This file is the canonical quick-start for AI coding agents in this repository.
+Keep it short, actionable, and linked to canonical docs instead of duplicating them.
 
-Strict boundaries: no OpenGL/projectM calls outside the render thread; no per-frame IPC in steady state; no heavy rendering in the Shell process.
+## Core Architecture
 
-## Project Structure
+Two-process model (must be preserved):
+- C renderer in [src](src): PipeWire capture, lock-free ring buffer, SDL2 offscreen + projectM rendering, Unix control socket (line-based JSON protocol).
+- GJS extension in [extension/milkdrop@mauriciobc.github.io](extension/milkdrop@mauriciobc.github.io): GNOME Shell lifecycle, background injection via `Meta.WaylandClient`, process supervision per monitor, settings routing, compositor anchoring.
 
-```
-src/                          # C renderer (GTK4 + GLArea + libprojectM)
-  app.h                       # Shared types: AppData, AudioRing, inline ring buffer ops
-  main.c                      # GTK app lifecycle, GLArea callbacks, window management
-  audio.c                     # PipeWire audio capture (optional, feature-flagged)
-  control.c                   # Unix socket control protocol (opacity, shuffle, preset-dir)
-  presets.c                   # Preset directory scanning and cycling
-extension/milkdrop@mauriciobc.github.io/
-  extension.js                # GNOME Shell extension (imports local ESM modules)
-  constants.js                # Retry backoff constants (shared)
-  controlClient.js            # Unix control socket client helpers
-  prefs.js                    # Adw preferences UI
-  metadata.json               # Extension metadata (shell-version, uuid)
-data/                         # GSettings schema XML
-tests/                        # C unit tests, Python scaffold validation, bash integration tests
-reference_codebases/          # Read-only reference material (cava, hanabi, projectM vendor)
-tools/                        # install.sh, uninstall.sh, reload.sh
-docs/research/                # Canonical deep-dive documents for architecture decisions
-```
+Target GNOME Shell: 47, 48, 49, 50. Wayland only.
 
-## Build Commands
+Non-negotiable invariants:
+- No OpenGL or projectM calls outside the renderer GL thread.
+- No per-frame IPC in steady state.
+- No heavy rendering work in GNOME Shell process.
+- Control thread communicates with GL thread only via atomic flags.
+
+## Architecture Evolution Notes
+
+The codebase has evolved beyond the original PRD spec:
+- **SDL2 offscreen renderer**: projectM now renders to an SDL2 GL context, then blits to GtkPicture via CPU readback. See [docs/research/14-renderer-sdl2-offscreen-architecture.md](docs/research/14-renderer-sdl2-offscreen-architecture.md) and [src/offscreen_renderer.c](src/offscreen_renderer.c).
+- **Line-based control protocol**: The socket uses line-delimited JSON commands (not the binary protocol from the PRD). See [src/control.c](src/control.c).
+- **Background injection**: The extension uses `Meta.WaylandClient` and background actor injection for wallpaper anchoring, not simple Clutter reparenting. See [extension/milkdrop@mauriciobc.github.io/extension.js](extension/milkdrop@mauriciobc.github.io/extension.js).
+- **Multi-monitor**: `all-monitors` GSettings key spawns one renderer instance per monitor.
+- **Modular extension**: Split into `controlClient.js`, `managedWindow.js`, `pausePolicy.js`, `mprisWatcher.js`, `constants.js`.
+
+## Build And Test
+
+Primary commands:
 
 ```bash
-# Initial setup
 meson setup build
-
-# Compile
 meson compile -C build
-
-# Reconfigure (after meson.build changes)
-meson setup --reconfigure build
-
-# Install
-meson install -C build
-
-# Optional feature flags
-meson setup build -Dprojectm=disabled   # build without libprojectM
-meson setup build -Dpipewire=disabled   # build without PipeWire
-meson setup build -Dshell-integration-tests=true   # register nested GNOME Shell test (see below)
+meson test -C build
 ```
 
-## Test Commands
+Reconfigure after Meson option changes:
 
 ```bash
-# Run all tests (default: no nested Shell integration test)
-meson test -C build
+meson setup --reconfigure build
+```
 
-# Enable compositor integration test when configuring the build (requires extension +
-# renderer installed under ~/.local, see tests/test_compositor_behavior.sh)
-meson setup --reconfigure build -Dshell-integration-tests=true
-meson test -C build compositor-behavior-integration
+Useful configuration flags:
 
-# Run compositor checks without spawning nested gnome-shell (static assertions only)
-./tests/test_compositor_behavior.sh --static-only
+```bash
+meson setup build -Dprojectm=disabled
+meson setup build -Dpipewire=disabled
+meson setup build -Dshell-integration-tests=true
+```
 
-# Run a single test
-meson test -C build ring-buffer
-meson test -C build backends
-meson test -C build control-protocol
-meson test -C build presets
-meson test -C build scaffold-validation
+Focused test runs:
 
-# Run a single test with verbose output
+```bash
+meson test -C build control-protocol --print-errorlogs --verbose
+meson test -C build offscreen-renderer --print-errorlogs --verbose
 meson test -C build ring-buffer --print-errorlogs --verbose
 ```
 
-Test files: `tests/test_ring_buffer.c`, `tests/test_backends.c`, `tests/test_control_protocol.c`, `tests/test_presets.c`, `tests/validate_scaffold.py`, `tests/test_compositor_behavior.sh`
+Environment notes:
+- Display-dependent tests require DISPLAY.
+- Tests touching control sockets should use MILKDROP_TEST_ISOLATE_SOCKET=1.
+- Shell integration test requires -Dshell-integration-tests=true and local install state.
+- `gtk-glarea-projectm`, `gdk-glcontext-projectm`, and `offscreen-renderer` run with `is_parallel: false` — some drivers leave GL state that breaks subsequent test readback.
 
-C tests use GLib test framework (`g_test_init`, `g_test_add_func`, `g_assert_*` macros). Python tests validate extension scaffold integrity (metadata, schema, scripts). Bash integration tests are only registered when `-Dshell-integration-tests=true`.
-
-## Renderer debugging
-
-The `milkdrop` binary logs sparingly by default. Use **`milkdrop --verbose`** for GL init, resize, and periodic tick diagnostics. Log domain is **`milkdrop`** (`G_MESSAGES_DEBUG` applies to `g_debug` if used).
-
-## Tools Scripts
+## Install And Debug
 
 ```bash
-tools/install.sh     # Install the extension
-tools/uninstall.sh   # Remove the extension
-tools/reload.sh      # Restart GNOME Shell extension
+meson install -C build
+./tools/install.sh        # build + install to ~/.local
+./tools/uninstall.sh
+./tools/reload.sh         # disable + enable extension
 ```
 
-## Test Details
+Collect runtime evidence when debugging in-session failures:
 
-- **C unit tests** (`tests/test_*.c`): Use GLib test framework (`g_test_init`, `g_test_add_func`, `g_assert_*` macros). Each test file is compiled as a standalone executable linked against GLib/GTK.
-- **Python scaffold validation** (`tests/validate_scaffold.py`): Checks metadata.json UUID/shell-version, GSettings schema keys/types/ranges, extension class declaration, prefs.js structure, and tool script executability/shebangs.
-- **Bash integration tests** (`tests/test_compositor_behavior.sh`): Validates compositor-level integration behavior (run with `--integration` flag, 180s timeout).
+```bash
+./tools/collect_issue_evidence.sh --since "30 minutes ago" --core-limit 5
+```
 
-## Data & Schema
+## Critical Renderer Rules
 
-- GSettings schema: `data/org.gnome.shell.extensions.milkdrop.gschema.xml`
-- Schema ID: `org.gnome.shell.extensions.milkdrop`
-- Keys: `enabled` (b), `monitor` (i), `opacity` (d, range 0.0–1.0), `preset-dir` (s), `shuffle` (b), `overlay` (b)
+When touching projectM or GL code in [src/main.c](src/main.c) and [src/offscreen_renderer.c](src/offscreen_renderer.c):
+- Call glFinish immediately after projectm_opengl_render_frame_fbo to synchronize multi-pass blur.
+- Restore GL state before returning from the frame wind-down path (program, texture, active texture, blend/depth/stencil/scissor).
+- Keep projectM lifecycle calls on the SDL2 GL context only (make_current in init, begin_frame at render time, shutdown cleanup).
 
-## C Code Style
+See canonical details in [docs/research/13-projectm-integration-compliance.md](docs/research/13-projectm-integration-compliance.md).
 
-- **Standard**: C11 (`-D_GNU_SOURCE`, `-std=c11`, warning level 2)
-- **Headers**: `#pragma once` for header guards; one `.h` per `.c` module; shared types in `app.h`
-- **Includes**: project headers first (`#include "module.h"`), then system/GLib/GTK headers, then conditional feature headers (`#if HAVE_PROJECTM`)
-- **Naming**: `snake_case` for functions/variables; `PascalCase` for types/structs; `UPPER_SNAKE_CASE` for macros/constants
-- **Functions**: return type on separate line from function name; each parameter on its own line when multiple; `static` for file-local functions
-- **Error handling**: return `bool`/`gboolean` for success/failure; use `g_warning()` for non-fatal errors; use `goto fail` pattern for cleanup in init functions; log with `g_message()` for informational events
-- **Null guards**: early return on NULL input; use `g_clear_pointer()` / `g_free()` for cleanup
-- **Feature flags**: wrap optional deps in `#if HAVE_PIPEWIRE` / `#if HAVE_PROJECTM` blocks; provide `(void)var;` stubs for unused params when features are disabled
-- **Threading**: use `_Atomic` types and `atomic_load`/`atomic_store` for shared state; `GMutex` for non-atomic shared data; `_Atomic` fields in `AppData` for cross-thread flags
-- **Memory**: prefer GLib allocators (`g_new0`, `g_strdup`, `g_free`); pair every alloc with a clear free path; zero-init structs with `{0}`
-- **Ring buffer**: lock-free single-producer/single-consumer; use `memory_order_relaxed` for index loads, `memory_order_acquire`/`memory_order_release` for synchronization
+## GSettings
 
-## GJS Code Style
+Schema: `org.gnome.shell.extensions.milkdrop`
 
-- **Imports**: GI imports first (`gi://Gio`), then shell resources (`resource:///org/gnome/shell/...`), then extension base class
-- **Class**: single `export default class MilkdropExtension extends Extension`
-- **Naming**: `camelCase` for methods/properties; `_` prefix for private members; `CONSTANT_CASE` for module-level constants
-- **Lifecycle**: `enable()` and `disable()` must be perfectly symmetric; track all signal IDs and source IDs; null out references in `disable()`
-- **Error handling**: wrap compositor/Shell API calls in `try/catch`; log with `log('[milkdrop] ...')` prefix
-- **No module-scope side effects**: all initialization happens in `enable()`
-- **InjectionManager**: use for Shell prototype overrides; always call `clear()` in `disable()`
-- **Process management**: spawn renderer via `Gio.SubprocessLauncher`; use `Meta.WaylandClient` on Wayland; implement exponential backoff retry with `GLib.timeout_add`
-- **Compositor overrides**: hide renderer from overview, alt-tab, dash, and window lists; inject clone into background actors (Hanabi pattern)
+Keys beyond the obvious: `preset-rotation-interval`, `fps`, `beat-sensitivity`, `hard-cut-enabled`, `hard-cut-sensitivity`, `hard-cut-duration`, `soft-cut-duration`, `all-monitors`, `pause-on-fullscreen`, `pause-on-maximized`, `media-aware`, `last-preset`, `was-paused`.
 
-## General Conventions
+Full schema in [data/org.gnome.shell.extensions.milkdrop.gschema.xml](data/org.gnome.shell.extensions.milkdrop.gschema.xml).
 
-- Treat `reference_codebases/` as read-only; do not modify unless explicitly asked
-- Keep patches small and reviewable; preserve documented architecture invariants
-- For GNOME extension lifecycle, follow GNOME Shell extension development best practices
-- Consult `PRD.md` for product constraints and `docs/research/` for deep technical dives
-- **ProjectM integration**: Follow compliance requirements documented in `docs/research/13-projectm-integration-compliance.md` and `docs/research/06-gtk4-glarea-projectm-integration.md`
-- Copilot instructions (`.github/copilot-instructions.md`): prefer small reviewable patches; preserve two-process architecture boundaries; consult research docs for design decisions; validate assumptions against docs before introducing build scripts
+## Conventions
 
-## ProjectM Integration Rules
+- Treat [reference_codebases](reference_codebases) as read-only.
+- Keep patches small and reviewable.
+- Preserve enable/disable symmetry in GJS extension lifecycle.
+- Avoid module-scope side effects in extension code.
+- Do not create `src/gl/`, `src/fft.c`, `src/expr.cpp`, or vendor directories — libprojectM replaces all of that.
+- Stale build dirs: `bundle_projectm_build_dir` is a deprecated meson option kept only so old build trees can reconfigure without errors.
 
-**Required reading**: `docs/research/13-projectm-integration-compliance.md` (comprehensive compliance audit), `docs/research/06-gtk4-glarea-projectm-integration.md` (GTK integration patterns)
+## Documentation Map
 
-**Critical requirements** (violations will cause rendering bugs):
+Start here, link instead of copying details:
+- Product and constraints: [PRD.md](PRD.md)
+- Research index: [docs/research](docs/research)
+- System architecture: [docs/research/02-system-architecture.md](docs/research/02-system-architecture.md)
+- GNOME Shell constraints: [docs/research/03-gnome-shell-and-mutter-context.md](docs/research/03-gnome-shell-and-mutter-context.md)
+- Extension lifecycle guidance: [docs/research/04-gnome-shell-extension-development.md](docs/research/04-gnome-shell-extension-development.md)
+- GTK4 GLArea and HiDPI: [docs/research/06-gtk4-glarea-projectm-integration.md](docs/research/06-gtk4-glarea-projectm-integration.md)
+- OpenGL/GLSL principles: [docs/research/07-opengl-glsl-and-rendering-principles.md](docs/research/07-opengl-glsl-and-rendering-principles.md)
+- PipeWire and ring buffer: [docs/research/08-pipewire-audio-ring-buffer-and-realtime.md](docs/research/08-pipewire-audio-ring-buffer-and-realtime.md)
+- Control protocol and runtime state: [docs/research/09-control-socket-settings-and-state.md](docs/research/09-control-socket-settings-and-state.md)
+- Testing and observability: [docs/research/11-testing-observability-and-performance.md](docs/research/11-testing-observability-and-performance.md)
+- SDL2 offscreen architecture: [docs/research/14-renderer-sdl2-offscreen-architecture.md](docs/research/14-renderer-sdl2-offscreen-architecture.md)
+- projectM compliance: [docs/research/13-projectm-integration-compliance.md](docs/research/13-projectm-integration-compliance.md)
+- EGL image / dmabuf / cross-context texture sharing: [docs/research/15-egl-dmabuf-cross-context-texture-sharing.md](docs/research/15-egl-dmabuf-cross-context-texture-sharing.md)
+- Meta.WaylandClient lifecycle and background injection: [docs/research/16-meta-wayland-client-lifecycle.md](docs/research/16-meta-wayland-client-lifecycle.md)
+- GNOME Shell 47–50 extension API changes: [docs/research/17-gnome-shell-47-50-extension-api-changes.md](docs/research/17-gnome-shell-47-50-extension-api-changes.md)
+- GNOME extension skill: [.github/skills/gnome-shell-extension-dev/SKILL.md](.github/skills/gnome-shell-extension-dev/SKILL.md)
 
-1. **GPU Synchronization** (`src/main.c:659-677`):
-   - MUST call `glFinish()` immediately after `projectm_opengl_render_frame_fbo()`
-   - Reason: Multi-pass blur effects execute asynchronously on GPU; without sync, framebuffer reads capture intermediate state
-   - Evidence: `reference_codebases/projectm/src/libprojectM/MilkdropPreset/BlurTexture.cpp:156-264` shows horizontal + vertical blur passes
+## Known Issues Fixed
 
-2. **GL State Restoration** (`src/main.c:694-713`):
-   - MUST restore all GL state before returning from render callback:
-     ```c
-     glUseProgram(0);
-     glBindTexture(GL_TEXTURE_2D, 0);
-     glActiveTexture(GL_TEXTURE0);
-     glDisable(GL_BLEND);
-     glDisable(GL_DEPTH_TEST);
-     glDisable(GL_STENCIL_TEST);
-     glDisable(GL_SCISSOR_TEST);
-     ```
-   - Reason: GTK's GLArea validates state; projectM modifies blend modes, texture bindings, shader programs
-   - Evidence: `reference_codebases/projectm/src/libprojectM/Renderer/CopyTexture.cpp:272-275` shows partial cleanup
+### Startup preset activation deferred until first render cycle
+Mesa's Gallium shader compiler dereferences NULL when `projectm_load_preset_file` is invoked before the first render cycle. This was caused by premature preset loading during startup. Fixed by deferring any preset load until `render_frame_counter > 0`, ensuring at least one `projectm_opengl_render_frame_fbo` call completes before the playlist is touched. The offscreen renderer also disables `GL_KHR_parallel_shader_compile` at init time to eliminate background compiler thread races.
 
-3. **GL Context Ownership**:
-   - ALL projectM calls MUST happen on GL thread with active GL context
-   - Allowed locations: `on_realize`, `on_render`, `on_unrealize` callbacks
-   - NEVER call projectM functions from control thread or outside GLArea lifecycle
+### Missing canonical window type setup (Shell 49+)
+The extension never called `window.hide_from_window_list()` or `window.set_type(Meta.WindowType.DESKTOP)`, causing Mutter to treat the renderer as a normal toplevel window. This produced "Buggy client" warnings and configure event races that destabilized the GL context. Fixed by adding canonical Shell 49+ window setup in `_anchorWindow()`. InjectionManager overrides are retained as fallback for Shell ≤48.
 
-4. **FBO Handling**:
-   - Use `gtk_gl_area_attach_buffers()` before rendering
-   - Query current FBO with `glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo)`
-   - Use `projectm_opengl_render_frame_fbo()` for non-zero FBOs (NOT `projectm_opengl_render_frame()`)
+### Non-canonical MetaContext reference
+Spawn code used `global.context` instead of the documented `global.display.get_context()`. Fixed to use the canonical API.
 
-5. **Frame Time**:
-   - Call `projectm_set_frame_time()` with monotonic seconds since first frame
-   - Use `g_get_monotonic_time()` for time source (NOT wall clock)
+### Insufficient GL sync before preset load
+`glFlush()` before `projectm_load_preset_file()` only submitted commands to the driver queue without waiting for completion. Mesa Gallium could still be in a partial FBO state when projectM started shader compilation. Fixed by replacing `glFlush()` with `glFinish()` to block until the FBO is fully ready. Performance impact is negligible — preset switches occur every 8-30 seconds, not per-frame.
 
-6. **Audio Data**:
-   - `projectm_pcm_add_float()` count parameter = **frame count** (interleaved sample pairs / 2)
-   - NOT total float count
+## Repository Layout
 
-**Verification**: All requirements verified against official SDL reference (`reference_codebases/projectm/src/sdl-test-ui/`) and internal implementation (`reference_codebases/projectm/src/libprojectM/`)
-
-**Audit status**: Last comprehensive compliance audit: 2025-04-11 (all issues resolved, production-ready)
+```
+milkdrop/
+├── meson.build
+├── meson_options.txt
+├── src/
+│   ├── app.h
+│   ├── main.c
+│   ├── audio.c/.h
+│   ├── control.c/.h
+│   ├── offscreen_renderer.c/.h
+│   ├── renderer.c/.h
+│   └── quarantine.c/.h
+├── extension/milkdrop@mauriciobc.github.io/
+│   ├── metadata.json
+│   ├── extension.js
+│   ├── prefs.js
+│   └── controlClient.js, managedWindow.js, pausePolicy.js, mprisWatcher.js, constants.js
+├── data/org.gnome.shell.extensions.milkdrop.gschema.xml
+└── tools/
+    ├── install.sh, uninstall.sh, reload.sh
+    ├── collect_issue_evidence.sh
+    └── run_controlled_projectm_fbo_test.sh
+```
