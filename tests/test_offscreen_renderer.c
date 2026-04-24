@@ -66,7 +66,8 @@ test_offscreen_render_and_readback(void)
     g_assert_cmpuint(b, <, 180);
     g_assert_cmpuint(a, >, 200);
 
-    g_free(pixels);
+    /* Do NOT free pixels: the buffer is reused by the renderer and freed
+     * when offscreen_renderer_free() is called. */
     offscreen_renderer_shutdown(renderer);
     offscreen_renderer_free(renderer);
 }
@@ -93,8 +94,8 @@ test_offscreen_resize_recreate_target(void)
     gsize stride = 0;
     g_assert_true(offscreen_renderer_read_rgba(renderer, &pixels, &len, &stride));
     g_assert_cmpuint(len, ==, 128u * 128u * 4u);
-    g_free(pixels);
 
+    /* Do NOT free pixels: the buffer is reused by the renderer. */
     offscreen_renderer_shutdown(renderer);
     offscreen_renderer_free(renderer);
 }

@@ -63,7 +63,7 @@ audio_reprobe_cb(gpointer user_data)
         return G_SOURCE_REMOVE;
 
     g_message("milkdrop: audio reprobe attempt %d/%d",
-              atomic_load(&d->audio_fail_count), AUDIO_MAX_RESTARTS);
+              atomic_load(&d->audio_recovery.fail_count), AUDIO_MAX_RESTARTS);
 
     /* Full teardown then reinit — runs on the GLib main loop, not PipeWire thread. */
     audio_cleanup(d);
@@ -97,13 +97,13 @@ on_stream_state_changed(void              *userdata,
             break;
 
         /* Only schedule one reprobe at a time. */
-        if (atomic_load(&d->audio_recovering))
+        if (atomic_load(&d->audio_recovery.recovering))
             break;
 
         audio_record_failure(d);
 
         if (audio_should_retry(d)) {
-            int delay_ms = audio_backoff_ms(atomic_load(&d->audio_fail_count));
+            int delay_ms = audio_backoff_ms(atomic_load(&d->audio_recovery.fail_count));
             g_timeout_add(delay_ms, audio_reprobe_cb, d);
         } else {
             g_warning("milkdrop: audio recovery budget exhausted after %d attempts",

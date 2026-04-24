@@ -31,6 +31,22 @@ function _isWayland() {
     return sessionType === 'wayland';
 }
 
+/* Map GSettings keys to control-socket command strings.
+ * Each value is a function(settings) → command string. */
+const SETTING_DISPATCH = {
+    'opacity':  s => `opacity ${s.get_double('opacity')}`,
+    'shuffle':  s => `shuffle ${s.get_boolean('shuffle') ? 'on' : 'off'}`,
+    'fps':      s => `fps ${s.get_int('fps')}`,
+    'overlay':  s => `overlay ${s.get_boolean('overlay') ? 'on' : 'off'}`,
+    'preset-dir': s => `preset-dir ${GLib.shell_quote(s.get_string('preset-dir'))}`,
+    'preset-rotation-interval': s => `rotation-interval ${s.get_int('preset-rotation-interval')}`,
+    'beat-sensitivity': s => `beat-sensitivity ${s.get_double('beat-sensitivity')}`,
+    'hard-cut-enabled': s => `hard-cut-enabled ${s.get_boolean('hard-cut-enabled') ? 'on' : 'off'}`,
+    'hard-cut-sensitivity': s => `hard-cut-sensitivity ${s.get_double('hard-cut-sensitivity')}`,
+    'hard-cut-duration': s => `hard-cut-duration ${s.get_double('hard-cut-duration')}`,
+    'soft-cut-duration': s => `soft-cut-duration ${s.get_double('soft-cut-duration')}`,
+};
+
 export default class MilkdropExtension extends Extension {
     constructor(metadata) {
         super(metadata);
@@ -283,7 +299,7 @@ export default class MilkdropExtension extends Extension {
         }
         // Clear debounced background reload if pending
         if (this._reloadBackgroundsSourceId > 0) {
-            GLib.source_remove(this._reloadBackgroundsSourceId);
+            this._safeRemoveSource(this._reloadBackgroundsSourceId);
             this._reloadBackgroundsSourceId = 0;
         }
         this._removeAllRetrySources();
@@ -349,14 +365,10 @@ export default class MilkdropExtension extends Extension {
     }
 
     _onSettingChanged(key) {
-        if (key === 'enabled')
-            return;
-
-        if (this._subprocesses.size === 0)
+        if (key === 'enabled' || this._subprocesses.size === 0)
             return;
 
         if (key === 'monitor') {
-            // Only restart if not in all-monitors mode
             if (!this._settings.get_boolean('all-monitors'))
                 this._syncEnabledState();
             return;
@@ -367,71 +379,9 @@ export default class MilkdropExtension extends Extension {
             return;
         }
 
-        if (key === 'opacity') {
-            const value = this._settings.get_double('opacity');
-            this._broadcastControlCommand(`opacity ${value}`);
-            return;
-        }
-
-        if (key === 'preset-dir') {
-            const path = this._settings.get_string('preset-dir');
-            this._broadcastControlCommand(`preset-dir ${GLib.shell_quote(path)}`);
-            return;
-        }
-
-        if (key === 'shuffle') {
-            const enabled = this._settings.get_boolean('shuffle');
-            this._broadcastControlCommand(`shuffle ${enabled ? 'on' : 'off'}`);
-            return;
-        }
-
-        if (key === 'fps') {
-            const value = this._settings.get_int('fps');
-            this._broadcastControlCommand(`fps ${value}`);
-            return;
-        }
-
-        if (key === 'overlay') {
-            const enabled = this._settings.get_boolean('overlay');
-            this._broadcastControlCommand(`overlay ${enabled ? 'on' : 'off'}`);
-            return;
-        }
-
-        if (key === 'preset-rotation-interval') {
-            const value = this._settings.get_int('preset-rotation-interval');
-            this._broadcastControlCommand(`rotation-interval ${value}`);
-            return;
-        }
-
-        if (key === 'beat-sensitivity') {
-            const value = this._settings.get_double('beat-sensitivity');
-            this._broadcastControlCommand(`beat-sensitivity ${value}`);
-            return;
-        }
-
-        if (key === 'hard-cut-enabled') {
-            const enabled = this._settings.get_boolean('hard-cut-enabled');
-            this._broadcastControlCommand(`hard-cut-enabled ${enabled ? 'on' : 'off'}`);
-            return;
-        }
-
-        if (key === 'hard-cut-sensitivity') {
-            const value = this._settings.get_double('hard-cut-sensitivity');
-            this._broadcastControlCommand(`hard-cut-sensitivity ${value}`);
-            return;
-        }
-
-        if (key === 'hard-cut-duration') {
-            const value = this._settings.get_double('hard-cut-duration');
-            this._broadcastControlCommand(`hard-cut-duration ${value}`);
-            return;
-        }
-
-        if (key === 'soft-cut-duration') {
-            const value = this._settings.get_double('soft-cut-duration');
-            this._broadcastControlCommand(`soft-cut-duration ${value}`);
-            return;
-        }
+        const cmd = SETTING_DISPATCH[key];
+        if (cmd)
+            this._broadcastControlCommand(cmd(this._settings));
     }
 
     _sendControlCommand(command, monitorIndex = 0) {
@@ -845,17 +795,14 @@ export default class MilkdropExtension extends Extension {
     _removeRetrySource(monitorIndex) {
         const sourceId = this._retrySourceIds.get(monitorIndex);
         if (sourceId) {
-            GLib.source_remove(sourceId);
+            this._safeRemoveSource(sourceId);
             this._retrySourceIds.delete(monitorIndex);
         }
     }
 
     _removeAllRetrySources() {
-        for (const sourceId of this._retrySourceIds.values()) {
-            try {
-                GLib.source_remove(sourceId);
-            } catch (_e) { /* ignore */ }
-        }
+        for (const sourceId of this._retrySourceIds.values())
+            this._safeRemoveSource(sourceId);
         this._retrySourceIds.clear();
     }
 
@@ -992,7 +939,7 @@ export default class MilkdropExtension extends Extension {
                         if (backgroundActor._milkdropWallpaper === wallpaper)
                             delete backgroundActor._milkdropWallpaper;
                         if (sourceId > 0) {
-                            GLib.source_remove(sourceId);
+                            thisRef._safeRemoveSource(sourceId);
                             thisRef._wallpaperSourceIds.delete(sourceId);
                             sourceId = 0;
                         }
@@ -1103,13 +1050,25 @@ export default class MilkdropExtension extends Extension {
     }
 
     /**
+     * Safely remove a GLib source, swallowing errors if the source
+     * was already removed or is invalid.
+     */
+    _safeRemoveSource(sourceId) {
+        if (!sourceId)
+            return;
+        try {
+            GLib.source_remove(sourceId);
+        } catch (_e) { /* ignore */ }
+    }
+
+    /**
      * Schedule a debounced background reload to prevent clone thrashing.
      * Multiple rapid calls (e.g., from monitors-changed) are coalesced into
      * a single reload after RELOAD_BACKGROUNDS_DEBOUNCE_MS quiet period.
      */
     _scheduleReloadBackgrounds() {
         if (this._reloadBackgroundsSourceId > 0) {
-            GLib.source_remove(this._reloadBackgroundsSourceId);
+            this._safeRemoveSource(this._reloadBackgroundsSourceId);
             this._reloadBackgroundsSourceId = 0;
         }
         this._reloadBackgroundsSourceId = GLib.timeout_add(
@@ -1145,13 +1104,8 @@ export default class MilkdropExtension extends Extension {
 
     _clearOverrides() {
         // Clear all wallpaper source IDs first
-        for (const sourceId of this._wallpaperSourceIds) {
-            try {
-                GLib.source_remove(sourceId);
-            } catch (e) {
-                log(`[milkdrop] Error removing wallpaper source: ${e}`);
-            }
-        }
+        for (const sourceId of this._wallpaperSourceIds)
+            this._safeRemoveSource(sourceId);
         this._wallpaperSourceIds.clear();
 
         // Destroy wallpaper widgets and their clones (Clutter.Clone will be cleaned up
@@ -1171,13 +1125,8 @@ export default class MilkdropExtension extends Extension {
     }
 
     _clearAnchorRetrySources() {
-        for (const id of this._anchorRetrySourceIds) {
-            try {
-                GLib.source_remove(id);
-            } catch (e) {
-                log(`[milkdrop] Error removing anchor retry source: ${e}`);
-            }
-        }
+        for (const id of this._anchorRetrySourceIds)
+            this._safeRemoveSource(id);
         this._anchorRetrySourceIds.clear();
     }
 

@@ -13,6 +13,8 @@ struct _OffscreenRenderer {
     int           width;
     int           height;
     gboolean      verbose;
+    guint8*       readback_buffer;
+    gsize         readback_buffer_size;
 };
 
 static gboolean sdl_video_ready = FALSE;
@@ -220,6 +222,8 @@ offscreen_renderer_shutdown(OffscreenRenderer* renderer)
         renderer->window = NULL;
     }
 
+    g_clear_pointer(&renderer->readback_buffer, g_free);
+    renderer->readback_buffer_size = 0;
     renderer->width = 0;
     renderer->height = 0;
 }
@@ -300,8 +304,8 @@ offscreen_renderer_read_rgba(OffscreenRenderer* renderer,
                              gsize*             out_len,
                              gsize*             out_stride)
 {
-    guint8* src = NULL;
-    guint8* dst = NULL;
+    guint8* pixels = NULL;
+    guint8* tmp = NULL;
     gsize stride = 0;
     gsize total = 0;
 
@@ -319,19 +323,24 @@ offscreen_renderer_read_rgba(OffscreenRenderer* renderer,
 
     stride = (gsize)renderer->width * 4u;
     total = stride * (gsize)renderer->height;
-    src = g_malloc(total);
-    dst = g_malloc(total);
-    if (!src || !dst) {
-        g_free(src);
-        g_free(dst);
-        return FALSE;
+
+    /* Reuse readback buffer when size matches; reduces per-frame allocation. */
+    if (renderer->readback_buffer && renderer->readback_buffer_size == total) {
+        pixels = renderer->readback_buffer;
+    } else {
+        g_clear_pointer(&renderer->readback_buffer, g_free);
+        renderer->readback_buffer_size = 0;
+        pixels = g_malloc(total);
+        if (!pixels) {
+            return FALSE;
+        }
+        renderer->readback_buffer = pixels;
+        renderer->readback_buffer_size = total;
     }
 
     /* Re-ensure our SDL2 GL context is current: projectm_opengl_render_frame_fbo
      * may call glXMakeCurrent or other context APIs that displace it. */
     if (!offscreen_renderer_make_current(renderer)) {
-        g_free(src);
-        g_free(dst);
         return FALSE;
     }
 
@@ -358,12 +367,14 @@ offscreen_renderer_read_rgba(OffscreenRenderer* renderer,
                       fbo_status, renderer->render_tex, renderer->render_fbo,
                       renderer->width, renderer->height);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            g_free(src);
-            g_free(dst);
             return FALSE;
         }
     }
-    while (glGetError() != GL_NO_ERROR) {} /* drain deferred errors */
+    /* Drain deferred errors with a safety limit to prevent infinite loops. */
+    for (int i = 0; i < 100; i++) {
+        if (glGetError() == GL_NO_ERROR)
+            break;
+    }
 
     if (renderer->verbose) {
         g_message("offscreen: pre-read bound FBO=%u, tex=%u, dims=%dx%d",
@@ -372,7 +383,7 @@ offscreen_renderer_read_rgba(OffscreenRenderer* renderer,
     }
 
     glReadPixels(0, 0, renderer->width, renderer->height,
-                 GL_RGBA, GL_UNSIGNED_BYTE, src);
+                 GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     {
         GLenum err = glGetError();
         if (err != GL_NO_ERROR) {
@@ -381,21 +392,27 @@ offscreen_renderer_read_rgba(OffscreenRenderer* renderer,
                       err, renderer->render_tex, renderer->render_fbo,
                       renderer->width, renderer->height);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            g_free(src);
-            g_free(dst);
             return FALSE;
         }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    for (int y = 0; y < renderer->height; y++) {
-        memcpy(dst + (gsize)y * stride,
-               src + (gsize)(renderer->height - 1 - y) * stride,
-               stride);
+    /* Flip Y in-place: OpenGL origin is bottom-left, GDK expects top-left.
+     * Swap rows pairwise using a temporary row buffer to avoid a second
+     * full-frame allocation. */
+    tmp = g_alloca(stride);
+    {
+        int half_height = renderer->height / 2;
+        for (int y = 0; y < half_height; y++) {
+            guint8* top = pixels + (gsize)y * stride;
+            guint8* bottom = pixels + (gsize)(renderer->height - 1 - y) * stride;
+            memcpy(tmp, top, stride);
+            memcpy(top, bottom, stride);
+            memcpy(bottom, tmp, stride);
+        }
     }
 
-    g_free(src);
-    *out_pixels = dst;
+    *out_pixels = pixels;
     *out_len = total;
     *out_stride = stride;
     return TRUE;
@@ -408,15 +425,12 @@ struct _OffscreenRenderer {
 };
 
 gboolean offscreen_renderer_preinit(void) { return FALSE; }
-void offscreen_renderer_global_shutdown(void) {}
-OffscreenRenderer* offscreen_renderer_new(void) { return g_new0(OffscreenRenderer, 1); }
+void offscreen_renderer_global_shutdown(void) { }
+OffscreenRenderer* offscreen_renderer_new(void) { return NULL; }
 void offscreen_renderer_free(OffscreenRenderer* renderer) { g_free(renderer); }
 gboolean offscreen_renderer_init(OffscreenRenderer* renderer, int width, int height, gboolean verbose)
 {
-    (void)renderer;
-    (void)width;
-    (void)height;
-    (void)verbose;
+    (void)renderer; (void)width; (void)height; (void)verbose;
     return FALSE;
 }
 void offscreen_renderer_shutdown(OffscreenRenderer* renderer) { (void)renderer; }
@@ -427,25 +441,18 @@ gboolean offscreen_renderer_make_current(OffscreenRenderer* renderer)
 }
 void* offscreen_renderer_gl_load_proc(const char* name, void* user_data)
 {
-    (void)name;
-    (void)user_data;
+    (void)name; (void)user_data;
     return NULL;
 }
 gboolean offscreen_renderer_begin_frame(OffscreenRenderer* renderer, int width, int height, uint32_t* out_fbo)
 {
-    (void)renderer;
-    (void)width;
-    (void)height;
-    (void)out_fbo;
+    (void)renderer; (void)width; (void)height; (void)out_fbo;
     return FALSE;
 }
 void offscreen_renderer_finish_gpu(OffscreenRenderer* renderer) { (void)renderer; }
 gboolean offscreen_renderer_read_rgba(OffscreenRenderer* renderer, guint8** out_pixels, gsize* out_len, gsize* out_stride)
 {
-    (void)renderer;
-    (void)out_pixels;
-    (void)out_len;
-    (void)out_stride;
+    (void)renderer; (void)out_pixels; (void)out_len; (void)out_stride;
     return FALSE;
 }
 

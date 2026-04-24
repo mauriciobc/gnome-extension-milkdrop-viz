@@ -11,11 +11,11 @@ quarantine_add(AppData *d, const char *path)
     if (!d || !path || path[0] == '\0')
         return;
 
-    int count = atomic_load(&d->quarantine_count);
+    int count = atomic_load(&d->quarantine.count);
 
     /* Ignore duplicates. */
     for (int i = 0; i < count; i++) {
-        if (strcmp(d->quarantine_list[i], path) == 0)
+        if (strcmp(d->quarantine.list[i], path) == 0)
             return;
     }
 
@@ -23,8 +23,8 @@ quarantine_add(AppData *d, const char *path)
     if (count >= MAX_QUARANTINE)
         return;
 
-    g_strlcpy(d->quarantine_list[count], path, MILKDROP_PATH_MAX);
-    atomic_store(&d->quarantine_count, count + 1);
+    g_strlcpy(d->quarantine.list[count], path, MILKDROP_PATH_MAX);
+    atomic_store(&d->quarantine.count, count + 1);
 }
 
 bool
@@ -33,9 +33,9 @@ quarantine_is_quarantined(const AppData *d, const char *path)
     if (!d || !path)
         return false;
 
-    int count = atomic_load(&d->quarantine_count);
+    int count = atomic_load(&d->quarantine.count);
     for (int i = 0; i < count; i++) {
-        if (strcmp(d->quarantine_list[i], path) == 0)
+        if (strcmp(d->quarantine.list[i], path) == 0)
             return true;
     }
     return false;
@@ -48,10 +48,10 @@ quarantine_record_failure(AppData *d, const char *path)
         return;
 
     quarantine_add(d, path);
-    d->consecutive_failures++;
+    d->quarantine.consecutive_failures++;
 
-    if (d->consecutive_failures >= QUARANTINE_FAILURE_THRESHOLD)
-        atomic_store(&d->quarantine_all_failed, true);
+    if (d->quarantine.consecutive_failures >= QUARANTINE_FAILURE_THRESHOLD)
+        atomic_store(&d->quarantine.all_failed, true);
 }
 
 void
@@ -60,12 +60,12 @@ quarantine_record_success(AppData *d, const char *path)
     if (!d)
         return;
 
-    d->consecutive_failures = 0;
-    atomic_store(&d->quarantine_all_failed, false);
+    d->quarantine.consecutive_failures = 0;
+    atomic_store(&d->quarantine.all_failed, false);
 
     if (path && path[0] != '\0') {
-        g_mutex_lock(&d->last_preset_lock);
-        g_strlcpy(d->last_good_preset, path, MILKDROP_PATH_MAX);
-        g_mutex_unlock(&d->last_preset_lock);
+        g_mutex_lock(&d->quarantine.last_preset_lock);
+        g_strlcpy(d->quarantine.last_good_preset, path, MILKDROP_PATH_MAX);
+        g_mutex_unlock(&d->quarantine.last_preset_lock);
     }
 }

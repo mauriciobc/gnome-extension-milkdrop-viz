@@ -80,20 +80,23 @@ parse_long_range(const char* value, long min, long max, long* out_parsed)
     return true;
 }
 
+/* Convenience: write an "ok …" response into the output buffer. */
+#define RESPOND_OK(msg) do { g_strlcpy(response, msg, response_size); } while (0)
+
 static gboolean
 control_apply_command(AppData* app_data, const ControlCommand* command, gchar* response, gsize response_size)
 {
     switch (command->type) {
     case CONTROL_CMD_STATUS: {
-        int audio_fails = atomic_load(&app_data->audio_fail_count);
+        int audio_fails = atomic_load(&app_data->audio_recovery.fail_count);
         const char *audio_status = (audio_fails == 0)                   ? "ok"
                                    : (audio_fails < AUDIO_MAX_RESTARTS) ? "recovering"
                                                                          : "failed";
         /* Snapshot last_good_preset under lock — it is written by the GL thread. */
         char preset_snapshot[MILKDROP_PATH_MAX];
-        g_mutex_lock(&app_data->last_preset_lock);
-        g_strlcpy(preset_snapshot, app_data->last_good_preset, sizeof(preset_snapshot));
-        g_mutex_unlock(&app_data->last_preset_lock);
+        g_mutex_lock(&app_data->quarantine.last_preset_lock);
+        g_strlcpy(preset_snapshot, app_data->quarantine.last_good_preset, sizeof(preset_snapshot));
+        g_mutex_unlock(&app_data->quarantine.last_preset_lock);
 
         g_snprintf(response,
                    response_size,
@@ -102,78 +105,51 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
                    atomic_load(&app_data->opacity),
                    atomic_load(&app_data->shuffle_runtime) ? 1 : 0,
                    atomic_load(&app_data->overlay_enabled) ? 1 : 0,
-                   atomic_load(&app_data->quarantine_count),
+                    atomic_load(&app_data->quarantine.count),
                    audio_status,
                    atomic_load(&app_data->fps_last),
                    preset_snapshot);
         return TRUE;
     }
     case CONTROL_CMD_OPACITY:
-        atomic_store(&app_data->opacity, command->opacity);
-        g_strlcpy(response, "ok opacity\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->opacity, command->opacity);                     RESPOND_OK("ok opacity\n");      return TRUE;
     case CONTROL_CMD_PAUSE:
-        atomic_store(&app_data->pause_audio, command->pause_enabled);
-        g_strlcpy(response, "ok pause\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->pause_audio, command->pause_enabled);            RESPOND_OK("ok pause\n");        return TRUE;
     case CONTROL_CMD_SHUFFLE:
-        atomic_store(&app_data->shuffle_runtime, command->bool_value);
-        g_strlcpy(response, "ok shuffle\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->shuffle_runtime, command->bool_value);           RESPOND_OK("ok shuffle\n");      return TRUE;
     case CONTROL_CMD_OVERLAY:
-        atomic_store(&app_data->overlay_enabled, command->bool_value);
-        g_strlcpy(response, "ok overlay\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->overlay_enabled, command->bool_value);           RESPOND_OK("ok overlay\n");      return TRUE;
     case CONTROL_CMD_PRESET_DIR:
         g_mutex_lock(&app_data->preset_dir_lock);
         g_strlcpy(app_data->pending_preset_dir, command->text_value, sizeof(app_data->pending_preset_dir));
         g_mutex_unlock(&app_data->preset_dir_lock);
-        atomic_store(&app_data->preset_dir_pending, true);
-        g_strlcpy(response, "ok preset-dir\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->preset_dir_pending, true);                       RESPOND_OK("ok preset-dir\n");  return TRUE;
     case CONTROL_CMD_NEXT_PRESET:
-        atomic_store(&app_data->next_preset_pending, true);
-        g_strlcpy(response, "ok next\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->next_preset_pending, true);                      RESPOND_OK("ok next\n");         return TRUE;
     case CONTROL_CMD_PREV_PRESET:
-        atomic_store(&app_data->prev_preset_pending, true);
-        g_strlcpy(response, "ok previous\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->prev_preset_pending, true);                      RESPOND_OK("ok previous\n");    return TRUE;
     case CONTROL_CMD_FPS:
-        atomic_store(&app_data->fps_runtime, command->int_value);
-        g_strlcpy(response, "ok fps\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->fps_runtime, command->int_value);                RESPOND_OK("ok fps\n");          return TRUE;
     case CONTROL_CMD_ROTATION_INTERVAL:
         atomic_store(&app_data->preset_rotation_interval, CLAMP(command->int_value, 5, 300));
-        g_strlcpy(response, "ok rotation-interval\n", response_size);
-        return TRUE;
+                                                                                 RESPOND_OK("ok rotation-interval\n"); return TRUE;
     case CONTROL_CMD_BEAT_SENSITIVITY:
-        atomic_store(&app_data->beat_sensitivity, command->float_value);
-        g_strlcpy(response, "ok beat-sensitivity\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->transitions.beat_sensitivity, command->float_value);         RESPOND_OK("ok beat-sensitivity\n");     return TRUE;
     case CONTROL_CMD_HARD_CUT_ENABLED:
-        atomic_store(&app_data->hard_cut_enabled, command->bool_value);
-        g_strlcpy(response, "ok hard-cut-enabled\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->transitions.hard_cut_enabled, command->bool_value);          RESPOND_OK("ok hard-cut-enabled\n");     return TRUE;
     case CONTROL_CMD_HARD_CUT_SENSITIVITY:
-        atomic_store(&app_data->hard_cut_sensitivity, command->float_value);
-        g_strlcpy(response, "ok hard-cut-sensitivity\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->transitions.hard_cut_sensitivity, command->float_value);     RESPOND_OK("ok hard-cut-sensitivity\n"); return TRUE;
     case CONTROL_CMD_HARD_CUT_DURATION:
-        atomic_store(&app_data->hard_cut_duration, command->double_value);
-        g_strlcpy(response, "ok hard-cut-duration\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->transitions.hard_cut_duration, command->double_value);       RESPOND_OK("ok hard-cut-duration\n");    return TRUE;
     case CONTROL_CMD_SOFT_CUT_DURATION:
-        atomic_store(&app_data->soft_cut_duration, command->double_value);
-        g_strlcpy(response, "ok soft-cut-duration\n", response_size);
-        return TRUE;
+        atomic_store(&app_data->transitions.soft_cut_duration, command->double_value);       RESPOND_OK("ok soft-cut-duration\n");    return TRUE;
     case CONTROL_CMD_SAVE_STATE: {
         /* Snapshot and JSON-escape last_good_preset under lock. */
         char preset_snapshot[MILKDROP_PATH_MAX];
         char escaped_preset[MILKDROP_PATH_MAX * 2];
-        g_mutex_lock(&app_data->last_preset_lock);
-        g_strlcpy(preset_snapshot, app_data->last_good_preset, sizeof(preset_snapshot));
-        g_mutex_unlock(&app_data->last_preset_lock);
+        g_mutex_lock(&app_data->quarantine.last_preset_lock);
+        g_strlcpy(preset_snapshot, app_data->quarantine.last_good_preset, sizeof(preset_snapshot));
+        g_mutex_unlock(&app_data->quarantine.last_preset_lock);
         control_json_escape(preset_snapshot[0] != '\0' ? preset_snapshot : "",
                             escaped_preset, sizeof(escaped_preset));
         g_snprintf(response,
@@ -187,28 +163,25 @@ control_apply_command(AppData* app_data, const ControlCommand* command, gchar* r
     }
     case CONTROL_CMD_RESTORE_STATE:
         if (command->text_value[0] != '\0') {
-            g_mutex_lock(&app_data->last_preset_lock);
+            g_mutex_lock(&app_data->quarantine.last_preset_lock);
             g_strlcpy(app_data->restore_preset_path, command->text_value,
                       sizeof(app_data->restore_preset_path));
             app_data->restore_preset_paused = command->int_value != 0;
-            g_mutex_unlock(&app_data->last_preset_lock);
+            g_mutex_unlock(&app_data->quarantine.last_preset_lock);
             atomic_store(&app_data->restore_state_pending, true);
         }
-        g_strlcpy(response, "ok restore-state\n", response_size);
-        return TRUE;
+        RESPOND_OK("ok restore-state\n"); return TRUE;
     case CONTROL_CMD_SCREENSHOT:
         /* Write path under lock; GL thread copies it out before use. */
-        g_mutex_lock(&app_data->screenshot_lock);
-        g_strlcpy(app_data->screenshot_path, command->screenshot_path,
-                  sizeof(app_data->screenshot_path));
-        g_mutex_unlock(&app_data->screenshot_lock);
-        atomic_store(&app_data->screenshot_requested, true);
-        g_strlcpy(response, "ok screenshot queued\n", response_size);
-        return TRUE;
+        g_mutex_lock(&app_data->screenshot.lock);
+        g_strlcpy(app_data->screenshot.path, command->screenshot_path,
+                  sizeof(app_data->screenshot.path));
+        g_mutex_unlock(&app_data->screenshot.lock);
+        atomic_store(&app_data->screenshot.requested, true);
+        RESPOND_OK("ok screenshot queued\n"); return TRUE;
     case CONTROL_CMD_NONE:
     default:
-        g_strlcpy(response, "err invalid\n", response_size);
-        return FALSE;
+        RESPOND_OK("err invalid\n"); return FALSE;
     }
 }
 
@@ -311,7 +284,6 @@ control_parse_command(const char* line, ControlCommand* out_command)
         double parsed = 0.0;
         if (!parse_double_range(argv[1], 0.0, 1.0, &parsed))
             return CONTROL_PARSE_INVALID;
-
         out_command->type = CONTROL_CMD_OPACITY;
         out_command->opacity = (float)parsed;
         return CONTROL_PARSE_OK;
@@ -327,25 +299,21 @@ control_parse_command(const char* line, ControlCommand* out_command)
         return CONTROL_PARSE_INVALID;
     }
 
-    if (g_strcmp0(argv[0], "shuffle") == 0 && argc == 2) {
-        bool enabled = false;
-        if (parse_on_off(argv[1], &enabled)) {
-            out_command->type = CONTROL_CMD_SHUFFLE;
-            out_command->bool_value = enabled;
-            return CONTROL_PARSE_OK;
-        }
-        return CONTROL_PARSE_INVALID;
+#define PARSE_ON_OFF(name, cmd, field)                                         \
+    if (g_strcmp0(argv[0], name) == 0 && argc == 2) {                          \
+        bool enabled = false;                                                  \
+        if (!parse_on_off(argv[1], &enabled))                                  \
+            return CONTROL_PARSE_INVALID;                                      \
+        out_command->type = cmd;                                               \
+        out_command->field = enabled;                                          \
+        return CONTROL_PARSE_OK;                                               \
     }
 
-    if (g_strcmp0(argv[0], "overlay") == 0 && argc == 2) {
-        bool enabled = false;
-        if (parse_on_off(argv[1], &enabled)) {
-            out_command->type = CONTROL_CMD_OVERLAY;
-            out_command->bool_value = enabled;
-            return CONTROL_PARSE_OK;
-        }
-        return CONTROL_PARSE_INVALID;
-    }
+    PARSE_ON_OFF("shuffle",           CONTROL_CMD_SHUFFLE,           bool_value);
+    PARSE_ON_OFF("overlay",           CONTROL_CMD_OVERLAY,           bool_value);
+    PARSE_ON_OFF("hard-cut-enabled",  CONTROL_CMD_HARD_CUT_ENABLED,  bool_value);
+
+#undef PARSE_ON_OFF
 
     if (g_strcmp0(argv[0], "preset-dir") == 0 && argc == 2) {
         if (argv[1][0] == '\0')
@@ -369,70 +337,37 @@ control_parse_command(const char* line, ControlCommand* out_command)
         return CONTROL_PARSE_OK;
     }
 
-    if (g_strcmp0(argv[0], "fps") == 0 && argc == 2) {
-        long parsed = 0;
-        if (!parse_long_range(argv[1], 10, 144, &parsed))
-            return CONTROL_PARSE_INVALID;
-
-        out_command->type = CONTROL_CMD_FPS;
-        out_command->int_value = (int)parsed;
-        return CONTROL_PARSE_OK;
+#define PARSE_LONG(name, cmd, field, min, max)                                 \
+    if (g_strcmp0(argv[0], name) == 0 && argc == 2) {                          \
+        long parsed = 0;                                                       \
+        if (!parse_long_range(argv[1], min, max, &parsed))                     \
+            return CONTROL_PARSE_INVALID;                                      \
+        out_command->type = cmd;                                               \
+        out_command->field = (int)parsed;                                      \
+        return CONTROL_PARSE_OK;                                               \
     }
 
-    if (g_strcmp0(argv[0], "rotation-interval") == 0 && argc == 2) {
-        long parsed = 0;
-        if (!parse_long_range(argv[1], 5, 300, &parsed))
-            return CONTROL_PARSE_INVALID;
+    PARSE_LONG("fps",               CONTROL_CMD_FPS,               int_value, 10, 144);
+    PARSE_LONG("rotation-interval", CONTROL_CMD_ROTATION_INTERVAL, int_value,  5, 300);
 
-        out_command->type = CONTROL_CMD_ROTATION_INTERVAL;
-        out_command->int_value = (int)parsed;
-        return CONTROL_PARSE_OK;
+#undef PARSE_LONG
+
+#define PARSE_DOUBLE(name, cmd, field, min, max, cast)                         \
+    if (g_strcmp0(argv[0], name) == 0 && argc == 2) {                          \
+        double parsed = 0.0;                                                   \
+        if (!parse_double_range(argv[1], min, max, &parsed))                   \
+            return CONTROL_PARSE_INVALID;                                      \
+        out_command->type = cmd;                                               \
+        out_command->field = (cast)parsed;                                     \
+        return CONTROL_PARSE_OK;                                               \
     }
 
-    if (g_strcmp0(argv[0], "beat-sensitivity") == 0 && argc == 2) {
-        double parsed = 0.0;
-        if (!parse_double_range(argv[1], 0.0, 5.0, &parsed))
-            return CONTROL_PARSE_INVALID;
-        out_command->type = CONTROL_CMD_BEAT_SENSITIVITY;
-        out_command->float_value = (float)parsed;
-        return CONTROL_PARSE_OK;
-    }
+    PARSE_DOUBLE("beat-sensitivity",     CONTROL_CMD_BEAT_SENSITIVITY,     float_value,  0.0,   5.0, float);
+    PARSE_DOUBLE("hard-cut-sensitivity", CONTROL_CMD_HARD_CUT_SENSITIVITY, float_value,  0.0,   5.0, float);
+    PARSE_DOUBLE("hard-cut-duration",    CONTROL_CMD_HARD_CUT_DURATION,    double_value, 1.0, 120.0, double);
+    PARSE_DOUBLE("soft-cut-duration",    CONTROL_CMD_SOFT_CUT_DURATION,    double_value, 1.0,  30.0, double);
 
-    if (g_strcmp0(argv[0], "hard-cut-enabled") == 0 && argc == 2) {
-        bool enabled = false;
-        if (!parse_on_off(argv[1], &enabled))
-            return CONTROL_PARSE_INVALID;
-        out_command->type = CONTROL_CMD_HARD_CUT_ENABLED;
-        out_command->bool_value = enabled;
-        return CONTROL_PARSE_OK;
-    }
-
-    if (g_strcmp0(argv[0], "hard-cut-sensitivity") == 0 && argc == 2) {
-        double parsed = 0.0;
-        if (!parse_double_range(argv[1], 0.0, 5.0, &parsed))
-            return CONTROL_PARSE_INVALID;
-        out_command->type = CONTROL_CMD_HARD_CUT_SENSITIVITY;
-        out_command->float_value = (float)parsed;
-        return CONTROL_PARSE_OK;
-    }
-
-    if (g_strcmp0(argv[0], "hard-cut-duration") == 0 && argc == 2) {
-        double parsed = 0.0;
-        if (!parse_double_range(argv[1], 1.0, 120.0, &parsed))
-            return CONTROL_PARSE_INVALID;
-        out_command->type = CONTROL_CMD_HARD_CUT_DURATION;
-        out_command->double_value = parsed;
-        return CONTROL_PARSE_OK;
-    }
-
-    if (g_strcmp0(argv[0], "soft-cut-duration") == 0 && argc == 2) {
-        double parsed = 0.0;
-        if (!parse_double_range(argv[1], 1.0, 30.0, &parsed))
-            return CONTROL_PARSE_INVALID;
-        out_command->type = CONTROL_CMD_SOFT_CUT_DURATION;
-        out_command->double_value = parsed;
-        return CONTROL_PARSE_OK;
-    }
+#undef PARSE_DOUBLE
 
     if (g_strcmp0(argv[0], "save-state") == 0 && argc == 1) {
         out_command->type = CONTROL_CMD_SAVE_STATE;

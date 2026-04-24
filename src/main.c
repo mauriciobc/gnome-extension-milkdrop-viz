@@ -73,7 +73,6 @@ milkdrop_projectm_log(const char*           message,
 {
     AppData* app_data = user_data;
     gboolean verbose  = app_data && app_data->verbose;
-    gboolean texture_fail = message && milkdrop_projectm_message_is_texture_failure(message);
 
     if (!message)
         return;
@@ -84,7 +83,8 @@ milkdrop_projectm_log(const char*           message,
         g_warning("milkdrop: projectM: %s", message);
     else if (level >= PROJECTM_LOG_LEVEL_WARN)
         g_warning("milkdrop: projectM: %s", message);
-    else if (texture_fail && level >= PROJECTM_LOG_LEVEL_INFO)
+    else if (level >= PROJECTM_LOG_LEVEL_INFO &&
+             milkdrop_projectm_message_is_texture_failure(message))
         g_warning("milkdrop: missing texture: %s", message);
     else if (verbose)
         g_message("milkdrop: projectM: %s", message);
@@ -102,6 +102,19 @@ milkdrop_unregister_projectm_logging(void)
 {
     projectm_set_log_callback(NULL, true, NULL);
 }
+
+/* Load an atomic setting, call the setter only when the value has changed,
+ * and cache the last-synced value.  Keeps the render loop free of per-frame
+ * API calls when nothing changed. */
+#define SYNC_ATOMIC(field, synced_field, setter_expr)              \
+    do {                                                           \
+        __typeof__(atomic_load(&app_data->field)) _cur =           \
+            atomic_load(&app_data->field);                         \
+        if (_cur != app_data->synced_field) {                      \
+            setter_expr;                                           \
+            app_data->synced_field = _cur;                         \
+        }                                                          \
+    } while (0)
 
 static void
 milkdrop_configure_texture_search_paths(AppData* app_data)
@@ -148,9 +161,9 @@ milkdrop_on_playlist_preset_switched(bool         is_hard_cut,
 
     char* filename = projectm_playlist_item(app_data->playlist, index);
     if (filename) {
-        g_mutex_lock(&app_data->last_preset_lock);
-        g_strlcpy(app_data->last_good_preset, filename, sizeof(app_data->last_good_preset));
-        g_mutex_unlock(&app_data->last_preset_lock);
+        g_mutex_lock(&app_data->quarantine.last_preset_lock);
+        g_strlcpy(app_data->quarantine.last_good_preset, filename, sizeof(app_data->quarantine.last_good_preset));
+        g_mutex_unlock(&app_data->quarantine.last_preset_lock);
         quarantine_record_success(app_data, filename);
         if (app_data->verbose)
             g_message("preset_switched: index=%u, filename=%s", index, filename);
@@ -177,9 +190,9 @@ milkdrop_on_playlist_preset_switch_failed(const char* preset_filename,
 
     quarantine_record_failure(app_data, preset_filename);
 
-    if (atomic_load(&app_data->quarantine_all_failed))
+    if (atomic_load(&app_data->quarantine.all_failed))
         g_warning("milkdrop: %d consecutive preset failures — playlist will retry",
-                  app_data->consecutive_failures);
+                  app_data->quarantine.consecutive_failures);
 }
 
 static void
@@ -226,23 +239,17 @@ milkdrop_try_init_projectm(AppData* app_data)
         return FALSE;
 
     if (!app_data->offscreen &&
-        !(app_data->offscreen = offscreen_renderer_new())) {
-        atomic_store(&app_data->projectm_init_aborted, true);
-        return FALSE;
-    }
+        !(app_data->offscreen = offscreen_renderer_new()))
+        goto fail;
 
     if (!offscreen_renderer_init(app_data->offscreen,
                                  MAX(app_data->render_width, 1),
                                  MAX(app_data->render_height, 1),
-                                 app_data->verbose)) {
-        atomic_store(&app_data->projectm_init_aborted, true);
-        return FALSE;
-    }
+                                 app_data->verbose))
+        goto fail;
 
-    if (!offscreen_renderer_make_current(app_data->offscreen)) {
-        atomic_store(&app_data->projectm_init_aborted, true);
-        return FALSE;
-    }
+    if (!offscreen_renderer_make_current(app_data->offscreen))
+        goto fail;
 
     milkdrop_register_projectm_logging(app_data);
 
@@ -256,9 +263,7 @@ milkdrop_try_init_projectm(AppData* app_data)
             g_warning("libprojectM failed to initialize (offscreen projectm_create returned NULL)");
             logged_create = TRUE;
         }
-        offscreen_renderer_shutdown(app_data->offscreen);
-        atomic_store(&app_data->projectm_init_aborted, true);
-        return FALSE;
+        goto fail;
     }
     if (app_data->verbose)
         g_message("projectm_create() succeeded");
@@ -266,11 +271,7 @@ milkdrop_try_init_projectm(AppData* app_data)
     app_data->playlist = projectm_playlist_create(app_data->projectm);
     if (!app_data->playlist) {
         g_warning("libprojectM: failed to create playlist manager");
-        projectm_destroy(app_data->projectm);
-        app_data->projectm = NULL;
-        offscreen_renderer_shutdown(app_data->offscreen);
-        atomic_store(&app_data->projectm_init_aborted, true);
-        return FALSE;
+        goto fail;
     }
 
     projectm_playlist_set_preset_switched_event_callback(app_data->playlist,
@@ -308,22 +309,41 @@ milkdrop_try_init_projectm(AppData* app_data)
     app_data->pcm_max_samples_per_channel = projectm_pcm_get_max_samples();
 
     projectm_set_beat_sensitivity(app_data->projectm,
-                                  atomic_load(&app_data->beat_sensitivity));
+                                  atomic_load(&app_data->transitions.beat_sensitivity));
     projectm_set_hard_cut_enabled(app_data->projectm,
-                                  atomic_load(&app_data->hard_cut_enabled));
+                                  atomic_load(&app_data->transitions.hard_cut_enabled));
     projectm_set_hard_cut_sensitivity(app_data->projectm,
-                                      atomic_load(&app_data->hard_cut_sensitivity));
+                                      atomic_load(&app_data->transitions.hard_cut_sensitivity));
     projectm_set_hard_cut_duration(app_data->projectm,
-                                   atomic_load(&app_data->hard_cut_duration));
+                                   atomic_load(&app_data->transitions.hard_cut_duration));
     projectm_set_soft_cut_duration(app_data->projectm,
-                                   atomic_load(&app_data->soft_cut_duration));
-    app_data->last_synced_beat_sensitivity     = atomic_load(&app_data->beat_sensitivity);
-    app_data->last_synced_hard_cut_enabled     = atomic_load(&app_data->hard_cut_enabled);
-    app_data->last_synced_hard_cut_sensitivity = atomic_load(&app_data->hard_cut_sensitivity);
-    app_data->last_synced_hard_cut_duration    = atomic_load(&app_data->hard_cut_duration);
-    app_data->last_synced_soft_cut_duration    = atomic_load(&app_data->soft_cut_duration);
+                                   atomic_load(&app_data->transitions.soft_cut_duration));
+    app_data->transitions.last_synced_beat_sensitivity     = atomic_load(&app_data->transitions.beat_sensitivity);
+    app_data->transitions.last_synced_hard_cut_enabled     = atomic_load(&app_data->transitions.hard_cut_enabled);
+    app_data->transitions.last_synced_hard_cut_sensitivity = atomic_load(&app_data->transitions.hard_cut_sensitivity);
+    app_data->transitions.last_synced_hard_cut_duration    = atomic_load(&app_data->transitions.hard_cut_duration);
+    app_data->transitions.last_synced_soft_cut_duration    = atomic_load(&app_data->transitions.soft_cut_duration);
 
     return TRUE;
+
+fail:
+    /* offscreen_renderer_shutdown is null-safe and zero-init-safe:
+     * it skips SDL_GL_MakeCurrent if gl_context is NULL, skips glDelete*
+     * if fbo/tex are 0, and only calls SDL_DestroyWindow if window exists.
+     * Calling it on a partially-initialized renderer is safe. */
+    if (app_data->playlist) {
+        projectm_playlist_destroy(app_data->playlist);
+        app_data->playlist = NULL;
+    }
+    if (app_data->projectm) {
+        projectm_destroy(app_data->projectm);
+        app_data->projectm = NULL;
+    }
+    if (app_data->offscreen) {
+        offscreen_renderer_shutdown(app_data->offscreen);
+    }
+    atomic_store(&app_data->projectm_init_aborted, true);
+    return FALSE;
 }
 #endif
 
@@ -434,6 +454,7 @@ milkdrop_save_screenshot_rgba(const char*   output_path,
                               gsize         stride)
 {
     FILE* f = NULL;
+    guint8* row_rgb = NULL;
 
     if (!output_path || !pixels || width <= 0 || height <= 0)
         return;
@@ -444,22 +465,34 @@ milkdrop_save_screenshot_rgba(const char*   output_path,
         return;
     }
 
-    fprintf(f, "P6\n%d %d\n255\n", width, height);
-    for (int y = 0; y < height; y++) {
-        const guint8* row = pixels + (gsize)y * stride;
-        for (int x = 0; x < width; x++) {
-            fwrite(row + (gsize)x * 4u, 1, 3, f);
-        }
+    row_rgb = g_malloc((gsize)width * 3u);
+    if (!row_rgb) {
+        fclose(f);
+        return;
     }
 
+    fprintf(f, "P6\n%d %d\n255\n", width, height);
+    for (int y = 0; y < height; y++) {
+        const guint8* row_rgba = pixels + (gsize)y * stride;
+        guint8* dst = row_rgb;
+        for (int x = 0; x < width; x++) {
+            dst[0] = row_rgba[x * 4u + 0];
+            dst[1] = row_rgba[x * 4u + 1];
+            dst[2] = row_rgba[x * 4u + 2];
+            dst += 3;
+        }
+        fwrite(row_rgb, 1, (gsize)width * 3u, f);
+    }
+
+    g_free(row_rgb);
     fclose(f);
 }
 
 static void
 milkdrop_publish_frame_to_picture(AppData* app_data,
-                                  guint8*  pixels,
-                                  gsize    len,
-                                  gsize    stride)
+                                  const guint8* pixels,
+                                  gsize          len,
+                                  gsize          stride)
 {
     GBytes* bytes = NULL;
     GdkTexture* texture = NULL;
@@ -467,7 +500,9 @@ milkdrop_publish_frame_to_picture(AppData* app_data,
     if (!app_data || !app_data->picture || !pixels || len == 0)
         return;
 
-    bytes = g_bytes_new_take(pixels, len);
+    /* Copy pixels: the readback buffer is reused by OffscreenRenderer.
+     * g_bytes_new() copies, g_bytes_new_take() would steal the buffer. */
+    bytes = g_bytes_new(pixels, len);
     texture = gdk_memory_texture_new(app_data->render_width,
                                      app_data->render_height,
                                      GDK_MEMORY_R8G8B8A8,
@@ -570,61 +605,26 @@ milkdrop_render_frame(AppData* app_data)
                                PROJECTM_STEREO);
     }
 
-    {
-        bool current_shuffle = atomic_load(&app_data->shuffle_runtime);
-        if (current_shuffle != app_data->last_synced_shuffle) {
-            projectm_playlist_set_shuffle(app_data->playlist, current_shuffle);
-            app_data->last_synced_shuffle = current_shuffle;
-        }
-    }
+    SYNC_ATOMIC(shuffle_runtime, last_synced_shuffle,
+                projectm_playlist_set_shuffle(app_data->playlist, _cur));
 
-    {
-        int current_interval = atomic_load(&app_data->preset_rotation_interval);
-        if (current_interval != app_data->last_synced_interval) {
-            projectm_set_preset_duration(app_data->projectm, (double)current_interval);
-            app_data->last_synced_interval = current_interval;
-        }
-    }
+    SYNC_ATOMIC(preset_rotation_interval, last_synced_interval,
+                projectm_set_preset_duration(app_data->projectm, (double)_cur));
 
-    {
-        float cur = atomic_load(&app_data->beat_sensitivity);
-        if (cur != app_data->last_synced_beat_sensitivity) {
-            projectm_set_beat_sensitivity(app_data->projectm, cur);
-            app_data->last_synced_beat_sensitivity = cur;
-        }
-    }
+    SYNC_ATOMIC(transitions.beat_sensitivity, transitions.last_synced_beat_sensitivity,
+                projectm_set_beat_sensitivity(app_data->projectm, _cur));
 
-    {
-        bool cur = atomic_load(&app_data->hard_cut_enabled);
-        if (cur != app_data->last_synced_hard_cut_enabled) {
-            projectm_set_hard_cut_enabled(app_data->projectm, cur);
-            app_data->last_synced_hard_cut_enabled = cur;
-        }
-    }
+    SYNC_ATOMIC(transitions.hard_cut_enabled, transitions.last_synced_hard_cut_enabled,
+                projectm_set_hard_cut_enabled(app_data->projectm, _cur));
 
-    {
-        float cur = atomic_load(&app_data->hard_cut_sensitivity);
-        if (cur != app_data->last_synced_hard_cut_sensitivity) {
-            projectm_set_hard_cut_sensitivity(app_data->projectm, cur);
-            app_data->last_synced_hard_cut_sensitivity = cur;
-        }
-    }
+    SYNC_ATOMIC(transitions.hard_cut_sensitivity, transitions.last_synced_hard_cut_sensitivity,
+                projectm_set_hard_cut_sensitivity(app_data->projectm, _cur));
 
-    {
-        double cur = atomic_load(&app_data->hard_cut_duration);
-        if (cur != app_data->last_synced_hard_cut_duration) {
-            projectm_set_hard_cut_duration(app_data->projectm, cur);
-            app_data->last_synced_hard_cut_duration = cur;
-        }
-    }
+    SYNC_ATOMIC(transitions.hard_cut_duration, transitions.last_synced_hard_cut_duration,
+                projectm_set_hard_cut_duration(app_data->projectm, _cur));
 
-    {
-        double cur = atomic_load(&app_data->soft_cut_duration);
-        if (cur != app_data->last_synced_soft_cut_duration) {
-            projectm_set_soft_cut_duration(app_data->projectm, cur);
-            app_data->last_synced_soft_cut_duration = cur;
-        }
-    }
+    SYNC_ATOMIC(transitions.soft_cut_duration, transitions.last_synced_soft_cut_duration,
+                projectm_set_soft_cut_duration(app_data->projectm, _cur));
 
     {
         (void)renderer_measure_render_fps(app_data, g_get_monotonic_time());
@@ -654,10 +654,10 @@ milkdrop_render_frame(AppData* app_data)
         atomic_exchange(&app_data->restore_state_pending, false)) {
         char restore_path[MILKDROP_PATH_MAX];
         bool restore_paused = false;
-        g_mutex_lock(&app_data->last_preset_lock);
+        g_mutex_lock(&app_data->quarantine.last_preset_lock);
         g_strlcpy(restore_path, app_data->restore_preset_path, sizeof(restore_path));
         restore_paused = app_data->restore_preset_paused;
-        g_mutex_unlock(&app_data->last_preset_lock);
+        g_mutex_unlock(&app_data->quarantine.last_preset_lock);
         if (restore_path[0] != '\0') {
             if (restore_paused)
                 atomic_store(&app_data->pause_audio, true);
@@ -682,15 +682,15 @@ milkdrop_render_frame(AppData* app_data)
         return TRUE;
     }
 
-    if (atomic_exchange(&app_data->screenshot_requested, false)) {
+    if (atomic_exchange(&app_data->screenshot.requested, false)) {
         char local_screenshot_path[MILKDROP_PATH_MAX];
 
-        g_mutex_lock(&app_data->screenshot_lock);
+        g_mutex_lock(&app_data->screenshot.lock);
         g_strlcpy(local_screenshot_path,
-                  app_data->screenshot_path,
+                  app_data->screenshot.path,
                   sizeof(local_screenshot_path));
-        app_data->screenshot_path[0] = '\0';
-        g_mutex_unlock(&app_data->screenshot_lock);
+        app_data->screenshot.path[0] = '\0';
+        g_mutex_unlock(&app_data->screenshot.lock);
 
         if (local_screenshot_path[0] != '\0') {
             milkdrop_save_screenshot_rgba(local_screenshot_path,
@@ -874,8 +874,8 @@ on_shutdown(GApplication* application, gpointer user_data)
     g_clear_pointer(&app_data->textures_dir, g_free);
     g_clear_pointer(&app_data->socket_path, g_free);
     g_mutex_clear(&app_data->preset_dir_lock);
-    g_mutex_clear(&app_data->screenshot_lock);
-    g_mutex_clear(&app_data->last_preset_lock);
+    g_mutex_clear(&app_data->screenshot.lock);
+    g_mutex_clear(&app_data->quarantine.last_preset_lock);
 }
 
 int
@@ -966,16 +966,16 @@ main(int argc, char** argv)
     app_data->fps_last_render_us = 0;
     app_data->last_synced_projectm_fps = -1;
     atomic_store(&app_data->preset_rotation_interval, CLAMP(preset_rotation_interval, 5, 300));
-    atomic_store(&app_data->beat_sensitivity, (float)CLAMP(beat_sensitivity_cli, 0.0, 5.0));
-    atomic_store(&app_data->hard_cut_enabled, (bool)hard_cut_enabled_cli);
-    atomic_store(&app_data->hard_cut_sensitivity, (float)CLAMP(hard_cut_sensitivity_cli, 0.0, 5.0));
-    atomic_store(&app_data->hard_cut_duration, CLAMP(hard_cut_duration_cli, 1.0, 120.0));
-    atomic_store(&app_data->soft_cut_duration, CLAMP(soft_cut_duration_cli, 1.0, 30.0));
+    atomic_store(&app_data->transitions.beat_sensitivity, (float)CLAMP(beat_sensitivity_cli, 0.0, 5.0));
+    atomic_store(&app_data->transitions.hard_cut_enabled, (bool)hard_cut_enabled_cli);
+    atomic_store(&app_data->transitions.hard_cut_sensitivity, (float)CLAMP(hard_cut_sensitivity_cli, 0.0, 5.0));
+    atomic_store(&app_data->transitions.hard_cut_duration, CLAMP(hard_cut_duration_cli, 1.0, 120.0));
+    atomic_store(&app_data->transitions.soft_cut_duration, CLAMP(soft_cut_duration_cli, 1.0, 30.0));
     atomic_store(&app_data->control_thread_running, false);
     app_data->control_fd = -1;
     app_data->control_thread = NULL;
-    g_mutex_init(&app_data->screenshot_lock);
-    g_mutex_init(&app_data->last_preset_lock);
+    g_mutex_init(&app_data->screenshot.lock);
+    g_mutex_init(&app_data->quarantine.last_preset_lock);
     app_data->pending_preset_dir[0] = '\0';
 
     GtkApplication* app = gtk_application_new(

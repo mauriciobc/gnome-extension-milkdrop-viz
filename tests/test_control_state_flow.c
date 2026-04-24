@@ -283,13 +283,13 @@ static void
 test_beat_sensitivity_command_updates_atomic(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.beat_sensitivity, 1.0f);
+    atomic_store(&app_data.transitions.beat_sensitivity, 1.0f);
 
     g_assert_true(control_init(&app_data));
 
     g_autofree gchar* resp = send_control_command(app_data.socket_path, "beat-sensitivity 2.5\n");
     g_assert_true(g_str_has_prefix(resp, "ok"));
-    g_assert_cmpfloat(atomic_load(&app_data.beat_sensitivity), ==, 2.5f);
+    g_assert_cmpfloat(    atomic_load(&app_data.transitions.beat_sensitivity), ==, 2.5f);
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
@@ -299,13 +299,13 @@ static void
 test_hard_cut_enabled_command_updates_atomic(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.hard_cut_enabled, false);
+    atomic_store(&app_data.transitions.hard_cut_enabled, false);
 
     g_assert_true(control_init(&app_data));
 
     g_autofree gchar* resp = send_control_command(app_data.socket_path, "hard-cut-enabled on\n");
     g_assert_true(g_str_has_prefix(resp, "ok"));
-    g_assert_true(atomic_load(&app_data.hard_cut_enabled));
+    g_assert_true(atomic_load(&app_data.transitions.hard_cut_enabled));
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
@@ -315,13 +315,13 @@ static void
 test_hard_cut_sensitivity_command_updates_atomic(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.hard_cut_sensitivity, 2.0f);
+    atomic_store(&app_data.transitions.hard_cut_sensitivity, 2.0f);
 
     g_assert_true(control_init(&app_data));
 
     g_autofree gchar* resp = send_control_command(app_data.socket_path, "hard-cut-sensitivity 3.0\n");
     g_assert_true(g_str_has_prefix(resp, "ok"));
-    g_assert_cmpfloat(atomic_load(&app_data.hard_cut_sensitivity), ==, 3.0f);
+    g_assert_cmpfloat(atomic_load(&app_data.transitions.hard_cut_sensitivity), ==, 3.0f);
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
@@ -331,13 +331,13 @@ static void
 test_hard_cut_duration_command_updates_atomic(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.hard_cut_duration, 20.0);
+    atomic_store(&app_data.transitions.hard_cut_duration, 20.0);
 
     g_assert_true(control_init(&app_data));
 
     g_autofree gchar* resp = send_control_command(app_data.socket_path, "hard-cut-duration 15.0\n");
     g_assert_true(g_str_has_prefix(resp, "ok"));
-    g_assert_cmpfloat(atomic_load(&app_data.hard_cut_duration), ==, 15.0);
+    g_assert_cmpfloat(atomic_load(&app_data.transitions.hard_cut_duration), ==, 15.0);
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);
@@ -347,13 +347,13 @@ static void
 test_soft_cut_duration_command_updates_atomic(void)
 {
     AppData app_data = {0};
-    atomic_store(&app_data.soft_cut_duration, 3.0);
+    atomic_store(&app_data.transitions.soft_cut_duration, 3.0);
 
     g_assert_true(control_init(&app_data));
 
     g_autofree gchar* resp = send_control_command(app_data.socket_path, "soft-cut-duration 5.0\n");
     g_assert_true(g_str_has_prefix(resp, "ok"));
-    g_assert_cmpfloat(atomic_load(&app_data.soft_cut_duration), ==, 5.0);
+    g_assert_cmpfloat(atomic_load(&app_data.transitions.soft_cut_duration), ==, 5.0);
 
     control_cleanup(&app_data);
     g_free(app_data.socket_path);

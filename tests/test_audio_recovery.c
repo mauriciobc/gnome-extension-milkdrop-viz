@@ -17,8 +17,8 @@ static void
 test_audio_fail_count_zero_on_init(void)
 {
     AppData d = {0};
-    g_assert_cmpint(atomic_load(&d.audio_fail_count), ==, 0);
-    g_assert_false(atomic_load(&d.audio_recovering));
+    g_assert_cmpint(atomic_load(&d.audio_recovery.fail_count), ==, 0);
+    g_assert_false(atomic_load(&d.audio_recovery.recovering));
 }
 
 static void
@@ -26,8 +26,8 @@ test_audio_fail_increments_on_failure(void)
 {
     AppData d = {0};
     audio_record_failure(&d);
-    g_assert_cmpint(atomic_load(&d.audio_fail_count), ==, 1);
-    g_assert_true(atomic_load(&d.audio_recovering));
+    g_assert_cmpint(atomic_load(&d.audio_recovery.fail_count), ==, 1);
+    g_assert_true(atomic_load(&d.audio_recovery.recovering));
 }
 
 static void
@@ -36,16 +36,16 @@ test_audio_fail_caps_at_max(void)
     AppData d = {0};
     for (int i = 0; i < AUDIO_MAX_RESTARTS + 10; i++)
         audio_record_failure(&d);
-    g_assert_cmpint(atomic_load(&d.audio_fail_count), ==, AUDIO_MAX_RESTARTS);
+    g_assert_cmpint(atomic_load(&d.audio_recovery.fail_count), ==, AUDIO_MAX_RESTARTS);
 }
 
 static void
 test_audio_recovering_flag_set_after_failure(void)
 {
     AppData d = {0};
-    g_assert_false(atomic_load(&d.audio_recovering));
+    g_assert_false(atomic_load(&d.audio_recovery.recovering));
     audio_record_failure(&d);
-    g_assert_true(atomic_load(&d.audio_recovering));
+    g_assert_true(atomic_load(&d.audio_recovery.recovering));
 }
 
 static void
@@ -55,8 +55,8 @@ test_audio_recovering_cleared_on_success(void)
     audio_record_failure(&d);
     audio_record_failure(&d);
     audio_record_success(&d);
-    g_assert_cmpint(atomic_load(&d.audio_fail_count), ==, 0);
-    g_assert_false(atomic_load(&d.audio_recovering));
+    g_assert_cmpint(atomic_load(&d.audio_recovery.fail_count), ==, 0);
+    g_assert_false(atomic_load(&d.audio_recovery.recovering));
 }
 
 static void
@@ -102,7 +102,7 @@ test_audio_success_after_max_resets_retry(void)
     /* A successful reconnect (e.g. user replaces device) clears the slate. */
     audio_record_success(&d);
     g_assert_true(audio_should_retry(&d));
-    g_assert_cmpint(atomic_load(&d.audio_fail_count), ==, 0);
+    g_assert_cmpint(atomic_load(&d.audio_recovery.fail_count), ==, 0);
 }
 
 static void

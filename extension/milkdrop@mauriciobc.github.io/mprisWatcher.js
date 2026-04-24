@@ -23,6 +23,8 @@ export class MprisWatcher {
         this._players = new Map();
         // busName → 'Playing' | 'Paused' | 'Stopped'
         this._states = new Map();
+        // Cached count of players in 'Playing' state — avoids array spread on every query.
+        this._playingCount = 0;
 
         this._nameChangedSubscriptionId = 0;
     }
@@ -85,12 +87,19 @@ export class MprisWatcher {
             Gio.DBus.session.signal_unsubscribe(subscriptionId);
         this._players.clear();
         this._states.clear();
+        this._playingCount = 0;
     }
 
     get isAnyPlaying() {
-        return [...this._states.values()].some(s => s === 'Playing');
+        return this._playingCount > 0;
     }
 
+    /**
+     * GJS serializes all D-Bus callbacks on the main loop. Both the
+     * PropertiesChanged signal handler and the async Get callback update
+     * this._states before reading wasPlaying, so whichever runs second
+     * sees the state written by the first and correctly skips the count.
+     */
     _addPlayer(busName) {
         if (this._players.has(busName))
             return;
@@ -109,6 +118,10 @@ export class MprisWatcher {
                     return;
                 if ('PlaybackStatus' in changedProps) {
                     const status = changedProps['PlaybackStatus'].deepUnpack();
+                    const wasPlaying = this._states.get(busName) === 'Playing';
+                    const isPlaying = status === 'Playing';
+                    if (wasPlaying !== isPlaying)
+                        this._playingCount += isPlaying ? 1 : -1;
                     this._states.set(busName, status);
                     this._onStateChange(this.isAnyPlaying);
                 }
@@ -138,6 +151,10 @@ export class MprisWatcher {
                 }
                 const [variant] = result.deepUnpack();
                 const status = variant.deepUnpack();
+                const wasPlaying = this._states.get(busName) === 'Playing';
+                const isPlaying = status === 'Playing';
+                if (wasPlaying !== isPlaying)
+                    this._playingCount += isPlaying ? 1 : -1;
                 this._states.set(busName, status);
                 this._onStateChange(this.isAnyPlaying);
             }
@@ -150,6 +167,8 @@ export class MprisWatcher {
             Gio.DBus.session.signal_unsubscribe(subscriptionId);
             this._players.delete(busName);
         }
+        if (this._states.get(busName) === 'Playing')
+            this._playingCount--;
         this._states.delete(busName);
         this._onStateChange(this.isAnyPlaying);
     }

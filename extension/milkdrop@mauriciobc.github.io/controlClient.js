@@ -47,20 +47,24 @@ export function getMilkdropSocketPath(monitorIndex = 0) {
     return `${runtimeDir}/milkdrop-${monitorIndex}.sock`;
 }
 
-export function sendMilkdropControlCommand(command, socketPath = null) {
-    const path = socketPath ?? getMilkdropSocketPath(0);
+function _sendOnce(command, path, onError) {
     const data = TEXT_ENCODER.encode(`${command}\n`);
-
     _connectUnixSocket(path, (connection, error) => {
         if (error) {
-            log(`[milkdrop] control connect failed (${command}): ${error.message}`);
+            onError(error);
             return;
         }
-
         _writeAllAndClose(connection, data, writeError => {
             if (writeError)
-                log(`[milkdrop] control write failed (${command}): ${writeError.message}`);
+                onError(writeError);
         });
+    });
+}
+
+export function sendMilkdropControlCommand(command, socketPath = null) {
+    const path = socketPath ?? getMilkdropSocketPath(0);
+    _sendOnce(command, path, err => {
+        log(`[milkdrop] control failed (${command}): ${err.message}`);
     });
 }
 
@@ -81,32 +85,21 @@ export function sendMilkdropControlCommandWithRetry(
     retryDelayMs = 200
 ) {
     const path = socketPath ?? getMilkdropSocketPath(0);
-    const data = TEXT_ENCODER.encode(`${command}\n`);
 
-    const attemptSend = (attempt) => {
-        _connectUnixSocket(path, (connection, error) => {
-            if (error) {
-                if (attempt < maxRetries) {
-                    // Silent retry after delay
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, retryDelayMs, () => {
-                        attemptSend(attempt + 1);
-                        return GLib.SOURCE_REMOVE;
-                    });
-                } else {
-                    // Final failure - log the error
-                    log(`[milkdrop] control connect failed after ${maxRetries} retries (${command}): ${error.message}`);
-                }
-                return;
+    const attempt = (n) => {
+        _sendOnce(command, path, err => {
+            if (n < maxRetries) {
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, retryDelayMs, () => {
+                    attempt(n + 1);
+                    return GLib.SOURCE_REMOVE;
+                });
+            } else {
+                log(`[milkdrop] control connect failed after ${maxRetries} retries (${command}): ${err.message}`);
             }
-
-            _writeAllAndClose(connection, data, writeError => {
-                if (writeError)
-                    log(`[milkdrop] control write failed (${command}): ${writeError.message}`);
-            });
         });
     };
 
-    attemptSend(0);
+    attempt(0);
 }
 
 /**

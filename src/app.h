@@ -37,12 +37,56 @@ typedef struct {
     atomic_uint read_index;
 } AudioRing;
 
+/* Transition / beat-detection settings (control thread writes, GL thread reads). */
+typedef struct {
+    _Atomic float  beat_sensitivity;       /* 0.0–5.0, default 1.0 */
+    _Atomic bool   hard_cut_enabled;       /* default false */
+    _Atomic float  hard_cut_sensitivity;   /* 0.0–5.0, default 2.0 */
+    _Atomic double hard_cut_duration;      /* 1.0–120.0 s, default 20.0 */
+    _Atomic double soft_cut_duration;      /* 1.0–30.0 s, default 3.0 */
+    /* Sync tracking — GL-thread-only */
+    float  last_synced_beat_sensitivity;
+    bool   last_synced_hard_cut_enabled;
+    float  last_synced_hard_cut_sensitivity;
+    double last_synced_hard_cut_duration;
+    double last_synced_soft_cut_duration;
+} TransitionState;
+
+/* Preset quarantine — mostly GL thread; quarantine_count and
+ * last_good_preset are also read by the control thread (status/save-state). */
+#define MAX_QUARANTINE 64
+#define QUARANTINE_FAILURE_THRESHOLD 5
+
+typedef struct {
+    char   list[MAX_QUARANTINE][MILKDROP_PATH_MAX];
+    _Atomic int  count;
+    int  consecutive_failures;
+    GMutex last_preset_lock;
+    char   last_good_preset[MILKDROP_PATH_MAX];
+    _Atomic bool all_failed;
+} PresetQuarantine;
+
+/* Screenshot request — control thread writes path+flag, GL thread reads. */
+typedef struct {
+    _Atomic bool requested;
+    GMutex lock;
+    char   path[MILKDROP_PATH_MAX];
+} ScreenshotState;
+
+/* Audio recovery state machine. */
+#define AUDIO_MAX_RESTARTS 5
+
+typedef struct {
+    _Atomic int  fail_count;
+    _Atomic bool recovering;
+} AudioRecoveryState;
+
 typedef struct {
     GtkApplication* app;
     GtkWindow* window;
     GtkPicture* picture;
     OffscreenRenderer* offscreen;
-    /** g_timeout_add: ~60 Hz; GdkFrameClock tick para de disparar com janela “parada” atrás. */
+    /** g_timeout_add: ~60 Hz; GdkFrameClock tick para de disparar com janela "parada" atrás. */
     guint render_pulse_source_id;
 
     projectm_handle projectm;
@@ -89,12 +133,9 @@ typedef struct {
     _Atomic float fps_last;
     /* Preset rotation interval in seconds (written by control thread, read by GL thread). */
     _Atomic int preset_rotation_interval;
-    /* Beat / transition settings — control thread writes, GL thread reads. */
-    _Atomic float  beat_sensitivity;       /* 0.0–5.0, default 1.0 */
-    _Atomic bool   hard_cut_enabled;       /* default false */
-    _Atomic float  hard_cut_sensitivity;   /* 0.0–5.0, default 2.0 */
-    _Atomic double hard_cut_duration;      /* 1.0–120.0 s, default 20.0 */
-    _Atomic double soft_cut_duration;      /* 1.0–30.0 s, default 3.0 */
+
+    TransitionState transitions;
+
     /* GL-thread-only fields for FPS tracking and timer rescheduling. */
     int    fps_applied;        /* last fps_runtime used for g_timeout interval; -1 until first pulse */
     gint64 fps_last_render_us; /* g_get_monotonic_time() of the previous rendered frame */
@@ -107,11 +148,6 @@ typedef struct {
     int   last_synced_render_width;
     int   last_synced_render_height;
     int   last_synced_projectm_fps;  /* last fps value sent to projectM via projectm_set_fps() */
-    float  last_synced_beat_sensitivity;
-    bool   last_synced_hard_cut_enabled;
-    float  last_synced_hard_cut_sensitivity;
-    double last_synced_hard_cut_duration;
-    double last_synced_soft_cut_duration;
     int   pulse_frame_count;  /* periodic pulse log counter */
     int   render_frame_counter; /* frames successfully rendered; guards projectm_load_preset_file warmup */
 
@@ -120,34 +156,18 @@ typedef struct {
     /* Cached result of projectm_pcm_get_max_samples(); 0 until projectM init. */
     unsigned int pcm_max_samples_per_channel;
 
-    /* Audio recovery state machine. */
-#define AUDIO_MAX_RESTARTS 5
-    _Atomic int  audio_fail_count;
-    _Atomic bool audio_recovering;
+    AudioRecoveryState audio_recovery;
 
-    /* Preset quarantine — mostly GL thread; quarantine_count and
-     * last_good_preset are also read by the control thread (status/save-state). */
-#define MAX_QUARANTINE 64
-#define QUARANTINE_FAILURE_THRESHOLD 5
-    char quarantine_list[MAX_QUARANTINE][MILKDROP_PATH_MAX];
-    _Atomic int  quarantine_count;
-    int  consecutive_failures;
-    GMutex last_preset_lock;
-    char   last_good_preset[MILKDROP_PATH_MAX];
-    _Atomic bool quarantine_all_failed;
+    PresetQuarantine quarantine;
 
-    /* restore-state: control thread writes path+paused under last_preset_lock,
+    /* restore-state: control thread writes path+paused under quarantine.last_preset_lock,
      * then sets the atomic flag; GL thread consumes on next render tick. */
     char         restore_preset_path[MILKDROP_PATH_MAX];
     bool         restore_preset_paused;
     _Atomic bool restore_state_pending;
 
-    /* Screenshot request — control thread writes path+flag, GL thread reads.
-     * screenshot_path is guarded by screenshot_lock (same pattern as preset_dir_lock). */
-    _Atomic bool screenshot_requested;
-    GMutex screenshot_lock;
-    char   screenshot_path[MILKDROP_PATH_MAX];
-    
+    ScreenshotState screenshot;
+
     gint64 pm_mono_origin_us;
 } AppData;
 
