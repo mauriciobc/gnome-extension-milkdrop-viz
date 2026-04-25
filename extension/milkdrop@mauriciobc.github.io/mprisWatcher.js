@@ -70,6 +70,7 @@ export class MprisWatcher {
         this._playingByBusName = new Map();   // busName -> boolean
         this._playingCount = 0;               // cached count for O(1) isAnyPlaying
         this._enabled = false;
+        this._hasEmittedInitialState = false;
     }
 
     enable() {
@@ -114,6 +115,7 @@ export class MprisWatcher {
             return;
 
         this._enabled = false;
+        this._hasEmittedInitialState = false;
 
         if (this._nameChangedSubscriptionId && this._connection) {
             try {
@@ -151,12 +153,15 @@ export class MprisWatcher {
     _onPlayingChanged(busName, playing, reason) {
         const previous = this.isAnyPlaying;
         this._setPlaying(busName, playing);
-        if (previous !== this.isAnyPlaying) {
+        const changed = previous !== this.isAnyPlaying;
+        if (changed || (reason === 'added' && !this._hasEmittedInitialState)) {
             if (_debugMpris()) {
                 const short = busName.replace(MPRIS_PREFIX, '');
-                log(`[milkdrop] MprisWatcher: isAnyPlaying ${previous} → ${this.isAnyPlaying} (${reason} ${short})`);
+                const transition = changed ? `${previous} → ${this.isAnyPlaying}` : `${this.isAnyPlaying} (initial)`;
+                log(`[milkdrop] MprisWatcher: isAnyPlaying ${transition} (${reason} ${short})`);
             }
             this._onStateChange(this.isAnyPlaying);
+            this._hasEmittedInitialState = true;
         }
     }
 
@@ -202,6 +207,13 @@ export class MprisWatcher {
                         const count = this._playerProxies.size + this._pendingInit.size;
                         if (_debugMpris())
                             log(`[milkdrop] MprisWatcher: enabled, ${count} player(s), isAnyPlaying=${this.isAnyPlaying}`);
+
+                        if (mprisNames.size === 0 && !this._hasEmittedInitialState) {
+                            if (_debugMpris())
+                                log('[milkdrop] MprisWatcher: no players found, emitting initial state isAnyPlaying=false');
+                            this._onStateChange(this.isAnyPlaying);
+                            this._hasEmittedInitialState = true;
+                        }
                     } catch (e) {
                         log(`[milkdrop] MprisWatcher: ListNames error: ${e.message}`);
                     }
