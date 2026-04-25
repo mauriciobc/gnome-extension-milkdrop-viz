@@ -173,6 +173,11 @@ offscreen_renderer_init(OffscreenRenderer* renderer,
         return FALSE;
     }
 
+    if (renderer->verbose) {
+        g_message("GL context: vendor=%s renderer=%s version=%s",
+                  glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION));
+    }
+
     /* Disable Mesa's parallel (background) shader compilation so that glFinish()
      * after every projectm_opengl_render_frame_fbo() is a hard synchronization
      * point.  Without this, Mesa's Gallium compiler threads continue running

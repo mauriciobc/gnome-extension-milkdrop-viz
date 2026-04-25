@@ -4,122 +4,145 @@
     <key name="enabled" type="b">
       <default>false</default>
       <summary>Enable the visualizer renderer</summary>
-      <description>When true, the extension will spawn and supervise the milkdrop renderer process.</description>
+      <description>When true, the extension will spawn and supervise the milkdrop renderer process</description>
     </key>
 
     <key name="monitor" type="i">
       <default>0</default>
       <summary>Monitor index</summary>
-      <description>Target monitor index passed to the renderer at startup.</description>
+      <description>Target monitor index passed to the renderer at startup</description>
     </key>
 
     <key name="opacity" type="d">
       <default>1.0</default>
       <range min="0.0" max="1.0"/>
       <summary>Renderer opacity</summary>
-      <description>Opacity forwarded to the renderer, from transparent to fully opaque.</description>
+      <description>Opacity forwarded to the renderer, from transparent to fully opaque</description>
     </key>
 
     <key name="preset-dir" type="s">
       <default>''</default>
       <summary>Preset directory</summary>
-      <description>Directory containing .milk presets.</description>
+      <description>Directory containing .milk presets</description>
     </key>
 
     <key name="shuffle" type="b">
       <default>false</default>
       <summary>Shuffle presets</summary>
-      <description>If true, preset selection should use random ordering when supported.</description>
+      <description>If true, preset selection should use random ordering when supported</description>
     </key>
 
     <key name="preset-rotation-interval" type="i">
       <default>30</default>
       <range min="5" max="300"/>
       <summary>Preset rotation interval</summary>
-      <description>Seconds before automatically switching to the next preset. Applied live via the control socket.</description>
+      <description>Seconds before automatically switching to the next preset. Applied live via the control socket</description>
     </key>
 
     <key name="overlay" type="b">
       <default>false</default>
       <summary>Overlay mode</summary>
-      <description>Passes --overlay to the renderer at startup and updates the control socket when changed. State is reflected in the control status command; additional visual behavior may be added later.</description>
+      <description>Passes --overlay to the renderer at startup and updates the control socket when changed. State is reflected in the control status command; additional visual behavior may be added later</description>
     </key>
 
     <key name="pause-on-fullscreen" type="b">
       <default>true</default>
       <summary>Pause when a fullscreen window is on the same monitor</summary>
-      <description>When true, the extension pauses the renderer whenever a fullscreen window covers the renderer's monitor.</description>
+      <description>When true, the extension pauses the renderer whenever a fullscreen window covers the renderer's monitor</description>
     </key>
 
     <key name="pause-on-maximized" type="b">
       <default>false</default>
       <summary>Pause when a maximized window is on the same monitor</summary>
-      <description>When true, the extension pauses the renderer whenever a maximized window covers the renderer's monitor.</description>
+      <description>When true, the extension pauses the renderer whenever a maximized window covers the renderer's monitor</description>
     </key>
 
     <key name="media-aware" type="b">
       <default>false</default>
       <summary>Pause when no media player is playing</summary>
-      <description>When true, the extension pauses the renderer whenever no MPRIS media player reports a Playing state.</description>
+      <description>When true, the extension pauses the renderer whenever no MPRIS media player reports a Playing state</description>
+    </key>
+
+    <key name="pause-on-empty-desktop" type="b">
+      <default>false</default>
+      <summary>Pause when other windows are present</summary>
+      <description>When true, pause the visualizer if any application windows exist on the active workspace (excluding docks, panels, desktop windows, and the renderer itself)</description>
+    </key>
+
+    <key name="stop-renderer-when-idle" type="b">
+      <default>false</default>
+      <summary>Stop renderer when idle</summary>
+      <description>When enabled together with media-aware mode, fully stops the renderer process when no media is playing to save CPU/GPU resources. The renderer is restarted automatically when playback resumes</description>
     </key>
 
     <key name="fps" type="i">
       <default>60</default>
       <range min="10" max="144"/>
       <summary>Target frame rate</summary>
-      <description>Target frames per second for the renderer. Changes are applied live via the control socket.</description>
+      <description>Target frames per second for the renderer. Changes are applied live via the control socket</description>
     </key>
 
     <key name="beat-sensitivity" type="d">
       <default>1.0</default>
       <range min="0.0" max="5.0"/>
       <summary>Beat sensitivity</summary>
-      <description>How strongly projectM reacts to beat detection. Applied live via the control socket.</description>
+      <description>How strongly projectM reacts to beat detection. Applied live via the control socket</description>
     </key>
 
     <key name="hard-cut-enabled" type="b">
       <default>false</default>
       <summary>Enable hard cuts</summary>
-      <description>When true, projectM performs abrupt preset transitions on strong beats.</description>
+      <description>When true, projectM performs abrupt preset transitions on strong beats</description>
     </key>
 
     <key name="hard-cut-sensitivity" type="d">
       <default>2.0</default>
       <range min="0.0" max="5.0"/>
       <summary>Hard cut sensitivity</summary>
-      <description>Beat strength required to trigger a hard cut. Only meaningful when hard cuts are enabled.</description>
+      <description>Beat strength required to trigger a hard cut. Only meaningful when hard cuts are enabled</description>
     </key>
 
     <key name="hard-cut-duration" type="d">
       <default>20.0</default>
       <range min="1.0" max="120.0"/>
       <summary>Hard cut duration</summary>
-      <description>Minimum seconds a preset must display before a hard cut is allowed. Applied live via the control socket.</description>
+      <description>Minimum seconds a preset must display before a hard cut is allowed. Applied live via the control socket</description>
     </key>
 
     <key name="soft-cut-duration" type="d">
       <default>3.0</default>
       <range min="1.0" max="30.0"/>
       <summary>Soft cut duration</summary>
-      <description>Duration in seconds for a smooth preset cross-fade transition. Applied live via the control socket.</description>
+      <description>Duration in seconds for a smooth preset cross-fade transition. Applied live via the control socket</description>
     </key>
 
     <key name="all-monitors" type="b">
       <default>false</default>
       <summary>Show visualizer on all connected monitors</summary>
-      <description>When true, the extension spawns one renderer instance per connected monitor instead of only the selected monitor.</description>
+      <description>When true, the extension spawns one renderer instance per connected monitor instead of only the selected monitor</description>
     </key>
 
     <key name="last-preset" type="s">
       <default>''</default>
       <summary>Last played preset</summary>
-      <description>Path to the last preset that was playing when the extension was disabled. Used to restore state on next enable.</description>
+      <description>Path to the last preset that was playing when the extension was disabled. Used to restore state on next enable</description>
     </key>
 
     <key name="was-paused" type="b">
       <default>false</default>
       <summary>Whether renderer was paused on exit</summary>
-      <description>True if the renderer was paused when the extension was disabled. Used to restore pause state on next enable.</description>
+      <description>True if the renderer was paused when the extension was disabled. Used to restore pause state on next enable</description>
+    </key>
+
+    <key name="gpu-profile" type="s">
+      <default>'default'</default>
+      <summary>GPU rendering profile</summary>
+      <description>
+        'default': Use the system's default GPU.
+        'dri-prime': Offload rendering to the discrete GPU via Mesa PRIME (DRI_PRIME=1).
+        'nvidia-optimus': Offload rendering to the NVIDIA GPU via proprietary driver PRIME.
+        Applied as environment variables when the renderer process is spawned
+      </description>
     </key>
   </schema>
 </schemalist>

@@ -12,7 +12,7 @@ import * as Workspace from 'resource:///org/gnome/shell/ui/workspace.js';
 import * as WorkspaceThumbnail from 'resource:///org/gnome/shell/ui/workspaceThumbnail.js';
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {RETRY_DELAYS_MS, RELOAD_BACKGROUNDS_DEBOUNCE_MS, CONTROL_SOCKET_RETRY_DELAY_MS, CONTROL_SOCKET_MAX_RETRIES} from './constants.js';
+import {RETRY_DELAYS_MS, RELOAD_BACKGROUNDS_DEBOUNCE_MS, CONTROL_SOCKET_RETRY_DELAY_MS, CONTROL_SOCKET_MAX_RETRIES, PAUSE_REASON_EMPTY_DESKTOP} from './constants.js';
 import {getMilkdropSocketPath, sendMilkdropControlCommand, sendMilkdropControlCommandsSequentially} from './controlClient.js';
 import {ManagedWindow} from './managedWindow.js';
 import {PausePolicy} from './pausePolicy.js';
@@ -33,6 +33,8 @@ function _isWayland() {
 
 /* Map GSettings keys to control-socket command strings.
  * Each value is a function(settings) → command string. */
+const MEDIA_FADE_MS = 400;
+
 const SETTING_DISPATCH = {
     'opacity':  s => `opacity ${s.get_double('opacity')}`,
     'shuffle':  s => `shuffle ${s.get_boolean('shuffle') ? 'on' : 'off'}`,
@@ -95,10 +97,17 @@ export default class MilkdropExtension extends Extension {
         this._pauseReasons = {
             fullscreen: false,
             maximized: false,
-            mpris: false
+            mpris: false,
+            emptydesktop: false
         };
         this._pausePolicies = new Map();      // monitorIndex -> PausePolicy
         this._mprisWatcher = null;
+        this._emptyDesktopSignalIds = [];     // { owner: GObject, id: number }[]
+
+        // Media overlay / stop-on-idle state
+        this._mediaOverlayVisible = true;
+        this._renderersStoppedForMedia = false;
+        this._mediaFadeSourceId = 0;
 
         // Debounce source for background reloads
         this._reloadBackgroundsSourceId = 0;
@@ -109,12 +118,24 @@ export default class MilkdropExtension extends Extension {
             log('[milkdrop] Cannot enable during disable transition');
             return;
         }
-        // Idempotent: re-entering during deferred startup is safe.
+        // Idempotent guard: already initialized.
+        if (this._settings) {
+            log('[milkdrop] enable() called while already initialized; skipping');
+            return;
+        }
         this._isEnabling = true;
 
         // Reset circuit breaker on fresh enable
         this._circuitBreakerOpen = false;
         this._consecutiveAbnormalDeaths = 0;
+
+        // Reset media overlay state for fresh enable
+        this._mediaOverlayVisible = true;
+        this._renderersStoppedForMedia = false;
+        if (this._mediaFadeSourceId) {
+            GLib.source_remove(this._mediaFadeSourceId);
+            this._mediaFadeSourceId = 0;
+        }
 
         this._settings = this.getSettings();
 
@@ -221,11 +242,12 @@ export default class MilkdropExtension extends Extension {
         // Aggregate: pause if ANY reason is active
         const shouldPause = this._pauseReasons.fullscreen ||
                            this._pauseReasons.maximized ||
-                           this._pauseReasons.mpris;
+                           this._pauseReasons.mpris ||
+                           this._pauseReasons.emptydesktop;
 
         this._broadcastControlCommand(`pause ${shouldPause ? 'on' : 'off'}`);
 
-        log(`[milkdrop] pause state: ${shouldPause ? 'on' : 'off'} (fullscreen:${this._pauseReasons.fullscreen}, maximized:${this._pauseReasons.maximized}, mpris:${this._pauseReasons.mpris})`);
+        log(`[milkdrop] pause state: ${shouldPause ? 'on' : 'off'} (fullscreen:${this._pauseReasons.fullscreen}, maximized:${this._pauseReasons.maximized}, mpris:${this._pauseReasons.mpris}, emptydesktop:${this._pauseReasons.emptydesktop})`);
     }
 
     /**
@@ -240,18 +262,22 @@ export default class MilkdropExtension extends Extension {
         if (mediaAware) {
             this._mprisWatcher = new MprisWatcher(isPlaying => {
                 this._setPauseReason('mpris', !isPlaying);
+                this._handleMediaPlaybackChanged(isPlaying);
             });
             this._mprisWatcher.enable();
         }
+
+        // Setup empty-desktop tracking if enabled
+        const pauseOnEmptyDesktop = this._settings.get_boolean('pause-on-empty-desktop');
+        if (pauseOnEmptyDesktop)
+            this._setupEmptyDesktopTracking();
 
         // Listen for settings changes to pause coordination
         this._settingsSignalIds.push(
             this._settings.connect('changed::pause-on-fullscreen', () => {
                 if (!this._settings.get_boolean('pause-on-fullscreen')) {
-                    // If disabled, clear the reason
                     this._setPauseReason('fullscreen', false);
                 } else {
-                    // Re-evaluate existing policies
                     for (const policy of this._pausePolicies.values())
                         policy.reEvaluate();
                 }
@@ -269,15 +295,193 @@ export default class MilkdropExtension extends Extension {
                 if (enabled && !this._mprisWatcher) {
                     this._mprisWatcher = new MprisWatcher(isPlaying => {
                         this._setPauseReason('mpris', !isPlaying);
+                        this._handleMediaPlaybackChanged(isPlaying);
                     });
                     this._mprisWatcher.enable();
                 } else if (!enabled && this._mprisWatcher) {
                     this._mprisWatcher.disable();
                     this._mprisWatcher = null;
                     this._setPauseReason('mpris', false);
+                    this._handleMediaPlaybackChanged(true);
+                }
+            }),
+            this._settings.connect('changed::pause-on-empty-desktop', () => {
+                const enabled = this._settings.get_boolean('pause-on-empty-desktop');
+                if (enabled && this._emptyDesktopSignalIds.length === 0) {
+                    this._setupEmptyDesktopTracking();
+                    this._evaluateEmptyDesktop();
+                } else if (!enabled && this._emptyDesktopSignalIds.length > 0) {
+                    this._teardownEmptyDesktopTracking();
+                    this._setPauseReason(PAUSE_REASON_EMPTY_DESKTOP, false);
+                }
+            }),
+            this._settings.connect('changed::stop-renderer-when-idle', () => {
+                const stopWhenIdle = this._settings.get_boolean('stop-renderer-when-idle');
+                if (!stopWhenIdle && this._renderersStoppedForMedia) {
+                    // Setting was disabled while renderers are stopped.
+                    // Spawn them back immediately.
+                    this._renderersStoppedForMedia = false;
+                    this._setMediaOverlayVisible(true);
+                    if (this._mediaFadeSourceId) {
+                        GLib.source_remove(this._mediaFadeSourceId);
+                        this._mediaFadeSourceId = 0;
+                    }
+                    this._syncEnabledState();
                 }
             })
         );
+    }
+
+    _setupEmptyDesktopTracking() {
+        // Track windows on the active workspace to detect when the
+        // desktop is not empty (user application windows are present).
+        // We skip DESKTOP, DOCK, skip-taskbar, minimized, and our own
+        // renderer windows.
+        this._emptyDesktopSignalIds.push(
+            { owner: global.window_manager, id: global.window_manager.connect('map', () => this._evaluateEmptyDesktop()) },
+            { owner: global.window_manager, id: global.window_manager.connect('destroy', () => this._evaluateEmptyDesktop()) },
+            { owner: global.window_manager, id: global.window_manager.connect('switch-to-workspace', () => this._evaluateEmptyDesktop()) },
+            { owner: global.display, id: global.display.connect('restacked', () => this._evaluateEmptyDesktop()) },
+            { owner: global.display, id: global.display.connect('notify::focus-window', () => this._evaluateEmptyDesktop()) }
+        );
+
+        this._evaluateEmptyDesktop();
+    }
+
+    _teardownEmptyDesktopTracking() {
+        for (const {owner, id} of this._emptyDesktopSignalIds) {
+            try {
+                owner.disconnect(id);
+            } catch (_e) {}
+        }
+        this._emptyDesktopSignalIds = [];
+    }
+
+    _evaluateEmptyDesktop() {
+        if (!this._settings?.get_boolean('pause-on-empty-desktop'))
+            return;
+
+        function isRenderer(metaWindow) {
+            if (!metaWindow)
+                return false;
+            if (typeof metaWindow.get_wm_class !== 'function')
+                return false;
+            if (metaWindow.get_wm_class() === 'milkdrop')
+                return true;
+            return metaWindow.title?.startsWith('@milkdrop!') ?? false;
+        }
+
+        let hasUserWindows = false;
+        try {
+            const workspace = global.workspace_manager.get_active_workspace();
+            if (!workspace)
+                return;
+            const windows = workspace.list_windows();
+            for (const w of windows) {
+                if (isRenderer(w))
+                    continue;
+                if (w.minimized)
+                    continue;
+                if (w.is_skip_taskbar?.())
+                    continue;
+                const wType = w.get_window_type?.();
+                if (wType === Meta.WindowType.DESKTOP ||
+                    wType === Meta.WindowType.DOCK)
+                    continue;
+                // Window is a normal application window — desktop is not empty.
+                hasUserWindows = true;
+                break;
+            }
+        } catch (_e) {
+            return;
+        }
+
+        this._setPauseReason(PAUSE_REASON_EMPTY_DESKTOP, hasUserWindows);
+    }
+
+    /**
+     * Handle media playback state changes for overlay visibility and
+     * optional renderer stop-on-idle (stop-renderer-when-idle setting).
+     *
+     * Called whenever MprisWatcher reports a playback state change.
+     * @param {boolean} isPlaying - true if any MPRIS player is playing
+     */
+    _handleMediaPlaybackChanged(isPlaying) {
+        if (!this._settings)
+            return;
+
+        const stopWhenIdle = this._settings.get_boolean('stop-renderer-when-idle');
+
+        if (isPlaying) {
+            if (stopWhenIdle)
+                this._setMediaOverlayVisible(true);
+            if (this._mediaFadeSourceId) {
+                GLib.source_remove(this._mediaFadeSourceId);
+                this._mediaFadeSourceId = 0;
+            }
+            if (this._renderersStoppedForMedia) {
+                this._renderersStoppedForMedia = false;
+                this._syncEnabledState();
+            }
+        } else {
+            if (stopWhenIdle) {
+                this._setMediaOverlayVisible(false);
+                if (this._subprocesses.size > 0) {
+                    this._renderersStoppedForMedia = false;
+                    this._scheduleMediaFadeStop();
+                }
+            }
+        }
+    }
+
+    _scheduleMediaFadeStop() {
+        if (this._mediaFadeSourceId)
+            GLib.source_remove(this._mediaFadeSourceId);
+
+        this._mediaFadeSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, MEDIA_FADE_MS + 50, () => {
+            this._mediaFadeSourceId = 0;
+            if (!this._settings)
+                return GLib.SOURCE_REMOVE;
+            const stopWhenIdle = this._settings.get_boolean('stop-renderer-when-idle');
+            if (!stopWhenIdle)
+                return GLib.SOURCE_REMOVE;
+            const isPlaying = this._mprisWatcher?.isAnyPlaying ?? true;
+            if (isPlaying)
+                return GLib.SOURCE_REMOVE;
+            // Stop all renderer processes to save resources.
+            for (const monitorIndex of Array.from(this._subprocesses.keys()))
+                this._stopProcess(monitorIndex);
+            this._renderersStoppedForMedia = true;
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * Fade all renderer window actors to visible or hidden.
+     * Uses opacity=0 (not visible=false) to keep Mutter texture updates
+     * flowing, which keeps Clutter.Clone instances alive in wallpaper widgets.
+     * @param {boolean} visible
+     */
+    _setMediaOverlayVisible(visible) {
+        if (this._mediaOverlayVisible === visible)
+            return;
+
+        this._mediaOverlayVisible = visible;
+        const targetOpacity = visible ? 255 : 0;
+        const mode = Clutter.AnimationMode.EASE_OUT_QUAD;
+
+        for (const managed of this._managedWindows.values()) {
+            try {
+                const actor = managed.window?.get_compositor_private?.();
+                if (!actor)
+                    continue;
+                actor.remove_all_transitions?.();
+                if (typeof actor.ease === 'function')
+                    actor.ease({ opacity: targetOpacity, duration: MEDIA_FADE_MS, mode });
+                else
+                    actor.opacity = targetOpacity;
+            } catch (_e) {}
+        }
     }
 
     disable() {
@@ -302,6 +506,10 @@ export default class MilkdropExtension extends Extension {
             this._safeRemoveSource(this._reloadBackgroundsSourceId);
             this._reloadBackgroundsSourceId = 0;
         }
+        if (this._mediaFadeSourceId) {
+            GLib.source_remove(this._mediaFadeSourceId);
+            this._mediaFadeSourceId = 0;
+        }
         this._removeAllRetrySources();
         this._clearAnchorRetrySources();
         this._disconnectWmSignals();
@@ -315,6 +523,9 @@ export default class MilkdropExtension extends Extension {
         for (const policy of this._pausePolicies.values())
             policy.disable();
         this._pausePolicies.clear();
+
+        // Tear down empty-desktop tracking
+        this._teardownEmptyDesktopTracking();
 
         // Disable MprisWatcher
         if (this._mprisWatcher) {
@@ -338,28 +549,35 @@ export default class MilkdropExtension extends Extension {
         const allMonitors = this._settings.get_boolean('all-monitors');
 
         if (!enabled) {
-            // Stop all renderers
             for (const monitorIndex of Array.from(this._subprocesses.keys()))
                 this._stopProcess(monitorIndex);
+            this._renderersStoppedForMedia = false;
+            return;
+        }
+
+        // Defer spawn when stop-renderer-when-idle is enabled and no media
+        // is playing. _handleMediaPlaybackChanged will spawn when playback starts.
+        const stopWhenIdle = this._settings.get_boolean('stop-renderer-when-idle');
+        const mediaAware = this._settings.get_boolean('media-aware');
+        if (stopWhenIdle && mediaAware && !(this._mprisWatcher?.isAnyPlaying ?? true)) {
+            this._renderersStoppedForMedia = true;
+            this._setMediaOverlayVisible(false);
             return;
         }
 
         const nMonitors = Main.layoutManager.monitors.length;
 
         if (allMonitors) {
-            // Spawn for all monitors
             for (let i = 0; i < nMonitors; i++)
                 this._spawnProcess(i);
         } else {
             const targetMonitor = this._settings.get_int('monitor');
 
-            // Stop monitors that are not the target
             for (const monitorIndex of this._subprocesses.keys()) {
                 if (monitorIndex !== targetMonitor)
                     this._stopProcess(monitorIndex);
             }
 
-            // Spawn for target monitor
             this._spawnProcess(targetMonitor);
         }
     }
@@ -419,8 +637,26 @@ export default class MilkdropExtension extends Extension {
         launcher.setenv('GSK_RENDERER', 'cairo', true);
         /* GtkGLArea pode escolher GLES; projectM precisa de OpenGL desktop (GLSL 330). */
         launcher.setenv('MILKDROP_FORCE_GL_API', '1', true);
-        /* Mesa Intel GPU: force OpenGL Compatibility profile for projectM shaders */
-        launcher.setenv('MESA_GL_VERSION_OVERRIDE', '3.3Compatibility', true);
+
+        const gpuProfile = this._settings.get_string('gpu-profile');
+        if (gpuProfile === 'dri-prime') {
+            launcher.setenv('DRI_PRIME', '1', true);
+        } else if (gpuProfile === 'nvidia-optimus') {
+            launcher.setenv('__NV_PRIME_RENDER_OFFLOAD', '1', true);
+            launcher.setenv('__GLX_VENDOR_LIBRARY_NAME', 'nvidia', true);
+            /* Defensive: force NVIDIA EGL vendor on Wayland to avoid
+             * GLVND iterating over all vendors (which wakes the dGPU
+             * and adds startup delay). See Arch Wiki PRIME#Wayland. */
+            launcher.setenv('__EGL_VENDOR_LIBRARY_FILENAMES',
+                '/usr/share/glvnd/egl_vendor.d/10_nvidia.json', true);
+        }
+
+        /* Mesa Intel GPU: force OpenGL Compatibility profile for projectM shaders.
+         * Skip for NVIDIA proprietary — it does not use Mesa and the override
+         * can confuse context creation. */
+        if (gpuProfile !== 'nvidia-optimus') {
+            launcher.setenv('MESA_GL_VERSION_OVERRIDE', '3.3Compatibility', true);
+        }
         this._launchers.set(monitorIndex, launcher);
 
         log(`[milkdrop] isWayland=${isWayland}, shellMajor=${shellMajor}`);
@@ -478,7 +714,8 @@ export default class MilkdropExtension extends Extension {
          * the control socket). */
         const shouldPause = this._pauseReasons.fullscreen ||
                            this._pauseReasons.maximized ||
-                           this._pauseReasons.mpris;
+                           this._pauseReasons.mpris ||
+                           this._pauseReasons.emptydesktop;
         const rotation = this._settings.get_int('preset-rotation-interval');
         const shuffleOn = this._settings.get_boolean('shuffle');
         const initialCommands = [

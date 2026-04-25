@@ -67,6 +67,8 @@ def main() -> int:
         "pause-on-fullscreen": "b",
         "pause-on-maximized": "b",
         "media-aware": "b",
+        "pause-on-empty-desktop": "b",
+        "stop-renderer-when-idle": "b",
         "all-monitors": "b",
         "fps": "i",
         "beat-sensitivity": "d",
@@ -76,6 +78,7 @@ def main() -> int:
         "soft-cut-duration": "d",
         "last-preset": "s",
         "was-paused": "b",
+        "gpu-profile": "s",
     }
     check(key_names == expected, f"schema keys mismatch: got {key_names}")
 
