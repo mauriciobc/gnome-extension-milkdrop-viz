@@ -26,6 +26,7 @@ The codebase has evolved beyond the original PRD spec:
 - **Line-based control protocol**: The socket uses line-delimited JSON commands (not the binary protocol from the PRD). See [src/control.c](src/control.c).
 - **Background injection**: The extension uses `Meta.WaylandClient` and background actor injection for wallpaper anchoring, not simple Clutter reparenting. See [extension/milkdrop@mauriciobc.github.io/extension.js](extension/milkdrop@mauriciobc.github.io/extension.js).
 - **Multi-monitor**: `all-monitors` GSettings key spawns one renderer instance per monitor.
+- **GPU profile selection**: `gpu-profile` GSettings key injects PRIME offloading environment variables at renderer spawn time (`DRI_PRIME=1` for Mesa, `__NV_PRIME_RENDER_OFFLOAD=1` for NVIDIA Optimus). `MESA_GL_VERSION_OVERRIDE` is suppressed when the NVIDIA profile is active.
 - **Modular extension**: Split into `controlClient.js`, `managedWindow.js`, `pausePolicy.js`, `mprisWatcher.js`, `constants.js`.
 
 ## Build And Test
@@ -126,6 +127,26 @@ Start here, link instead of copying details:
 - Meta.WaylandClient lifecycle and background injection: [docs/research/16-meta-wayland-client-lifecycle.md](docs/research/16-meta-wayland-client-lifecycle.md)
 - GNOME Shell 47–50 extension API changes: [docs/research/17-gnome-shell-47-50-extension-api-changes.md](docs/research/17-gnome-shell-47-50-extension-api-changes.md)
 - GNOME extension skill: [.github/skills/gnome-shell-extension-dev/SKILL.md](.github/skills/gnome-shell-extension-dev/SKILL.md)
+
+## GPU Profile Selection
+
+The `gpu-profile` GSettings key controls which GPU renders the visualizer on hybrid-graphics systems. It is applied at renderer spawn time via `Gio.SubprocessLauncher.setenv()`.
+
+| Profile | Env vars injected |
+|---|---|
+| `default` | None (system default) |
+| `dri-prime` | `DRI_PRIME=1` |
+| `nvidia-optimus` | `__NV_PRIME_RENDER_OFFLOAD=1`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json` |
+
+**Rules:**
+- `MESA_GL_VERSION_OVERRIDE` is **not** set when `gpu-profile` is `nvidia-optimus` (NVIDIA proprietary does not use Mesa).
+- Changing the profile triggers an immediate renderer restart (`_restartProcess()` for all active monitors).
+- The renderer logs `GL_VENDOR`, `GL_RENDERER`, and `GL_VERSION` on startup when verbose mode is enabled so users can verify which GPU is active.
+
+**Sources:**
+- Mesa `DRI_PRIME`: https://docs.mesa3d.org/envvars.html#envvar-DRI_PRIME
+- NVIDIA PRIME Render Offload: https://download.nvidia.com/XFree86/Linux-x86_64/565.77/README/primerenderoffload.html
+- Arch Wiki PRIME (Wayland delay workaround): https://wiki.archlinux.org/title/PRIME
 
 ## Known Issues Fixed
 
