@@ -6,19 +6,47 @@ import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
-import {queryMilkdropStatus, queryAllMilkdropStatus} from './controlClient.js';
+import {queryAllMilkdropStatus} from './controlClient.js';
 
 export default class MilkdropPreferences extends ExtensionPreferences {
     /**
-     * Fill the preferences window with settings UI.
+     * Fill the preferences window with tabbed settings UI.
      * Declared async for GNOME 47+ compatibility where fillPreferencesWindow is awaited.
      * @param {Adw.PreferencesWindow} window
      */
     async fillPreferencesWindow(window) {
         const settings = this.getSettings();
 
+        window.set_title(this.metadata.name);
+        window.search_enabled = true;
+        window.set_default_size(740, 520);
+
+        this._settings = settings;
+        this._signalIds = [];
+        this._pollSourceId = 0;
+
+        this._buildGeneralPage(window, settings);
+        this._buildRenderingPage(window, settings);
+        this._buildBehaviorPage(window, settings);
+        this._buildTransitionsPage(window, settings);
+
+        window.connect('destroy', () => {
+            this._signalIds.forEach(id => settings.disconnect(id));
+            this._signalIds = [];
+            if (this._pollSourceId > 0) {
+                GLib.source_remove(this._pollSourceId);
+                this._pollSourceId = 0;
+            }
+            if (this._mapHandler)
+                window.disconnect(this._mapHandler);
+            if (this._unmapHandler)
+                window.disconnect(this._unmapHandler);
+        });
+    }
+
+    _buildGeneralPage(window, settings) {
         const page = new Adw.PreferencesPage({
-            title: 'Milkdrop',
+            title: 'General',
             icon_name: 'applications-multimedia-symbolic',
         });
         window.add(page);
@@ -39,7 +67,10 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         window.add_breakpoint(breakpoint);
 
         const makeStatusRow = (title, initial) => {
-            const row = new Adw.ActionRow({title, activatable: false});
+            const row = new Adw.ActionRow({
+                title,
+                activatable: false,
+            });
             const label = new Gtk.Label({
                 label: initial,
                 xalign: 1.0,
@@ -52,13 +83,11 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             return label;
         };
 
-        const fpsStatusLabel      = makeStatusRow('FPS', '—');
-        const presetStatusLabel   = makeStatusRow('Current Preset', '—');
-        const audioStatusLabel    = makeStatusRow('Audio', '—');
-        const pausedStatusLabel   = makeStatusRow('Paused', '—');
-        const quarantineLabel     = makeStatusRow('Quarantined Presets', '—');
-
-        let pollSourceId = 0;
+        const fpsStatusLabel = makeStatusRow('Frames Per Second', '—');
+        const presetStatusLabel = makeStatusRow('Current Preset', '—');
+        const audioStatusLabel = makeStatusRow('Audio', '—');
+        const pausedStatusLabel = makeStatusRow('Paused', '—');
+        const quarantineLabel = makeStatusRow('Quarantined Presets', '—');
 
         const refreshStatus = () => {
             const display = Gdk.Display.get_default();
@@ -108,34 +137,34 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             }).catch(() => {});
         };
 
-        window.connect('map', () => {
+        this._mapHandler = window.connect('map', () => {
             refreshStatus();
-            pollSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+            this._pollSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
                 refreshStatus();
                 return GLib.SOURCE_CONTINUE;
             });
         });
-        window.connect('unmap', () => {
-            if (pollSourceId > 0) {
-                GLib.source_remove(pollSourceId);
-                pollSourceId = 0;
+        this._unmapHandler = window.connect('unmap', () => {
+            if (this._pollSourceId > 0) {
+                GLib.source_remove(this._pollSourceId);
+                this._pollSourceId = 0;
             }
         });
 
-        // ── Runtime ──────────────────────────────────────────────────────────
-        const runtimeGroup = new Adw.PreferencesGroup({title: 'Runtime'});
-        page.add(runtimeGroup);
+        // ── General ──────────────────────────────────────────────────────────
+        const generalGroup = new Adw.PreferencesGroup({title: 'General'});
+        page.add(generalGroup);
 
         const enabledRow = new Adw.SwitchRow({
             title: 'Enabled',
-            subtitle: 'Spawn and supervise the renderer process',
+            subtitle: 'Start the visualizer renderer',
         });
         settings.bind('enabled', enabledRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        runtimeGroup.add(enabledRow);
+        generalGroup.add(enabledRow);
 
         const monitorRow = new Adw.SpinRow({
-            title: 'Monitor Index',
-            subtitle: 'Zero-based index of the monitor to render on',
+            title: 'Monitor',
+            subtitle: 'Which monitor to display the visualizer on',
             adjustment: new Gtk.Adjustment({
                 value: 0,
                 lower: 0,
@@ -146,14 +175,14 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             digits: 0,
         });
         settings.bind('monitor', monitorRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        runtimeGroup.add(monitorRow);
+        generalGroup.add(monitorRow);
 
         const allMonitorsRow = new Adw.SwitchRow({
             title: 'All Monitors',
-            subtitle: 'Show visualizer on every connected monitor simultaneously',
+            subtitle: 'Show the visualizer on every connected monitor',
         });
         settings.bind('all-monitors', allMonitorsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        runtimeGroup.add(allMonitorsRow);
+        generalGroup.add(allMonitorsRow);
 
         // Disable the monitor index row when all-monitors is active
         const syncMonitorSensitivity = () => {
@@ -161,39 +190,72 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         };
         syncMonitorSensitivity();
         const allMonitorsSignalId = settings.connect('changed::all-monitors', syncMonitorSensitivity);
-        let shuffleSignalId = 0;
-        let presetDirSignalId = 0;
-
-        // Cleanup on window destroy
-        window.connect('destroy', () => {
-            if (allMonitorsSignalId)
-                settings.disconnect(allMonitorsSignalId);
-            if (shuffleSignalId)
-                settings.disconnect(shuffleSignalId);
-            if (presetDirSignalId)
-                settings.disconnect(presetDirSignalId);
-        });
+        this._signalIds.push(allMonitorsSignalId);
 
         const opacityRow = new Adw.ActionRow({
             title: 'Opacity',
-            subtitle: 'Renderer window transparency',
-            activatable: false,
+            subtitle: 'Window transparency',
         });
         const opacityScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01);
         opacityScale.set_hexpand(true);
         opacityScale.set_digits(2);
         opacityScale.set_valign(Gtk.Align.CENTER);
+        opacityScale.set_draw_value(true);
         settings.bind('opacity', opacityScale, 'value', Gio.SettingsBindFlags.DEFAULT);
         opacityRow.add_suffix(opacityScale);
-        runtimeGroup.add(opacityRow);
+        opacityRow.activatable_widget = opacityScale;
+        generalGroup.add(opacityRow);
+    }
 
-        // ── Performance ──────────────────────────────────────────────────────
-        const perfGroup = new Adw.PreferencesGroup({title: 'Performance'});
-        page.add(perfGroup);
+    _buildRenderingPage(window, settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Rendering',
+            icon_name: 'applications-graphics-symbolic',
+        });
+        window.add(page);
+
+        // ── GPU ──────────────────────────────────────────────────────────────
+        const gpuGroup = new Adw.PreferencesGroup({
+            title: 'GPU',
+            description: 'Select which graphics card renders the visualizer',
+        });
+        page.add(gpuGroup);
+
+        const gpuProfileRow = new Adw.ComboRow({
+            title: 'Rendering Profile',
+            subtitle: 'Graphics card for hybrid graphics systems',
+            model: Gtk.StringList.new(['System Default', 'Discrete GPU (DRI PRIME)', 'NVIDIA Optimus']),
+        });
+        const gpuProfileMap = ['default', 'dri-prime', 'nvidia-optimus'];
+        const initialGpuProfile = settings.get_string('gpu-profile');
+        gpuProfileRow.selected = gpuProfileMap.indexOf(initialGpuProfile) >= 0
+            ? gpuProfileMap.indexOf(initialGpuProfile)
+            : 0;
+        gpuProfileRow.connect('notify::selected', () => {
+            settings.set_string('gpu-profile', gpuProfileMap[gpuProfileRow.selected] ?? 'default');
+        });
+        gpuGroup.add(gpuProfileRow);
+
+        const gpuWarningRow = new Adw.ActionRow({
+            title: 'GPU profile changes take effect after the extension is disabled and re-enabled.',
+            subtitle: 'Use the Extensions app to restart MilkDrop.',
+            activatable: false,
+        });
+        const gpuWarningIcon = new Gtk.Image({
+            icon_name: 'dialog-information-symbolic',
+            valign: Gtk.Align.CENTER,
+        });
+        gpuWarningIcon.add_css_class('dim-label');
+        gpuWarningRow.add_prefix(gpuWarningIcon);
+        gpuGroup.add(gpuWarningRow);
+
+        // ── Rendering ────────────────────────────────────────────────────────
+        const renderingGroup = new Adw.PreferencesGroup({title: 'Rendering'});
+        page.add(renderingGroup);
 
         const fpsRow = new Adw.SpinRow({
             title: 'Frame Rate',
-            subtitle: 'Target frames per second (applied live)',
+            subtitle: 'Target frames per second',
             adjustment: new Gtk.Adjustment({
                 value: 60,
                 lower: 10,
@@ -204,149 +266,15 @@ export default class MilkdropPreferences extends ExtensionPreferences {
             digits: 0,
         });
         settings.bind('fps', fpsRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        perfGroup.add(fpsRow);
-
-        // ── Behavior ─────────────────────────────────────────────────────────
-        const behaviorGroup = new Adw.PreferencesGroup({title: 'Behavior'});
-        page.add(behaviorGroup);
-
-        // Preset rotation: Sequential / Shuffle (replaces the old SwitchRow)
-        const rotationRow = new Adw.ComboRow({
-            title: 'Preset Rotation',
-            subtitle: 'Order in which presets are selected',
-            model: Gtk.StringList.new(['Sequential', 'Shuffle']),
-        });
-        rotationRow.selected = settings.get_boolean('shuffle') ? 1 : 0;
-        rotationRow.connect('notify::selected', () => {
-            settings.set_boolean('shuffle', rotationRow.selected === 1);
-        });
-        shuffleSignalId = settings.connect('changed::shuffle', () => {
-            const expected = settings.get_boolean('shuffle') ? 1 : 0;
-            if (rotationRow.selected !== expected)
-                rotationRow.selected = expected;
-        });
-        behaviorGroup.add(rotationRow);
-
-        const rotationIntervalRow = new Adw.SpinRow({
-            title: 'Rotation Interval',
-            subtitle: 'Seconds before switching to the next preset',
-            adjustment: new Gtk.Adjustment({
-                value: 30,
-                lower: 5,
-                upper: 300,
-                step_increment: 5,
-                page_increment: 30,
-            }),
-            digits: 0,
-        });
-        settings.bind('preset-rotation-interval', rotationIntervalRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        behaviorGroup.add(rotationIntervalRow);
-
-        const overlayRow = new Adw.SwitchRow({
-            title: 'Overlay Mode',
-            subtitle: 'Pass --overlay to the renderer; state is visible in the Status section',
-        });
-        settings.bind('overlay', overlayRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        behaviorGroup.add(overlayRow);
-
-        const pauseFsRow = new Adw.SwitchRow({
-            title: 'Pause on Fullscreen',
-            subtitle: 'Pause when a fullscreen window is on the same monitor',
-        });
-        settings.bind('pause-on-fullscreen', pauseFsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        behaviorGroup.add(pauseFsRow);
-
-        const pauseMaxRow = new Adw.SwitchRow({
-            title: 'Pause when Maximized',
-            subtitle: 'Pause when a maximized window is on the same monitor',
-        });
-        settings.bind('pause-on-maximized', pauseMaxRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        behaviorGroup.add(pauseMaxRow);
-
-        const mediaAwareRow = new Adw.SwitchRow({
-            title: 'Media-Aware Mode',
-            subtitle: 'Pause when no MPRIS media player is playing',
-        });
-        settings.bind('media-aware', mediaAwareRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        behaviorGroup.add(mediaAwareRow);
-
-        // ── Transitions ──────────────────────────────────────────────────────
-        const transGroup = new Adw.PreferencesGroup({title: 'Transitions'});
-        page.add(transGroup);
-
-        const beatSensRow = new Adw.ActionRow({
-            title: 'Beat Sensitivity',
-            subtitle: 'How strongly projectM reacts to beat detection (0.0–5.0)',
-            activatable: false,
-        });
-        const beatSensScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 5.0, 0.1);
-        beatSensScale.set_hexpand(true);
-        beatSensScale.set_digits(1);
-        beatSensScale.set_valign(Gtk.Align.CENTER);
-        settings.bind('beat-sensitivity', beatSensScale, 'value', Gio.SettingsBindFlags.DEFAULT);
-        beatSensRow.add_suffix(beatSensScale);
-        transGroup.add(beatSensRow);
-
-        const softCutRow = new Adw.SpinRow({
-            title: 'Soft Cut Duration',
-            subtitle: 'Seconds for a smooth preset cross-fade (1–30)',
-            adjustment: new Gtk.Adjustment({
-                value: 3,
-                lower: 1,
-                upper: 30,
-                step_increment: 1,
-                page_increment: 5,
-            }),
-            digits: 0,
-        });
-        settings.bind('soft-cut-duration', softCutRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        transGroup.add(softCutRow);
-
-        const hardCutExpander = new Adw.ExpanderRow({
-            title: 'Hard Cuts',
-            subtitle: 'Abrupt preset transitions on strong beats',
-            show_enable_switch: true,
-        });
-        settings.bind('hard-cut-enabled', hardCutExpander, 'enable-expansion',
-                      Gio.SettingsBindFlags.DEFAULT);
-        transGroup.add(hardCutExpander);
-
-        const hardCutSensRow = new Adw.ActionRow({
-            title: 'Sensitivity',
-            subtitle: 'Beat strength required to trigger a hard cut (0.0–5.0)',
-            activatable: false,
-        });
-        const hardCutSensScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 5.0, 0.1);
-        hardCutSensScale.set_hexpand(true);
-        hardCutSensScale.set_digits(1);
-        hardCutSensScale.set_valign(Gtk.Align.CENTER);
-        settings.bind('hard-cut-sensitivity', hardCutSensScale, 'value', Gio.SettingsBindFlags.DEFAULT);
-        hardCutSensRow.add_suffix(hardCutSensScale);
-        hardCutExpander.add_row(hardCutSensRow);
-
-        const hardCutDurRow = new Adw.SpinRow({
-            title: 'Minimum Duration',
-            subtitle: 'Seconds a preset must play before a hard cut (1–120)',
-            adjustment: new Gtk.Adjustment({
-                value: 20,
-                lower: 1,
-                upper: 120,
-                step_increment: 1,
-                page_increment: 10,
-            }),
-            digits: 0,
-        });
-        settings.bind('hard-cut-duration', hardCutDurRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        hardCutExpander.add_row(hardCutDurRow);
+        renderingGroup.add(fpsRow);
 
         // ── Presets ──────────────────────────────────────────────────────────
-        const presetGroup = new Adw.PreferencesGroup({title: 'Presets'});
-        page.add(presetGroup);
+        const presetsGroup = new Adw.PreferencesGroup({title: 'Presets'});
+        page.add(presetsGroup);
 
         const dirRow = new Adw.ActionRow({
             title: 'Directory',
-            subtitle: 'Folder containing .milk preset files',
-            activatable: false,
+            subtitle: 'Folder with preset files',
         });
 
         const dirLabel = new Gtk.Label({
@@ -358,9 +286,10 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         });
         dirLabel.add_css_class('dim-label');
 
-        presetDirSignalId = settings.connect('changed::preset-dir', () => {
+        const presetDirSignalId = settings.connect('changed::preset-dir', () => {
             dirLabel.set_label(settings.get_string('preset-dir') || '(default)');
         });
+        this._signalIds.push(presetDirSignalId);
 
         const browseBtn = new Gtk.Button({
             label: 'Browse…',
@@ -388,6 +317,177 @@ export default class MilkdropPreferences extends ExtensionPreferences {
 
         dirRow.add_suffix(dirLabel);
         dirRow.add_suffix(browseBtn);
-        presetGroup.add(dirRow);
+        dirRow.activatable_widget = browseBtn;
+        presetsGroup.add(dirRow);
+    }
+
+    _buildBehaviorPage(window, settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Behavior',
+            icon_name: 'preferences-system-symbolic',
+        });
+        window.add(page);
+
+        // ── Rotation ─────────────────────────────────────────────────────────
+        const rotationGroup = new Adw.PreferencesGroup({title: 'Rotation'});
+        page.add(rotationGroup);
+
+        // Preset rotation: Sequential / Shuffle (replaces the old SwitchRow)
+        const rotationRow = new Adw.ComboRow({
+            title: 'Preset Rotation',
+            subtitle: 'Order in which presets are selected',
+            model: Gtk.StringList.new(['Sequential', 'Shuffle']),
+        });
+        rotationRow.selected = settings.get_boolean('shuffle') ? 1 : 0;
+        rotationRow.connect('notify::selected', () => {
+            settings.set_boolean('shuffle', rotationRow.selected === 1);
+        });
+        const shuffleSignalId = settings.connect('changed::shuffle', () => {
+            const expected = settings.get_boolean('shuffle') ? 1 : 0;
+            if (rotationRow.selected !== expected)
+                rotationRow.selected = expected;
+        });
+        this._signalIds.push(shuffleSignalId);
+        rotationGroup.add(rotationRow);
+
+        const rotationIntervalRow = new Adw.SpinRow({
+            title: 'Rotation Interval',
+            subtitle: 'Seconds before switching to the next preset',
+            adjustment: new Gtk.Adjustment({
+                value: 30,
+                lower: 5,
+                upper: 300,
+                step_increment: 5,
+                page_increment: 30,
+            }),
+            digits: 0,
+        });
+        settings.bind('preset-rotation-interval', rotationIntervalRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        rotationGroup.add(rotationIntervalRow);
+
+        // ── Behavior ─────────────────────────────────────────────────────────
+        const behaviorGroup = new Adw.PreferencesGroup({title: 'Behavior'});
+        page.add(behaviorGroup);
+
+        const overlayRow = new Adw.SwitchRow({
+            title: 'Overlay Mode',
+            subtitle: 'Display the visualizer over other windows',
+        });
+        settings.bind('overlay', overlayRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(overlayRow);
+
+        const pauseFsRow = new Adw.SwitchRow({
+            title: 'Pause on Fullscreen',
+            subtitle: 'Pause when a fullscreen window is on the same monitor',
+        });
+        settings.bind('pause-on-fullscreen', pauseFsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(pauseFsRow);
+
+        const pauseMaxRow = new Adw.SwitchRow({
+            title: 'Pause on Maximized',
+            subtitle: 'Pause when a maximized window is on the same monitor',
+        });
+        settings.bind('pause-on-maximized', pauseMaxRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(pauseMaxRow);
+
+        const emptyDesktopRow = new Adw.SwitchRow({
+            title: 'Pause on Empty Desktop',
+            subtitle: 'Pause when no application windows are present on the active workspace',
+        });
+        settings.bind('pause-on-empty-desktop', emptyDesktopRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(emptyDesktopRow);
+
+        const mediaAwareRow = new Adw.SwitchRow({
+            title: 'Media-Aware Mode',
+            subtitle: 'Pause when no media is playing',
+        });
+        settings.bind('media-aware', mediaAwareRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(mediaAwareRow);
+
+        const stopIdleRow = new Adw.SwitchRow({
+            title: 'Stop Renderer When Idle',
+            subtitle: 'Fully stop the renderer to save resources when no media is playing',
+        });
+        settings.bind('stop-renderer-when-idle', stopIdleRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviorGroup.add(stopIdleRow);
+    }
+
+    _buildTransitionsPage(window, settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Transitions',
+            icon_name: 'emblem-music-symbolic',
+        });
+        window.add(page);
+
+        // ── Transitions ──────────────────────────────────────────────────────
+        const transitionsGroup = new Adw.PreferencesGroup({title: 'Transitions'});
+        page.add(transitionsGroup);
+
+        const beatSensRow = new Adw.ActionRow({
+            title: 'Beat Sensitivity',
+            subtitle: 'How strongly the visualizer reacts to beats',
+        });
+        const beatSensScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 5.0, 0.1);
+        beatSensScale.set_hexpand(true);
+        beatSensScale.set_digits(1);
+        beatSensScale.set_valign(Gtk.Align.CENTER);
+        beatSensScale.set_draw_value(true);
+        settings.bind('beat-sensitivity', beatSensScale, 'value', Gio.SettingsBindFlags.DEFAULT);
+        beatSensRow.add_suffix(beatSensScale);
+        beatSensRow.activatable_widget = beatSensScale;
+        transitionsGroup.add(beatSensRow);
+
+        const softCutRow = new Adw.SpinRow({
+            title: 'Soft Cut Duration',
+            subtitle: 'Duration of smooth preset transitions',
+            adjustment: new Gtk.Adjustment({
+                value: 3,
+                lower: 1,
+                upper: 30,
+                step_increment: 1,
+                page_increment: 5,
+            }),
+            digits: 0,
+        });
+        settings.bind('soft-cut-duration', softCutRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        transitionsGroup.add(softCutRow);
+
+        const hardCutExpander = new Adw.ExpanderRow({
+            title: 'Hard Cuts',
+            subtitle: 'Abrupt preset transitions on strong beats',
+            show_enable_switch: true,
+        });
+        settings.bind('hard-cut-enabled', hardCutExpander, 'enable-expansion',
+                      Gio.SettingsBindFlags.DEFAULT);
+        transitionsGroup.add(hardCutExpander);
+
+        const hardCutSensRow = new Adw.ActionRow({
+            title: 'Sensitivity',
+            subtitle: 'Required beat strength to trigger a transition',
+        });
+        const hardCutSensScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 5.0, 0.1);
+        hardCutSensScale.set_hexpand(true);
+        hardCutSensScale.set_digits(1);
+        hardCutSensScale.set_valign(Gtk.Align.CENTER);
+        hardCutSensScale.set_draw_value(true);
+        settings.bind('hard-cut-sensitivity', hardCutSensScale, 'value', Gio.SettingsBindFlags.DEFAULT);
+        hardCutSensRow.add_suffix(hardCutSensScale);
+        hardCutSensRow.activatable_widget = hardCutSensScale;
+        hardCutExpander.add_row(hardCutSensRow);
+
+        const hardCutDurRow = new Adw.SpinRow({
+            title: 'Minimum Duration',
+            subtitle: 'Minimum time before an abrupt transition',
+            adjustment: new Gtk.Adjustment({
+                value: 20,
+                lower: 1,
+                upper: 120,
+                step_increment: 1,
+                page_increment: 10,
+            }),
+            digits: 0,
+        });
+        settings.bind('hard-cut-duration', hardCutDurRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        hardCutExpander.add_row(hardCutDurRow);
     }
 }
