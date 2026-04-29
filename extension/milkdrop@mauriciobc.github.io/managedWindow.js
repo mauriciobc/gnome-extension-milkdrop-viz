@@ -22,8 +22,7 @@ import GLib from 'gi://GLib';
  * @typedef {Object} WindowState
  * @property {boolean} keepAtBottom - Mantém a janela sempre no fundo
  * @property {boolean} keepPosition - Mantém a janela na posição do monitor
- * @property {boolean} keepMinimized - Mantém a janela minimizada (não usado ainda)
- * @property {string} reparentState - 'window_group' | 'wallpaper' | null
+ * @property {string} reparentState - 'window_group' | 'wallpaper'
  */
 
 export class ManagedWindow {
@@ -47,7 +46,6 @@ export class ManagedWindow {
         this._state = {
             keepAtBottom: true,
             keepPosition: true,
-            keepMinimized: false,
             reparentState: null,
         };
 
@@ -92,17 +90,11 @@ export class ManagedWindow {
         if (this._disabled || !this._state.keepAtBottom)
             return;
 
-        // Mantém a janela no fundo
         this._window.lower();
 
         const actor = this._window.get_compositor_private();
-        if (actor && global.window_group && this._state.reparentState === 'window_group') {
-            try {
-                global.window_group.set_child_below_sibling(actor, null);
-            } catch (e) {
-                log(`[milkdrop] ManagedWindow: Error setting child position: ${e}`);
-            }
-        }
+        if (actor && global.window_group && this._state.reparentState === 'window_group')
+            global.window_group.set_child_below_sibling(actor, null);
 
         if (this._callbacks.onRaised)
             this._callbacks.onRaised(this._window);
@@ -169,78 +161,33 @@ export class ManagedWindow {
     }
 
     /**
-     * Define uma propriedade de estado.
-     * @param {string} key - Chave do estado
-     * @param {any} value - Valor a definir
-     */
-    setState(key, value) {
-        if (key in this._state)
-            this._state[key] = value;
-    }
-
-    /**
-     * Checks if an actor is valid and can be operated on.
-     * @param {Clutter.Actor} actor
-     * @returns {boolean}
-     */
-    _isActorValid(actor) {
-        if (!actor)
-            return false;
-        if (typeof actor.is_finalized === 'function' && actor.is_finalized())
-            return false;
-        if (typeof actor.is_destroyed === 'function' && actor.is_destroyed())
-            return false;
-        if (typeof actor.get_stage === 'function' && !actor.get_stage())
-            return false;
-        return typeof actor.get_parent === 'function';
-    }
-
-    /**
      * Ancora a janela no wallpaper: move para o monitor correto,
      * aplica sticky, redimensiona para cobrir o monitor, e posiciona no fundo.
      * @param {Meta.Rectangle} geometry - Geometria do monitor (x, y, width, height)
      */
     anchor(geometry) {
         const actor = this._window.get_compositor_private();
-        if (!this._isActorValid(actor)) {
-            log(`[milkdrop] ManagedWindow: Invalid actor for anchoring on monitor ${this._monitorIndex}`);
+        if (!actor) {
+            log(`[milkdrop] ManagedWindow: No compositor actor on monitor ${this._monitorIndex}`);
             return;
         }
 
         const parent = actor.get_parent();
-        const parentName = parent ? (parent._milkdropWallpaper ? `wallpaper(StWidget)` : String(parent)) : 'null';
-        log(`[milkdrop] ManagedWindow: Actor parent: ${parentName}`);
 
-        // If already in wallpaper (parent has _milkdropWallpaper === true), skip window_group anchoring
-        if (parent && parent._milkdropWallpaper === true) {
+        if (parent && parent._milkdropWallpaper) {
             this._state.reparentState = 'wallpaper';
-            log('[milkdrop] ManagedWindow: Actor already in wallpaper, skipping window_group anchoring');
         } else {
             this._state.reparentState = 'window_group';
-            // Move actor to the bottom of the window group
-            try {
-                if (parent && parent !== global.window_group)
-                    parent.remove_child(actor);
-                if (actor.get_parent() !== global.window_group)
-                    global.window_group.add_child(actor);
-                global.window_group.set_child_below_sibling(actor, null);
-                log('[milkdrop] ManagedWindow: Actor moved to bottom of window_group');
-            } catch (e) {
-                log(`[milkdrop] ManagedWindow: Error moving actor to window_group: ${e}`);
-                return;
-            }
+            if (parent && parent !== global.window_group)
+                parent.remove_child(actor);
+            if (actor.get_parent() !== global.window_group)
+                global.window_group.add_child(actor);
+            global.window_group.set_child_below_sibling(actor, null);
         }
 
-        // Aplica sticky (visível em todos os workspaces)
         this._window.stick();
-        log('[milkdrop] ManagedWindow: Window stuck to all workspaces');
-
-        // Move para o monitor correto e redimensiona
         this.enforceCoverage(geometry);
-
-        // Garante que fica no fundo
         this._window.lower();
-        log('[milkdrop] ManagedWindow: Window lowered in Meta stack');
     }
 
     /**
@@ -253,25 +200,14 @@ export class ManagedWindow {
             return;
         }
 
-        try {
-            this._window.move_to_monitor(this._monitorIndex);
-            log(`[milkdrop] ManagedWindow: move_to_monitor(${this._monitorIndex}) succeeded`);
-        } catch (e) {
-            log(`[milkdrop] ManagedWindow: move_to_monitor failed: ${e}`);
-        }
-
-        try {
-            this._window.move_resize_frame(
-                false,
-                geometry.x,
-                geometry.y,
-                geometry.width,
-                geometry.height
-            );
-            log(`[milkdrop] ManagedWindow: move_resize_frame to ${geometry.width}x${geometry.height} succeeded`);
-        } catch (e) {
-            log(`[milkdrop] ManagedWindow: move_resize_frame failed: ${e}`);
-        }
+        this._window.move_to_monitor(this._monitorIndex);
+        this._window.move_resize_frame(
+            false,
+            geometry.x,
+            geometry.y,
+            geometry.width,
+            geometry.height
+        );
     }
 
     /**
@@ -280,14 +216,8 @@ export class ManagedWindow {
      */
     disable() {
         this._disabled = true;
-        
-        for (const signalId of this._signals) {
-            try {
-                this._window.disconnect(signalId);
-            } catch (e) {
-                // Ignora erros de desconexão (janela pode já ter sido destruída)
-            }
-        }
+        for (const signalId of this._signals)
+            this._window.disconnect(signalId);
         this._signals = [];
         this._window = null;
         this._callbacks = {};

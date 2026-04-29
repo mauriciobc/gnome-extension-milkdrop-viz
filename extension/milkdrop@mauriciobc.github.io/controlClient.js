@@ -30,11 +30,7 @@ function _writeAllAndClose(connection, data, callback) {
         }
 
         connection.close_async(GLib.PRIORITY_DEFAULT, null, (_conn, closeRes) => {
-            try {
-                _conn.close_finish(closeRes);
-            } catch (_e) {
-                // Ignore close errors — command was already attempted.
-            }
+            _conn.close_finish(closeRes);
             callback(writeError);
         });
     });

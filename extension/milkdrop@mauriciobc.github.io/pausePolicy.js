@@ -55,9 +55,8 @@ export class PausePolicy {
         this._displaySignalIds = [];
 
         for (const [win, ids] of this._windowSignals) {
-            for (const id of ids) {
-                try { win.disconnect(id); } catch (_e) { /* already unmanaged */ }
-            }
+            for (const id of ids)
+                win.disconnect(id);
         }
         this._windowSignals.clear();
 
@@ -87,9 +86,8 @@ export class PausePolicy {
         ids.push(win.connect('unmanaged', () => {
             const storedIds = this._windowSignals.get(win);
             if (storedIds) {
-                for (const id of storedIds) {
-                    try { win.disconnect(id); } catch (_e) { /* already gone */ }
-                }
+                for (const id of storedIds)
+                    win.disconnect(id);
                 this._windowSignals.delete(win);
             }
             this._evaluateMaximized();
@@ -119,16 +117,10 @@ export class PausePolicy {
             const w = actor.meta_window;
             if (!w)
                 continue;
-
-            if (typeof w.get_compositor_private !== 'function')
-                continue;
-            if (w.get_compositor_private() === null)
-                continue;
             if (w.get_monitor() !== this._monitorIndex)
                 continue;
             if (w.minimized || w.fullscreen)
                 continue;
-
             if (w.maximized_vertically || w.maximized_horizontally) {
                 hasMaximized = true;
                 break;

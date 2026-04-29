@@ -18,17 +18,11 @@ import {ManagedWindow} from './managedWindow.js';
 import {PausePolicy} from './pausePolicy.js';
 import {MprisWatcher} from './mprisWatcher.js';
 
-/**
- * Safely detect if running on Wayland.
- * _isWayland() may not be available in all GNOME Shell versions.
- */
 function _isWayland() {
-    // Check if the Meta function exists and is callable
-    if (typeof Meta.is_wayland_compositor === 'function')
-        return Meta.is_wayland_compositor();
-    // Fallback: check session type via environment
-    const sessionType = GLib.getenv('XDG_SESSION_TYPE');
-    return sessionType === 'wayland';
+    // Shell 50+ removed is_wayland_compositor - no X11 backend means always Wayland
+    if (Meta.is_wayland_compositor === undefined)
+        return true;
+    return Meta.is_wayland_compositor();
 }
 
 /* Map GSettings keys to control-socket command strings.
@@ -58,8 +52,6 @@ export default class MilkdropExtension extends Extension {
         this._wmSignalIds = [];
         this._windowCreatedId = 0;
 
-        // Multi-process support: Maps indexed by monitor index
-        this._launchers = new Map();           // monitorIndex -> Gio.SubprocessLauncher
         this._waylandClients = new Map();      // monitorIndex -> Meta.WaylandClient
         this._subprocesses = new Map();        // monitorIndex -> Gio.Subprocess
         this._stdoutStreams = new Map();     // monitorIndex -> Gio.DataInputStream
@@ -69,13 +61,10 @@ export default class MilkdropExtension extends Extension {
 
         this._startupCompleteId = 0;
 
-        // Track managed windows per monitor (ManagedWindow instances)
         this._managedWindows = new Map();      // monitorIndex -> ManagedWindow
         this._injectionManager = null;
         this._wallpaperActors = new Set();
         this._wallpaperSourceIds = new Set();
-        this._overviewShowingId = 0;
-        this._overviewHiddenId = 0;
         this._workareasChangedId = 0;
         this._monitorsChangedId = 0;
 
@@ -87,11 +76,8 @@ export default class MilkdropExtension extends Extension {
         this._lastDeathTimestamp = 0;
         this._circuitBreakerOpen = false;
 
-        // State tracking for actor lifecycle management
         this._actorReparentState = new Map();
         this._isDisabling = false;
-        this._isEnabling = false;
-        this._pendingCleanup = false;
 
         // Pause coordination state
         this._pauseReasons = {
@@ -123,7 +109,6 @@ export default class MilkdropExtension extends Extension {
             log('[milkdrop] enable() called while already initialized; skipping');
             return;
         }
-        this._isEnabling = true;
 
         // Reset circuit breaker on fresh enable
         this._circuitBreakerOpen = false;
@@ -215,11 +200,9 @@ export default class MilkdropExtension extends Extension {
             this._startupCompleteId = Main.layoutManager.connect('startup-complete', () => {
                 this._disconnectStartupComplete();
                 this._syncEnabledState();
-                this._isEnabling = false;
             });
         } else {
             this._syncEnabledState();
-            this._isEnabling = false;
         }
     }
 
@@ -228,11 +211,6 @@ export default class MilkdropExtension extends Extension {
             this._sendControlCommand(command, monitorIndex);
     }
 
-    /**
-     * Coordinates pause reasons and sends pause command when aggregate state changes.
-     * @param {string} reason - 'fullscreen', 'maximized', or 'mpris'
-     * @param {boolean} active - whether this reason should pause
-     */
     _setPauseReason(reason, active) {
         if (this._pauseReasons[reason] === active)
             return;
@@ -250,9 +228,6 @@ export default class MilkdropExtension extends Extension {
         log(`[milkdrop] pause state: ${shouldPause ? 'on' : 'off'} (fullscreen:${this._pauseReasons.fullscreen}, maximized:${this._pauseReasons.maximized}, mpris:${this._pauseReasons.mpris}, emptydesktop:${this._pauseReasons.emptydesktop})`);
     }
 
-    /**
-     * Setup PausePolicy for each monitor and MprisWatcher if enabled.
-     */
     _setupPauseCoordination() {
         const pauseOnFullscreen = this._settings.get_boolean('pause-on-fullscreen');
         const pauseOnMaximized = this._settings.get_boolean('pause-on-maximized');
@@ -349,11 +324,8 @@ export default class MilkdropExtension extends Extension {
     }
 
     _teardownEmptyDesktopTracking() {
-        for (const {owner, id} of this._emptyDesktopSignalIds) {
-            try {
-                owner.disconnect(id);
-            } catch (_e) {}
-        }
+        for (const {owner, id} of this._emptyDesktopSignalIds)
+            owner.disconnect(id);
         this._emptyDesktopSignalIds = [];
     }
 
@@ -364,48 +336,34 @@ export default class MilkdropExtension extends Extension {
         function isRenderer(metaWindow) {
             if (!metaWindow)
                 return false;
-            if (typeof metaWindow.get_wm_class !== 'function')
-                return false;
             if (metaWindow.get_wm_class() === 'milkdrop')
                 return true;
             return metaWindow.title?.startsWith('@milkdrop!') ?? false;
         }
 
-        let hasUserWindows = false;
-        try {
-            const workspace = global.workspace_manager.get_active_workspace();
-            if (!workspace)
-                return;
-            const windows = workspace.list_windows();
-            for (const w of windows) {
-                if (isRenderer(w))
-                    continue;
-                if (w.minimized)
-                    continue;
-                if (w.is_skip_taskbar?.())
-                    continue;
-                const wType = w.get_window_type?.();
-                if (wType === Meta.WindowType.DESKTOP ||
-                    wType === Meta.WindowType.DOCK)
-                    continue;
-                // Window is a normal application window — desktop is not empty.
-                hasUserWindows = true;
-                break;
-            }
-        } catch (_e) {
+        const workspace = global.workspace_manager.get_active_workspace();
+        if (!workspace)
             return;
+        const windows = workspace.list_windows();
+        let hasUserWindows = false;
+        for (const w of windows) {
+            if (isRenderer(w))
+                continue;
+            if (w.minimized)
+                continue;
+            if (w.is_skip_taskbar?.())
+                continue;
+            const wType = w.get_window_type();
+            if (wType === Meta.WindowType.DESKTOP ||
+                wType === Meta.WindowType.DOCK)
+                continue;
+            hasUserWindows = true;
+            break;
         }
 
         this._setPauseReason(PAUSE_REASON_EMPTY_DESKTOP, hasUserWindows);
     }
 
-    /**
-     * Handle media playback state changes for overlay visibility and
-     * optional renderer stop-on-idle (stop-renderer-when-idle setting).
-     *
-     * Called whenever MprisWatcher reports a playback state change.
-     * @param {boolean} isPlaying - true if any MPRIS player is playing
-     */
     _handleMediaPlaybackChanged(isPlaying) {
         if (!this._settings)
             return;
@@ -456,12 +414,6 @@ export default class MilkdropExtension extends Extension {
         });
     }
 
-    /**
-     * Fade all renderer window actors to visible or hidden.
-     * Uses opacity=0 (not visible=false) to keep Mutter texture updates
-     * flowing, which keeps Clutter.Clone instances alive in wallpaper widgets.
-     * @param {boolean} visible
-     */
     _setMediaOverlayVisible(visible) {
         if (this._mediaOverlayVisible === visible)
             return;
@@ -471,16 +423,11 @@ export default class MilkdropExtension extends Extension {
         const mode = Clutter.AnimationMode.EASE_OUT_QUAD;
 
         for (const managed of this._managedWindows.values()) {
-            try {
-                const actor = managed.window?.get_compositor_private?.();
-                if (!actor)
-                    continue;
-                actor.remove_all_transitions?.();
-                if (typeof actor.ease === 'function')
-                    actor.ease({ opacity: targetOpacity, duration: MEDIA_FADE_MS, mode });
-                else
-                    actor.opacity = targetOpacity;
-            } catch (_e) {}
+            const actor = managed.window?.get_compositor_private();
+            if (!actor)
+                continue;
+            actor.remove_all_transitions();
+            actor.ease({ opacity: targetOpacity, duration: MEDIA_FADE_MS, mode });
         }
     }
 
@@ -538,7 +485,6 @@ export default class MilkdropExtension extends Extension {
         this._settings = null;
         this._actorReparentState.clear();
         this._isDisabling = false;
-        this._isEnabling = false;
     }
 
     _syncEnabledState() {
@@ -657,7 +603,6 @@ export default class MilkdropExtension extends Extension {
         if (gpuProfile !== 'nvidia-optimus') {
             launcher.setenv('MESA_GL_VERSION_OVERRIDE', '3.3Compatibility', true);
         }
-        this._launchers.set(monitorIndex, launcher);
 
         log(`[milkdrop] isWayland=${isWayland}, shellMajor=${shellMajor}`);
         let subprocess = null;
@@ -693,8 +638,6 @@ export default class MilkdropExtension extends Extension {
             subprocess = null;
             waylandClient = null;
         }
-
-        this._launchers.delete(monitorIndex);
 
         if (!subprocess) {
             this._scheduleRetry(monitorIndex);
@@ -769,9 +712,8 @@ export default class MilkdropExtension extends Extension {
                     log(`[milkdrop] renderer wait failed: ${error}`);
             }
 
-            /* Guard: only clear state if this callback belongs to the current
-             * subprocess. A stale wait_async from a previously killed renderer
-             * must not wipe out a newly spawned replacement (enable/disable cycle). */
+            /* Stale callback guard: a previously killed renderer's wait_async
+             * must not wipe out a newly spawned replacement. */
             if (this._subprocesses.get(monitorIndex) !== spawnedSubprocess)
                 return;
 
@@ -815,10 +757,6 @@ export default class MilkdropExtension extends Extension {
         });
     }
 
-    /**
-     * Setup PausePolicy for a specific monitor if pause settings are enabled.
-     * @param {number} monitorIndex
-     */
     _setupPausePolicyForMonitor(monitorIndex) {
         const pauseOnFullscreen = this._settings.get_boolean('pause-on-fullscreen');
         const pauseOnMaximized = this._settings.get_boolean('pause-on-maximized');
@@ -984,11 +922,7 @@ export default class MilkdropExtension extends Extension {
         if (subprocess) {
             if (this._settings)
                 this._saveStateSync(monitorIndex);
-            try {
-                subprocess.force_exit();
-            } catch (error) {
-                log(`[milkdrop] failed to stop renderer for monitor ${monitorIndex}: ${error}`);
-            }
+            subprocess.force_exit();
         }
 
         this._subprocesses.delete(monitorIndex);
@@ -1005,12 +939,6 @@ export default class MilkdropExtension extends Extension {
 
         // Clean up ManagedWindow for this monitor to prevent signal leaks
         this._clearAnchor(monitorIndex);
-    }
-
-    _restartProcess(monitorIndex) {
-        this._stopProcess(monitorIndex);
-        if (this._settings?.get_boolean('enabled'))
-            this._spawnProcess(monitorIndex);
     }
 
     _scheduleRetry(monitorIndex) {
@@ -1053,9 +981,6 @@ export default class MilkdropExtension extends Extension {
         function isRenderer(metaWindow) {
             if (!metaWindow)
                 return false;
-            // Guard: some callers pass non-MetaWindow objects (e.g., WorkspaceThumbnail).
-            if (typeof metaWindow.get_wm_class !== 'function')
-                return false;
             if (metaWindow.get_wm_class() === 'milkdrop')
                 return true;
             return metaWindow.title?.startsWith('@milkdrop!') ?? false;
@@ -1094,7 +1019,6 @@ export default class MilkdropExtension extends Extension {
                     if (!monitor)
                         return backgroundActor;
 
-                    // Guard: only add one wallpaper widget per backgroundActor.
                     if (backgroundActor._milkdropWallpaper)
                         return backgroundActor;
 
@@ -1138,30 +1062,21 @@ export default class MilkdropExtension extends Extension {
                         if (!rendererActor)
                             return GLib.SOURCE_CONTINUE;
 
-                        // Use _safeActorOperation to handle race where actor is finalized
-                        // between validation and clone creation
-                        const result = thisRef._safeActorOperation(rendererActor, (actor) => {
-                            // Use Clutter.Clone to display the renderer window (Hanabi pattern).
-                            // Clone works with Wayland surfaces and handles GL content correctly.
-                            const rendererClone = new Clutter.Clone({
-                                source: actor,
-                                x_expand: true,
-                                y_expand: true,
-                            });
-                            rendererClone.connect('destroy', () => {
-                                log(`[milkdrop] renderer clone destroyed for monitor ${monitorIndex}`);
-                            });
-                            wallpaper.add_child(rendererClone);
-                            log(`[milkdrop] renderer actor cloned to wallpaper for monitor ${monitorIndex}`);
-                            return true;
-                        }, 'clone renderer actor');
-
-                        return result ? GLib.SOURCE_REMOVE : GLib.SOURCE_REMOVE;
+                        const rendererClone = new Clutter.Clone({
+                            source: rendererActor,
+                            x_expand: true,
+                            y_expand: true,
+                        });
+                        rendererClone.connect('destroy', () => {
+                            log(`[milkdrop] renderer clone destroyed for monitor ${monitorIndex}`);
+                        });
+                        wallpaper.add_child(rendererClone);
+                        log(`[milkdrop] renderer actor cloned to wallpaper for monitor ${monitorIndex}`);
+                        return GLib.SOURCE_REMOVE;
                     };
 
                     if (attachClone() === GLib.SOURCE_CONTINUE) {
                         sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                            // Guard: skip if extension is being disabled
                             if (thisRef._isDisabling)
                                 return GLib.SOURCE_REMOVE;
                             if (!wallpaper.get_stage())
@@ -1286,23 +1201,11 @@ export default class MilkdropExtension extends Extension {
         );
     }
 
-    /**
-     * Safely remove a GLib source, swallowing errors if the source
-     * was already removed or is invalid.
-     */
     _safeRemoveSource(sourceId) {
-        if (!sourceId)
-            return;
-        try {
+        if (sourceId)
             GLib.source_remove(sourceId);
-        } catch (_e) { /* ignore */ }
     }
 
-    /**
-     * Schedule a debounced background reload to prevent clone thrashing.
-     * Multiple rapid calls (e.g., from monitors-changed) are coalesced into
-     * a single reload after RELOAD_BACKGROUNDS_DEBOUNCE_MS quiet period.
-     */
     _scheduleReloadBackgrounds() {
         if (this._reloadBackgroundsSourceId > 0) {
             this._safeRemoveSource(this._reloadBackgroundsSourceId);
@@ -1320,23 +1223,10 @@ export default class MilkdropExtension extends Extension {
     }
 
     _reloadBackgrounds() {
-        // Hanabi pattern: force all BackgroundManager instances to recreate
-        // their background actors so our _createBackgroundActor override takes
-        // effect for actors created before the extension was enabled.
-        // Wrapped in try/catch since the overview tree may not be ready yet.
-        if (!Main.layoutManager._startingUp) {
-            try {
-                Main.layoutManager._updateBackgrounds();
-            } catch (e) {
-                log(`[milkdrop] _updateBackgrounds failed: ${e}`);
-            }
-            try {
-                Main.overview._overview._controls._workspacesDisplay._updateWorkspacesViews();
-            } catch (e) {
-                // Not fatal — overview tree might not exist in all shell modes.
-                log(`[milkdrop] _updateWorkspacesViews skipped: ${e.message}`);
-            }
-        }
+        if (Main.layoutManager._startingUp)
+            return;
+        Main.layoutManager._updateBackgrounds();
+        Main.overview._overview._controls._workspacesDisplay._updateWorkspacesViews();
     }
 
     _clearOverrides() {
@@ -1345,13 +1235,8 @@ export default class MilkdropExtension extends Extension {
             this._safeRemoveSource(sourceId);
         this._wallpaperSourceIds.clear();
 
-        // Destroy wallpaper widgets and their clones (Clutter.Clone will be cleaned up
-        // automatically by the wallpaper destroy).
-        for (const wallpaper of this._wallpaperActors) {
-            this._safeActorOperation(wallpaper, (actor) => {
-                actor.destroy();
-            }, 'destroy wallpaper');
-        }
+        for (const wallpaper of this._wallpaperActors)
+            wallpaper.destroy();
         this._wallpaperActors.clear();
 
         this._injectionManager?.clear();
@@ -1399,7 +1284,6 @@ export default class MilkdropExtension extends Extension {
         sid = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delayMs, () => {
             this._anchorRetrySourceIds.delete(sid);
 
-            // Guard: skip if extension is being disabled
             if (this._isDisabling)
                 return GLib.SOURCE_REMOVE;
 
@@ -1421,26 +1305,13 @@ export default class MilkdropExtension extends Extension {
                 return GLib.SOURCE_REMOVE;
             }
 
-            try {
-                if (waylandClient.owns_window(window)) {
-                    if (!window.get_compositor_private()) {
-                        log(`[milkdrop] owns_window true but compositor_private null for monitor ${monitorIndex}; retrying`);
-                        this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
-                        return GLib.SOURCE_REMOVE;
-                    }
-                    this._anchorWindow(window);
+            if (waylandClient.owns_window(window)) {
+                if (!window.get_compositor_private()) {
+                    log(`[milkdrop] owns_window true but compositor_private null for monitor ${monitorIndex}; retrying`);
+                    this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
                     return GLib.SOURCE_REMOVE;
                 }
-            } catch (e) {
-                log(`[milkdrop] owns_window retry error for monitor ${monitorIndex}, anchoring by title/wm_class: ${e}`);
-                if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop') {
-                    if (!window.get_compositor_private()) {
-                        log(`[milkdrop] fallback anchor: compositor_private null for monitor ${monitorIndex}; retrying`);
-                        this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
-                        return GLib.SOURCE_REMOVE;
-                    }
-                    this._anchorWindow(window);
-                }
+                this._anchorWindow(window);
                 return GLib.SOURCE_REMOVE;
             }
 
@@ -1458,17 +1329,12 @@ export default class MilkdropExtension extends Extension {
         if (!window || this._isDisabling)
             return;
 
-        // Check all our Wayland clients to find the owner
         for (const waylandClient of this._waylandClients.values()) {
-            try {
-                if (waylandClient.owns_window(window)) {
-                    window.hide_from_window_list();
-                    window.set_type(Meta.WindowType.DESKTOP);
-                    log('[milkdrop] Early DESKTOP type set on window-created');
-                    return;
-                }
-            } catch (_e) {
-                // owns_window may fail transiently; fall through
+            if (waylandClient.owns_window(window)) {
+                window.hide_from_window_list();
+                window.set_type(Meta.WindowType.DESKTOP);
+                log('[milkdrop] Early DESKTOP type set on window-created');
+                return;
             }
         }
     }
@@ -1477,7 +1343,6 @@ export default class MilkdropExtension extends Extension {
         if (!window)
             return;
 
-        // Guard: skip if extension is being disabled
         if (this._isDisabling) {
             log('[milkdrop] _onWindowMapped: skipping, extension is disabling');
             return;
@@ -1490,31 +1355,19 @@ export default class MilkdropExtension extends Extension {
         // Get the monitor index for this window
         const monitorIndex = window.get_monitor();
 
-        // On Wayland, check all our wayland clients to find which one owns this window
         if (isWayland) {
-            let foundOwner = false;
             for (const [idx, waylandClient] of this._waylandClients.entries()) {
-                try {
-                    if (waylandClient.owns_window(window)) {
-                        foundOwner = true;
-                        log(`[milkdrop] Window matched by wayland client for monitor ${idx}`);
-                        this._anchorWindow(window);
-                        return;
-                    }
-                } catch (error) {
-                    // Ownership API failed, continue to next client
-                    continue;
+                if (waylandClient.owns_window(window)) {
+                    log(`[milkdrop] Window matched by wayland client for monitor ${idx}`);
+                    this._anchorWindow(window);
+                    return;
                 }
             }
 
-            // If no wayland client owns it, but title matches, schedule retries
-            if (!foundOwner && (wmClass === 'milkdrop' || title === 'milkdrop')) {
+            if (wmClass === 'milkdrop' || title === 'milkdrop') {
                 log('[milkdrop] owns_window false at map; scheduling anchor retries');
                 this._scheduleAnchorRetries(window, 0, monitorIndex);
-                return;
             }
-
-            // Not our window
             return;
         }
 
@@ -1532,33 +1385,18 @@ export default class MilkdropExtension extends Extension {
             monitorIndex = 0;
         this._anchorPending.set(monitorIndex, false);
 
-        // Shell 49+: canonical background window type setup
-        // Fallback — normally _onWindowCreated() sets this before map.
-        // Kept for X11 and for the owns_window-retry code path.
         const shellMajor = parseInt(Config.PACKAGE_VERSION.split('.')[0], 10);
         if (shellMajor >= 49) {
-            try {
-                window.hide_from_window_list();
-                window.set_type(Meta.WindowType.DESKTOP);
-            } catch (e) {
-                log(`[milkdrop] Shell 49+ window setup failed: ${e}`);
-            }
-        }
-
-        // Validate window before proceeding
-        if (!this._isWindowValid(window)) {
-            log(`[milkdrop] ERROR: Invalid window for anchoring on monitor ${monitorIndex}`);
-            return;
+            window.hide_from_window_list();
+            window.set_type(Meta.WindowType.DESKTOP);
         }
 
         const actor = window.get_compositor_private();
-        log(`[milkdrop] _anchorWindow monitor ${monitorIndex}: actor=${actor}, visible=${actor?.visible}`);
-
-        // Validate actor before proceeding
-        if (!this._isActorValid(actor)) {
-            log(`[milkdrop] ERROR: No compositor actor for window or actor is disposed on monitor ${monitorIndex}`);
+        if (!actor) {
+            log(`[milkdrop] ERROR: No compositor actor for window on monitor ${monitorIndex}`);
             return;
         }
+        log(`[milkdrop] _anchorWindow monitor ${monitorIndex}: actor=${actor}, visible=${actor.visible}`);
 
         // Disable any previous ManagedWindow before re-anchoring
         const existingManaged = this._managedWindows.get(monitorIndex);
@@ -1644,27 +1482,14 @@ export default class MilkdropExtension extends Extension {
             return;
         }
 
-        // Fallback for windows not yet in _managedWindows (shouldn't happen normally)
-        // Mutter-level request for the toplevel bounds.
-        try {
-            window.move_to_monitor(monitorIndex);
-            log(`[milkdrop] move_to_monitor(${monitorIndex}) succeeded`);
-        } catch (e) {
-            log(`[milkdrop] move_to_monitor failed: ${e}`);
-        }
-
-        try {
-            window.move_resize_frame(
-                false,
-                geometry.x,
-                geometry.y,
-                geometry.width,
-                geometry.height
-            );
-            log(`[milkdrop] move_resize_frame to ${geometry.width}x${geometry.height} succeeded`);
-        } catch (e) {
-            log(`[milkdrop] move_resize_frame failed: ${e}`);
-        }
+        window.move_to_monitor(monitorIndex);
+        window.move_resize_frame(
+            false,
+            geometry.x,
+            geometry.y,
+            geometry.width,
+            geometry.height
+        );
     }
 
     _clearAnchor(monitorIndex) {
@@ -1721,54 +1546,4 @@ export default class MilkdropExtension extends Extension {
         }
     }
 
-    _isActorValid(actor) {
-        if (!actor)
-            return false;
-        // Check if actor is disposed/finalized - try multiple methods for compatibility
-        if (typeof actor.is_finalized === 'function' && actor.is_finalized())
-            return false;
-        if (typeof actor.is_destroyed === 'function' && actor.is_destroyed())
-            return false;
-        // Check if actor has a stage - detached actors are invalid
-        if (typeof actor.get_stage === 'function' && !actor.get_stage())
-            return false;
-        return typeof actor.get_parent === 'function';
-    }
-
-    _isWindowValid(window) {
-        return window &&
-               typeof window.get_compositor_private === 'function' &&
-               window.get_compositor_private() !== null;
-    }
-
-    /**
-     * Safely execute an operation on an actor with race condition protection.
-     * Actors can be finalized between validation check and use, so this helper
-     * wraps operations in try/catch and re-validates before use.
-     * @param {Clutter.Actor} actor - The actor to operate on
-     * @param {function(Clutter.Actor):any} operation - The operation to perform
-     * @param {string} operationName - Name of operation for logging
-     * @returns {any} Result of operation, or undefined if actor was invalid
-     */
-    _safeActorOperation(actor, operation, operationName = 'operation') {
-        if (!this._isActorValid(actor)) {
-            log(`[milkdrop] _safeActorOperation: actor invalid before ${operationName}`);
-            return undefined;
-        }
-
-        try {
-            return operation(actor);
-        } catch (e) {
-            // Check if error is due to actor finalization
-            const errorStr = String(e);
-            if (errorStr.includes('finalized') ||
-                errorStr.includes('destroyed') ||
-                errorStr.includes('disposed')) {
-                log(`[milkdrop] _safeActorOperation: actor finalized during ${operationName}`);
-            } else {
-                log(`[milkdrop] _safeActorOperation: ${operationName} failed: ${e}`);
-            }
-            return undefined;
-        }
-    }
 }

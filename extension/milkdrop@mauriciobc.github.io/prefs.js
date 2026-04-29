@@ -9,11 +9,6 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 import {queryAllMilkdropStatus} from './controlClient.js';
 
 export default class MilkdropPreferences extends ExtensionPreferences {
-    /**
-     * Fill the preferences window with tabbed settings UI.
-     * Declared async for GNOME 47+ compatibility where fillPreferencesWindow is awaited.
-     * @param {Adw.PreferencesWindow} window
-     */
     async fillPreferencesWindow(window) {
         const settings = this.getSettings();
 
@@ -134,7 +129,7 @@ export default class MilkdropPreferences extends ExtensionPreferences {
                     pausedStatusLabel.set_label(pausedAny ? 'Some' : 'No');
                     quarantineLabel.set_label(String(totalQuarantine));
                 }
-            }).catch(() => {});
+            });
         };
 
         this._mapHandler = window.connect('map', () => {
@@ -299,19 +294,12 @@ export default class MilkdropPreferences extends ExtensionPreferences {
         browseBtn.connect('clicked', () => {
             const dialog = new Gtk.FileDialog({title: 'Select Preset Directory'});
             const initialPath = settings.get_string('preset-dir');
-            if (initialPath) {
-                try {
-                    dialog.initial_folder = Gio.File.new_for_path(initialPath);
-                } catch (_e) { /* ignore */ }
-            }
+            if (initialPath)
+                dialog.initial_folder = Gio.File.new_for_path(initialPath);
             dialog.select_folder(window, null, (_dialog, res) => {
-                try {
-                    const file = _dialog.select_folder_finish(res);
-                    if (file)
-                        settings.set_string('preset-dir', file.get_path());
-                } catch (_e) {
-                    // User cancelled — no action needed
-                }
+                const file = _dialog.select_folder_finish(res);
+                if (file)
+                    settings.set_string('preset-dir', file.get_path());
             });
         });
 

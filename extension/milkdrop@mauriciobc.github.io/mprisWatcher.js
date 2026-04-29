@@ -118,9 +118,7 @@ export class MprisWatcher {
         this._hasEmittedInitialState = false;
 
         if (this._nameChangedSubscriptionId && this._connection) {
-            try {
-                this._connection.signal_unsubscribe(this._nameChangedSubscriptionId);
-            } catch (_e) {}
+            this._connection.signal_unsubscribe(this._nameChangedSubscriptionId);
             this._nameChangedSubscriptionId = 0;
         }
 
@@ -251,37 +249,26 @@ export class MprisWatcher {
                 if (this._playerProxies.has(busName))
                     return;
 
-                let propsChangedId = 0;
-                let nameOwnerNotifyId = 0;
-                try {
-                    const statusStr = proxy.PlaybackStatus ?? '';
-                    const { playing } = _parsePlaybackStatus(statusStr);
+                const statusStr = proxy.PlaybackStatus ?? '';
+                const { playing } = _parsePlaybackStatus(statusStr);
 
-                    propsChangedId = proxy.connect('g-properties-changed',
-                        (_pxy, changed, _invalidated) => this._onPropertiesChanged(busName, changed));
-                    nameOwnerNotifyId = proxy.connect('notify::g-name-owner',
-                        () => {
-                            if (!proxy.g_name_owner)
-                                this._removePlayer(busName);
-                        });
+                const propsChangedId = proxy.connect('g-properties-changed',
+                    (_pxy, changed, _invalidated) => this._onPropertiesChanged(busName, changed));
+                const nameOwnerNotifyId = proxy.connect('notify::g-name-owner',
+                    () => {
+                        if (!proxy.g_name_owner)
+                            this._removePlayer(busName);
+                    });
 
-                    proxy._propsChangedId = propsChangedId;
-                    proxy._nameOwnerNotifyId = nameOwnerNotifyId;
+                proxy._propsChangedId = propsChangedId;
+                proxy._nameOwnerNotifyId = nameOwnerNotifyId;
 
-                    this._playerProxies.set(busName, proxy);
+                this._playerProxies.set(busName, proxy);
+                this._onPlayingChanged(busName, playing, 'added');
 
-                    this._onPlayingChanged(busName, playing, 'added');
-
-                    if (_debugMpris()) {
-                        const short = busName.replace(MPRIS_PREFIX, '');
-                        log(`[milkdrop] MprisWatcher: proxy ready ${short}: PlaybackStatus=${statusStr || '(empty)'} playing=${playing}`);
-                    }
-                } catch (e) {
-                    if (propsChangedId)
-                        try { proxy.disconnect(propsChangedId); } catch (_e) {}
-                    if (nameOwnerNotifyId)
-                        try { proxy.disconnect(nameOwnerNotifyId); } catch (_e) {}
-                    log(`[milkdrop] MprisWatcher: proxy setup failed for ${busName.replace(MPRIS_PREFIX, '')}: ${e.message}`);
+                if (_debugMpris()) {
+                    const short = busName.replace(MPRIS_PREFIX, '');
+                    log(`[milkdrop] MprisWatcher: proxy ready ${short}: PlaybackStatus=${statusStr || '(empty)'} playing=${playing}`);
                 }
             },
             null,
@@ -312,16 +299,14 @@ export class MprisWatcher {
     }
 
     _disconnectPlayerProxy(proxy) {
-        try {
-            if (proxy._propsChangedId) {
-                proxy.disconnect(proxy._propsChangedId);
-                proxy._propsChangedId = 0;
-            }
-            if (proxy._nameOwnerNotifyId) {
-                proxy.disconnect(proxy._nameOwnerNotifyId);
-                proxy._nameOwnerNotifyId = 0;
-            }
-        } catch (_e) {}
+        if (proxy._propsChangedId) {
+            proxy.disconnect(proxy._propsChangedId);
+            proxy._propsChangedId = 0;
+        }
+        if (proxy._nameOwnerNotifyId) {
+            proxy.disconnect(proxy._nameOwnerNotifyId);
+            proxy._nameOwnerNotifyId = 0;
+        }
     }
 
     _onPropertiesChanged(busName, changed) {
