@@ -97,6 +97,9 @@ export default class MilkdropExtension extends Extension {
 
         // Debounce source for background reloads
         this._reloadBackgroundsSourceId = 0;
+
+        // restacked signal handler to keep renderers at bottom
+        this._restackedId = 0;
     }
 
     enable() {
@@ -1269,7 +1272,7 @@ export default class MilkdropExtension extends Extension {
         const maxAttempts = 15;
         if (attempt >= maxAttempts) {
             log(`[milkdrop] owns_window still false after retries for monitor ${monitorIndex}; anchoring if title/wm_class match`);
-            if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop') {
+            if (window.get_wm_class() === 'milkdrop' || window.title?.startsWith('@milkdrop!')) {
                 if (!window.get_compositor_private()) {
                     log(`[milkdrop] max-retries anchor: compositor_private null for monitor ${monitorIndex}, giving up`);
                     return;
@@ -1294,7 +1297,7 @@ export default class MilkdropExtension extends Extension {
             const waylandClient = this._waylandClients.get(monitorIndex);
             if (!_isWayland() || !waylandClient) {
                 // If not on Wayland or no wayland client, use title/wm_class
-                if (window.get_wm_class() === 'milkdrop' || window.title === 'milkdrop') {
+                if (window.get_wm_class() === 'milkdrop' || window.title?.startsWith('@milkdrop!')) {
                     if (!window.get_compositor_private()) {
                         log(`[milkdrop] X11 anchor: compositor_private null for monitor ${monitorIndex}; retrying`);
                         this._scheduleAnchorRetries(window, attempt + 1, monitorIndex);
@@ -1364,15 +1367,27 @@ export default class MilkdropExtension extends Extension {
                 }
             }
 
-            if (wmClass === 'milkdrop' || title === 'milkdrop') {
-                log('[milkdrop] owns_window false at map; scheduling anchor retries');
+            if (wmClass === 'milkdrop' || title?.startsWith('@milkdrop!')) {
+                // owns_window() is false (new_subprocess timing race on Shell 50+).
+                // Immediately suppress the window so it does not appear as a focused
+                // NORMAL-type window for the ~5 s while anchor retries run.
+                const shellMajorEarly = parseInt(Config.PACKAGE_VERSION.split('.')[0], 10);
+                if (shellMajorEarly >= 49) {
+                    window.hide_from_window_list();
+                    window.set_type(Meta.WindowType.DESKTOP);
+                }
+                window.lower();
+                const earlyActor = window.get_compositor_private();
+                if (earlyActor && global.window_group)
+                    global.window_group.set_child_below_sibling(earlyActor, null);
+                log('[milkdrop] owns_window false at map; applied early DESKTOP+lower, scheduling anchor retries');
                 this._scheduleAnchorRetries(window, 0, monitorIndex);
             }
             return;
         }
 
         // X11: match by wm_class or title
-        if (wmClass !== 'milkdrop' && title !== 'milkdrop')
+        if (wmClass !== 'milkdrop' && !title?.startsWith('@milkdrop!'))
             return;
 
         log(`[milkdrop] renderer window matched — anchoring on monitor ${monitorIndex}`);
@@ -1449,8 +1464,24 @@ export default class MilkdropExtension extends Extension {
         this._consecutiveAbnormalDeaths = 0;
         log(`[milkdrop] renderer window anchored successfully on monitor ${monitorIndex} (using ManagedWindow)`);
 
+        // Connect global.display::restacked so we re-lower renderers
+        // whenever Mutter re-sorts the window stack (workspace switch,
+        // focus change, lock/unlock, fullscreen toggle, etc.).
+        if (!this._restackedId) {
+            this._restackedId = global.display.connect(
+                'restacked',
+                () => this._onRestacked()
+            );
+            log('[milkdrop] Connected global.display::restacked handler');
+        }
+
         // Trigger wallpaper injection after window is anchored
         this._scheduleReloadBackgrounds();
+    }
+
+    _onRestacked() {
+        for (const managed of this._managedWindows.values())
+            managed.relower();
     }
 
     _enforceWindowCoverage(window) {
@@ -1507,6 +1538,13 @@ export default class MilkdropExtension extends Extension {
             this._managedWindows.delete(monitorIndex);
             log(`[milkdrop] Cleared ManagedWindow for monitor ${monitorIndex}`);
         }
+
+        // If no more managed windows, disconnect the restacked handler
+        if (this._managedWindows.size === 0 && this._restackedId) {
+            global.display.disconnect(this._restackedId);
+            this._restackedId = 0;
+            log('[milkdrop] Disconnected global.display::restacked handler (no managed windows)');
+        }
     }
 
     _clearAllAnchors() {
@@ -1514,6 +1552,13 @@ export default class MilkdropExtension extends Extension {
 
         for (const monitorIndex of this._managedWindows.keys())
             this._clearAnchor(monitorIndex);
+
+        // Disconnect restacked handler if still connected
+        if (this._restackedId) {
+            global.display.disconnect(this._restackedId);
+            this._restackedId = 0;
+            log('[milkdrop] Disconnected global.display::restacked handler');
+        }
 
         this._actorReparentState.clear();
         this._anchorPending.clear();

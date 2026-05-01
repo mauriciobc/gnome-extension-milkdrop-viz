@@ -87,6 +87,17 @@ export class ManagedWindow {
      * @private
      */
     _onRaised() {
+        this.relower();
+
+        if (this._callbacks.onRaised)
+            this._callbacks.onRaised(this._window);
+    }
+
+    /**
+     * Força a janela para o fundo da pilha, rebaixando tanto no
+     * Meta.Window quanto no ClutterActor. Idempotente.
+     */
+    relower() {
         if (this._disabled || !this._state.keepAtBottom)
             return;
 
@@ -95,9 +106,6 @@ export class ManagedWindow {
         const actor = this._window.get_compositor_private();
         if (actor && global.window_group && this._state.reparentState === 'window_group')
             global.window_group.set_child_below_sibling(actor, null);
-
-        if (this._callbacks.onRaised)
-            this._callbacks.onRaised(this._window);
     }
 
     /**
