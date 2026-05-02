@@ -1,51 +1,44 @@
 # gnome-extension-milkdrop-viz
 
-MilkDrop-style audio visualizer for GNOME Shell on Wayland, built as a two-process system:
+MilkDrop-style audio visualizer for GNOME Shell on Wayland.
 
-- Native C renderer (`milkdrop`) for audio capture, ring buffer, and OpenGL/projectM rendering
-- GNOME Shell extension (GJS) for lifecycle supervision, settings routing, and compositor anchoring
+Current project version: `0.2.0-alpha.1`
 
-Targeted GNOME Shell versions: 47, 48, 49.
+This is a prerelease build line. The renderer, extension lifecycle, settings flow, and test suite are in active use, but the project is not yet broadly tested across GNOME, Mesa, NVIDIA, and multi-monitor combinations.
 
-## Status
+## Current Architecture
 
-This project is actively developed. Core renderer, control protocol, extension scaffold, and tests are present.
+The project is a two-process system:
 
-## Why Two Processes?
+- Native C renderer (`milkdrop`) for audio capture, ring buffer management, projectM rendering, screenshot/state helpers, and the local control socket.
+- GNOME Shell extension (GJS) for process supervision, monitor-aware spawning, settings routing, pause policy, MPRIS integration, and compositor anchoring.
 
-GNOME Shell extensions run inside the shell process, so heavy rendering must stay out of-process for stability and performance.
+The production renderer uses an SDL2 hidden OpenGL context and renders projectM into an offscreen FBO. Frames are read back with `glReadPixels()` and published into a GTK4 `GtkPicture` as a `GdkMemoryTexture`.
 
-- C renderer process owns:
-  - PipeWire capture (optional)
-  - lock-free audio ring buffer
-  - projectM frame rendering
-  - Unix control socket
-- GJS extension owns:
-  - enable/disable lifecycle
-  - subprocess supervision and restart policy
-  - GSettings bindings and runtime settings forwarding
-  - compositor integration and window anchoring
+Supported GNOME Shell versions in metadata: 47, 48, 49, 50.
 
-Architecture invariants:
+Core invariants:
 
-- No OpenGL/projectM calls outside the render thread
-- No per-frame IPC in steady state
-- No heavy rendering work in the GNOME Shell process
+- No OpenGL or projectM calls outside the renderer GL thread.
+- No per-frame IPC in steady state.
+- No heavy rendering work inside the GNOME Shell process.
+- Control-thread requests cross into rendering only through atomics or locked handoff state.
 
 ## Repository Layout
 
 ```text
-src/                          C renderer (GTK4 + GLArea + control/audio modules)
-extension/milkdrop@.../       GNOME Shell extension and prefs UI
+src/                          C renderer, control server, audio path, offscreen renderer
+extension/milkdrop@.../       GNOME Shell extension, prefs UI, pause policy, MPRIS watcher
 data/                         GSettings schema
-tests/                        C unit tests + scaffold/integration validation
-docs/research/                Design and architecture deep dives
-tools/                        install/uninstall/reload helper scripts
+tests/                        C, GJS, and smoke-style validation targets
+docs/research/                Current architecture and design references
+docs/legacy/                  Historical notes and discarded approaches
+tools/                        install, reload, uninstall, and evidence collection helpers
 ```
 
 ## Dependencies
 
-Required (base build):
+Required base dependencies:
 
 - `glib-2.0 >= 2.76`
 - `gio-2.0 >= 2.76`
@@ -53,10 +46,11 @@ Required (base build):
 - `epoxy >= 1.5`
 - EGL/OpenGL runtime
 
-Optional:
+Feature-dependent dependencies:
 
-- `libprojectM-4` and `libprojectM-4-playlist`
-- `libpipewire-0.3` and `libspa-0.2`
+- `sdl2` when building with projectM enabled
+- `libprojectM-4` and `libprojectM-4-playlist` for visual rendering
+- `libpipewire-0.3` and `libspa-0.2` for live system-audio capture
 
 ## Build
 
@@ -71,76 +65,47 @@ Reconfigure after Meson option changes:
 meson setup --reconfigure build
 ```
 
-Feature flags:
+Useful feature flags:
 
 ```bash
 meson setup build -Dprojectm=disabled
 meson setup build -Dpipewire=disabled
+meson setup build -Dshell-integration-tests=true
 ```
 
-## Install
+## Install And Reload
 
 ```bash
 meson install -C build
-```
-
-Helper scripts:
-
-```bash
 ./tools/install.sh
 ./tools/uninstall.sh
 ./tools/reload.sh
-./tools/collect_issue_evidence.sh --since "30 minutes ago"
-```
-
-## Collect Runtime Evidence
-
-When the extension or renderer is failing in-session, collect a bounded evidence bundle before changing code:
-
-```bash
-./tools/collect_issue_evidence.sh --since "30 minutes ago" --core-limit 5
-```
-
-The script writes a timestamped bundle under `logs/` with:
-
-- environment and GSettings snapshot
-- recent `journalctl --user` output
-- filtered Milkdrop and GNOME Shell excerpts
-- `coredumpctl list milkdrop` output
-- detailed `coredumpctl info` files for the newest matching crashes
-
-Useful variants:
-
-```bash
-./tools/collect_issue_evidence.sh --boot
-./tools/collect_issue_evidence.sh --since "2 hours ago" --core-limit 10
-./tools/collect_issue_evidence.sh --output-dir ./logs/manual-capture
 ```
 
 ## Test
 
-Run all registered tests:
+Run the full registered test suite:
 
 ```bash
 meson test -C build
 ```
 
-Run one test:
+Focused examples:
 
 ```bash
+meson test -C build control-protocol --print-errorlogs --verbose
+meson test -C build offscreen-renderer --print-errorlogs --verbose
 meson test -C build ring-buffer --print-errorlogs --verbose
+meson test -C build pause-policy --print-errorlogs --verbose
 ```
 
-Optional nested GNOME Shell integration test:
-
-```bash
-meson setup --reconfigure build -Dshell-integration-tests=true
-meson test -C build compositor-behavior-integration
-```
+Targets that rely on a display or local install state are already isolated in Meson. The GL-sensitive tests `gtk-glarea-projectm`, `gdk-glcontext-projectm`, and `offscreen-renderer` run with `is_parallel: false` because some drivers leave GL state behind.
 
 ## Runtime Control Protocol
 
-The renderer exposes a Unix domain control socket with line commands:
+The renderer exposes a per-monitor Unix socket at `$XDG_RUNTIME_DIR/milkdrop-<monitor>.sock` by default. The protocol is line-delimited text, not binary.
+
+Current commands:
 
 - `status`
 - `opacity <0.0-1.0>`
@@ -150,30 +115,55 @@ The renderer exposes a Unix domain control socket with line commands:
 - `preset-dir <absolute-path>`
 - `next`
 - `previous`
+- `fps <10-144>`
+- `rotation-interval <5-300>`
+- `beat-sensitivity <0.0-5.0>`
+- `hard-cut-enabled <on|off>`
+- `hard-cut-sensitivity <0.0-5.0>`
+- `hard-cut-duration <1.0-120.0>`
+- `soft-cut-duration <1.0-30.0>`
+- `save-state`
+- `restore-state [preset-path] [0|1]`
+- `screenshot <absolute-path>`
 
-## GSettings
+`status` currently returns newline-delimited `key=value` fields, including `paused`, `opacity`, `shuffle`, `overlay`, `quarantine`, `audio`, `fps`, and `preset`.
+
+## Settings Surface
 
 Schema ID: `org.gnome.shell.extensions.milkdrop`
 
-Keys:
+Current keys are:
 
-- `enabled` (bool)
-- `monitor` (int)
-- `opacity` (double 0.0 to 1.0)
-- `preset-dir` (string)
-- `shuffle` (bool)
-- `overlay` (bool)
+- `enabled`, `monitor`, `all-monitors`
+- `opacity`, `overlay`, `fps`, `gpu-profile`
+- `preset-dir`, `shuffle`, `preset-rotation-interval`
+- `beat-sensitivity`, `hard-cut-enabled`, `hard-cut-sensitivity`, `hard-cut-duration`, `soft-cut-duration`
+- `pause-on-fullscreen`, `pause-on-maximized`, `pause-on-empty-desktop`, `media-aware`, `stop-renderer-when-idle`
+- `last-preset`, `was-paused`
 
-## Wayland Scope
+The preferences window includes live status polling, GPU profile selection, rendering controls, pause-policy controls, and transition tuning.
 
-This project targets Wayland sessions. X11 support is out of scope.
+## Runtime Evidence Collection
 
-## Documentation
+When debugging session failures, collect a bounded evidence bundle before changing code:
 
-- Product requirements: `PRD.md`
-- Canonical technical research: `docs/research/`
-- Historical notes: `docs/legacy/`
+```bash
+./tools/collect_issue_evidence.sh --since "30 minutes ago" --core-limit 5
+```
+
+The script captures environment, GSettings, user journal excerpts, and the newest matching coredumps under `logs/`.
+
+## Documentation Map
+
+- `AGENTS.md`: concise implementation quick-start and current architecture notes
+- `docs/research/`: current technical references
+- `PRD.md`: original design document, now historical where it conflicts with the shipped SDL2 offscreen architecture
+- `docs/legacy/`: exploratory and superseded material
+
+## Scope
+
+Wayland only. X11 support is out of scope.
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE`.
+MIT. See `LICENSE`.

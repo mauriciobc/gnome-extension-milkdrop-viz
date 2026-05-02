@@ -27,3 +27,16 @@ nested_log.txt
 # Python
 __pycache__/
 *.pyc
+
+# AI assistant workspace metadata
+.claude/
+.cursor/
+.github/
+.vscode/
+/AGENTS.md
+
+# Local content and large reference trees
+logs/
+presets/
+reports/
+reference_codebases/

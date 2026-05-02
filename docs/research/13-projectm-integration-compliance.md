@@ -16,6 +16,8 @@ The audit compared our integration against:
 
 **Overall Assessment**: ✅ **HIGHLY COMPLIANT**
 
+Release note: this audit supports technical confidence in the SDL2 offscreen integration, but it is not a release-readiness statement. The project is currently documented as `0.2.0-alpha.1` prerelease because it is not yet broadly field-tested.
+
 The integration demonstrates deep understanding of projectM's architecture and correctly implements all API contracts. The production renderer uses an **SDL2 offscreen context** (custom FBO + pixel readback + `GtkPicture`). Two implementation gaps were identified and resolved:
 
 1. **Missing GPU synchronization for multi-pass blur effects** (CRITICAL) → **RESOLVED**
@@ -231,9 +233,7 @@ These are **not compliance issues** but potential optimizations:
 
 ## Testing Results
 
-All unit tests pass after fixes:
-- Build completes without warnings
-- Code follows project C style conventions
+The audit established API-contract alignment and documented the focused test surface used during that review. It should not be read as a standing claim that every current environment or packaging combination has been validated.
 
 ## Documentation Updates
 
@@ -282,7 +282,7 @@ Updated documentation to reflect compliance audit findings:
 
 ## Audit Conclusion
 
-The projectM integration is **production-ready** and demonstrates:
+The projectM integration is technically aligned with projectM 4.x API expectations and demonstrates:
 
 ✅ Deep understanding of projectM's internal architecture  
 ✅ Correct threading model with lock-free audio buffering  
@@ -298,4 +298,4 @@ The integration correctly handles the complex interaction between:
 - Cross-thread audio data flow
 - GTK4 pixel upload via `GdkMemoryTexture`
 
-This audit confirms that the implementation is fully compliant with projectM 4.x API contracts and best practices.
+This audit confirms that the implementation is compliant with projectM 4.x API contracts and best practices. Broader release confidence still depends on continued cross-driver and cross-shell testing, which is why the project version remains prerelease.

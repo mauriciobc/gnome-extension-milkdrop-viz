@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**gnome-extension-milkdrop-viz** is a MilkDrop-style audio visualizer for GNOME Shell 47/48/49 on **Wayland only**. It renders psychedelic visuals synchronized to system audio via libprojectM. The project is a **two-process system**: a C renderer binary + a GJS GNOME Shell extension.
+**gnome-extension-milkdrop-viz** is a prerelease MilkDrop-style audio visualizer for GNOME Shell 47/48/49/50 on **Wayland only**. It renders psychedelic visuals synchronized to system audio via libprojectM. The project is a **two-process system**: a C renderer binary + a GJS GNOME Shell extension.
 
 ## Build Commands
 
@@ -39,6 +39,7 @@ meson test -C build
 meson test -C build ring-buffer
 meson test -C build control-protocol
 meson test -C build render-pipeline
+meson test -C build offscreen-renderer
 meson test -C build gtk-glarea-projectm   # requires DISPLAY
 meson test -C build scaffold-validation   # Python extension validation
 
@@ -50,7 +51,7 @@ meson setup --reconfigure build -Dshell-integration-tests=true
 meson test -C build compositor-behavior-integration
 ```
 
-Test names: `ring-buffer`, `backends`, `control-protocol`, `presets`, `audio-alignment`, `render-pipeline`, `gtk-glarea-projectm`, `gtk-glarea-fbo`, `tick-state-machine`, `control-state-flow`, `presets-edge-cases`, `scaffold-validation`
+Test names: `ring-buffer`, `backends`, `control-protocol`, `audio-alignment`, `render-pipeline`, `control-state-flow`, `audio-recovery`, `pause-policy`, `preset-quarantine`, `state-persistence`, `offscreen-renderer`, `gtk-glarea-projectm`, `gdk-glcontext-projectm`, `gtk-glarea-fbo`, `milkdrop-binary-verbose-local-presets`, `scaffold-validation`, `title-parser`, `managed-window`
 
 ## Helper Scripts
 
@@ -70,7 +71,7 @@ milkdrop (C binary)          GNOME Shell Extension (GJS)
 PipeWire audio capture  ←→   Process lifecycle (spawn/kill)
 Lock-free ring buffer        GSettings routing
 libprojectM rendering        Compositor scene graph anchoring
-GTK4 GtkGLArea window        Window detection + reparenting
+SDL2 offscreen GL + GtkPicture Window detection + reparenting
 Unix socket control server
 ```
 
@@ -80,7 +81,7 @@ The extension spawns the binary, routes settings changes to it via the Unix sock
 
 | Thread | Role |
 |--------|------|
-| Main/GL | GTK main loop, GtkGLArea render signal, all projectM calls |
+| Main/GL | GTK main loop, SDL2 offscreen render pulse, all projectM calls |
 | PipeWire | Audio capture, ring buffer writes |
 | Control | Unix socket accept/read/write |
 
@@ -91,15 +92,15 @@ The extension spawns the binary, routes settings changes to it via the Unix sock
 
 ### Per-Frame Data Flow
 
-PipeWire thread → `ring_push()` (~50ns, lock-free) → GL thread → `ring_read()` → `projectm_pcm_add_float()` → `projectm_render_frame()` → OpenGL output
+PipeWire thread → `ring_push()` (~50ns, lock-free) → GL thread → `ring_read()` → `projectm_pcm_add_float()` → `projectm_opengl_render_frame_fbo()` → `glReadPixels()` → `GtkPicture`
 
 ### Control Protocol
 
 Text-based commands over Unix domain socket:
-`status`, `opacity <0.0-1.0>`, `pause <0|1>`, `shuffle <0|1>`, `overlay <0|1>`, `preset-dir <path>`
+`status`, `opacity <0.0-1.0>`, `pause <on|off>`, `shuffle <on|off>`, `overlay <on|off>`, `preset-dir <path>`, `next`, `previous`, `fps <10-144>`, `rotation-interval <5-300>`, `beat-sensitivity <0.0-5.0>`, `hard-cut-enabled <on|off>`, `hard-cut-sensitivity <0.0-5.0>`, `hard-cut-duration <1.0-120.0>`, `soft-cut-duration <1.0-30.0>`, `save-state`, `restore-state [preset-path] [0|1]`, `screenshot <path>`
 
-Settings routed to socket at runtime: `opacity`, `preset-dir`, `shuffle`, `overlay`
-Settings requiring restart: `monitor`
+Settings routed to socket at runtime: `opacity`, `preset-dir`, `shuffle`, `overlay`, `fps`, `preset-rotation-interval`, `beat-sensitivity`, `hard-cut-*`, `soft-cut-duration`
+Settings requiring restart: `monitor`, `all-monitors`, `gpu-profile`
 
 ### Key Source Files
 
@@ -139,14 +140,14 @@ Settings requiring restart: `monitor`
 
 - **Wayland only** — no X11 support
 - **libprojectM 4.x** — not 3.x; use the C API (not C++)
-- **GTK4 GtkGLArea** for windowing (GNOME 48 dropped wlr-layer-shell-v1)
+- **SDL2 offscreen GL + GTK4 GtkPicture** for the production renderer
 - **Dynamic linking only** — this is a system component
 - **Do NOT modify `reference_codebases/`** — read-only reference material
-- HiDPI: always multiply window size by `gtk_widget_get_scale_factor()`
+- HiDPI: always propagate real pixel dimensions into the renderer and projectM resize path
 
 ## Documentation Map
 
-- `PRD.md` — Product requirements, final decisions (canonical)
+- `PRD.md` — Original product and implementation proposal; historical where it conflicts with current code
 - `AGENTS.md` — Architecture overview, code style guide
 - `docs/research/` — Deep-dive research documents (canonical references)
   - `02-system-architecture.md` — Two-process model details

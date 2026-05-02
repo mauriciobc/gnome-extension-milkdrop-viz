@@ -1,9 +1,26 @@
 # gnome-milkdrop v2 — Agent Implementation Guide
 
-**Status:** Approved — Ready to Implement  
-**Target:** GNOME Shell 47 / 48 / 49, Wayland only  
+**Status:** Historical design document. Current implementation has diverged in several important areas.  
+**Current implementation line:** 0.2.0-alpha.1 prerelease  
+**Target:** GNOME Shell 47 / 48 / 49 / 50, Wayland only  
 **Sprint:** 2 days  
 **Language:** C (binary) + JavaScript (GJS extension)
+
+---
+
+## Current Implementation Note (2026-05-02)
+
+Use this file as the original product and architecture proposal, not as the source of truth for the shipped implementation.
+
+The current code differs from this PRD in these material ways:
+
+- The production renderer uses an SDL2 offscreen GL context plus `GtkPicture` upload, not a production `GtkGLArea` render path.
+- The control protocol is line-delimited text with `key=value` status replies, not the binary protocol specified below.
+- The extension supports GNOME Shell 50 in metadata and implementation docs.
+- The extension is split across `controlClient.js`, `managedWindow.js`, `pausePolicy.js`, `mprisWatcher.js`, and `constants.js`.
+- The live settings surface now includes multi-monitor spawning, GPU profile selection, pause-on-empty-desktop, media-aware mode, stop-renderer-when-idle, and transition controls.
+
+For current implementation details, prefer `README.md`, `AGENTS.md`, and `docs/research/`.
 
 ---
 

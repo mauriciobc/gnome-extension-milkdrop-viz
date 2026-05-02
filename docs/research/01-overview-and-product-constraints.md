@@ -2,7 +2,7 @@
 
 ## Product definition
 
-**gnome-milkdrop v2 — libprojectM Edition** is a GNOME-integrated music visualizer consisting of a native C renderer process and a thin GNOME Shell extension. The renderer process owns PipeWire capture, lock-free audio buffering, GTK4 window creation, OpenGL context usage through `GtkGLArea`, and `libprojectM` embedding. The Shell extension owns settings, process lifecycle, user controls, and recovery behavior.[cite:18][cite:16]
+**gnome-milkdrop v2 — libprojectM Edition** is a GNOME-integrated music visualizer consisting of a native C renderer process and a thin GNOME Shell extension. The renderer process owns PipeWire capture, lock-free audio buffering, an SDL2 offscreen OpenGL context, GTK4 window creation, and `libprojectM` embedding. The Shell extension owns settings, process lifecycle, user controls, and recovery behavior.[cite:18][cite:16]
 
 This document interprets the PRD as an architectural simplification: custom FFT, custom expression evaluation, manual shader pipeline construction, and custom preset parsing are intentionally removed from scope because `libprojectM` already provides those capabilities as a mature embedded engine.
 
@@ -16,11 +16,11 @@ The architectural center of gravity is the renderer binary, not the extension. G
 
 - Audio capture from PipeWire monitor sources.
 - Lock-free transfer of stereo PCM from the PipeWire thread to the render thread.
-- Rendering through `libprojectM` inside a `GtkGLArea`-managed OpenGL context.
+- Rendering through `libprojectM` inside an SDL2-managed offscreen OpenGL context, with readback presented in GTK4.
 - Preset loading and cycling.
 - Runtime control through a local Unix socket.
 - GNOME Shell integration for spawn, stop, retry, and setting changes.
-- Optional D-Bus exposure only if it does not complicate v2 delivery.
+- Multi-monitor spawning, pause policy control, and GPU profile selection through GSettings.
 
 ## Out-of-scope capabilities
 
@@ -48,7 +48,7 @@ User-facing controls must follow GNOME HIG guidance: interfaces should be input-
 
 ### Rendering ownership
 
-GTK owns the OpenGL context via `GtkGLArea`; the renderer may only call OpenGL-dependent projectM functions when that context is current. This is a foundational constraint of the architecture and must not be weakened.
+The renderer owns the OpenGL context through an SDL2 hidden window and must call OpenGL-dependent projectM functions only while that context is current. GTK4 remains a pixel consumer through `GtkPicture`, not the GL owner. This is a foundational constraint of the current architecture and must not be weakened.
 
 ### Packaging model
 

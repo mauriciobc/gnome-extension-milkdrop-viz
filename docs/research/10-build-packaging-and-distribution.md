@@ -11,17 +11,20 @@ The core runtime stack consists of:
 - `libprojectM` 4.x.
 - PipeWire 0.3 runtime.
 - GTK4 runtime.
+- SDL2 runtime when projectM support is enabled.
 - GNOME Shell for the extension host.
 
 The dependency goal is to stay close to standard distro packaging, minimizing bundled third-party code and avoiding private copies of system graphics/audio libraries.
 
 ## Build dependencies
 
-Meson and Ninja are the primary build tools, with development headers for projectM, PipeWire, and GTK4.
+Meson and Ninja are the primary build tools, with development headers for GTK4, Epoxy, EGL, and optionally projectM, SDL2, and PipeWire.
 
 ## Version pinning
 
 The PRD requires `projectM >= 4.0.0` and explicitly excludes 3.x compatibility. This must remain encoded in build expectations and in the documentation presented to developers and packagers.
+
+The current Meson project version is `0.2.0-alpha.1`. Treat this as a prerelease packaging line rather than a stable release promise.
 
 ## Meson philosophy
 
@@ -29,7 +32,6 @@ The build should remain simple:
 
 - One native executable target.
 - One extension install subtree.
-- Optional static-link flag only for edge cases.
 - No vendor subtree for FFT or expression libraries removed by the v2 rewrite.
 
 ## Install layout

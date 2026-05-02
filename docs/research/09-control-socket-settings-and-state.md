@@ -6,7 +6,7 @@ The Unix socket is the command channel between the GNOME Shell extension and the
 
 ## Command model
 
-The command protocol should remain binary, compact, and versioned by convention. Commands include preset operations, pause/resume, opacity changes, and status retrieval.
+The current command protocol is line-delimited UTF-8 text over a local Unix domain socket. Commands are sparse control events, not a transport for frame data.
 
 A stable command set for v2 includes:
 
@@ -17,6 +17,16 @@ A stable command set for v2 includes:
 - `shuffle <on|off>`
 - `overlay <on|off>`
 - `opacity <0.0-1.0>`
+- `fps <10-144>`
+- `rotation-interval <5-300>`
+- `beat-sensitivity <0.0-5.0>`
+- `hard-cut-enabled <on|off>`
+- `hard-cut-sensitivity <0.0-5.0>`
+- `hard-cut-duration <1.0-120.0>`
+- `soft-cut-duration <1.0-30.0>`
+- `save-state`
+- `restore-state [preset-path] [0|1]`
+- `screenshot <absolute-path>`
 - `status`
 
 ## Threading rule
@@ -32,8 +42,8 @@ Settings should be classified into one of three buckets:
 | Category | Examples | Handling |
 |---|---|---|
 | Hot command | Next preset, pause, opacity | Send socket command immediately |
-| Hot config | Preset directory, shuffle | Send a config command or request renderer-side rescan if supported |
-| Restart-required | Device/monitor source, startup mode changes | Stop and relaunch renderer |
+| Hot config | Preset directory, shuffle, fps, transition tuning | Send a config command immediately |
+| Restart-required | Monitor layout strategy, GPU profile, startup environment changes | Stop and relaunch renderer |
 
 This policy keeps the Shell extension simple and avoids unnecessary process restarts.
 
@@ -44,7 +54,8 @@ The control server should defensively validate:
 - Payload length.
 - Path string termination or bounded length.
 - Float payload sanity for opacity.
-- Enum range for commands.
+- Numeric range for fps and transition controls.
+- `on|off` parsing for boolean commands.
 
 Invalid commands should fail safely and never crash the renderer.
 
@@ -53,10 +64,13 @@ Invalid commands should fail safely and never crash the renderer.
 A status response should include enough information for Shell UI and debugging without forcing expensive queries. At minimum:
 
 - Running/paused state.
+- Opacity, shuffle, and overlay state.
 - Current preset name or identifier.
 - Approximate FPS.
-- Optional last known audio-source state.
-- Optional error code/message class.
+- Audio recovery status.
+- Quarantine count.
+
+The current implementation returns newline-delimited `key=value` pairs terminated by a blank line.
 
 ## Socket ownership and cleanup
 

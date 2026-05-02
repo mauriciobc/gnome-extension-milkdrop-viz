@@ -22,13 +22,13 @@ This document records the most important known risks, the rationale behind curre
 
 **Consequence:** the extension is a controller, not a renderer.
 
-### Decision: Use GtkGLArea as GL owner
+### Decision: Use an SDL2 offscreen GL context as GL owner
 
 **Status:** accepted.
 
-**Rationale:** GTK-managed context ownership simplifies embedding and avoids custom context fights.
+**Rationale:** keeping projectM on an SDL2-owned hidden context avoids GTK compositor GL-state interference, keeps context lifetime independent from window mapping, and matches the current readback-based presentation path.
 
-**Consequence:** GL-affecting projectM calls are restricted to the render path.
+**Consequence:** GL-affecting projectM calls are restricted to the SDL2 render path, while GTK4 remains a presentation layer through `GtkPicture`.
 
 ### Decision: Synchronize GPU rendering after projectM blur effects
 
@@ -50,11 +50,11 @@ This document records the most important known risks, the rationale behind curre
 
 **Status:** accepted (added 2025-04-11).
 
-**Rationale:** GTK's GLArea validates specific GL state after the render signal returns. While projectM cleans up most state internally (`CopyTexture.cpp:272-275`, `BlurTexture.cpp:267`), GTK requires guaranteed clean state for shader programs, texture bindings, blend modes, and test enables.
+**Rationale:** while projectM cleans up most state internally, explicitly restoring state keeps the SDL2 render context in a known baseline before readback and the next frame.
 
 **Implementation:** Explicitly disable/unbind all potentially-modified GL state before returning from render callback.
 
-**Consequence:** Prevents rendering artifacts and GTK warnings in compositor integration.
+**Consequence:** Prevents rendering artifacts and hard-to-debug state carry-over between offscreen frames.
 
 **Location:** `src/main.c:694-713`
 

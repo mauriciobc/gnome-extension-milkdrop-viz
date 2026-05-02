@@ -13,7 +13,7 @@ This split aligns with GNOME extension guidance because Shell-side code should s
 
 | Component | Responsibilities |
 |---|---|
-| Renderer binary | PipeWire capture, ring buffer, GTK application/window, `GtkGLArea`, `libprojectM` lifecycle, socket server, preset indexing, opacity changes, status reporting |
+| Renderer binary | PipeWire capture, ring buffer, SDL2 offscreen GL context, GTK application/window, `libprojectM` lifecycle, socket server, preset indexing, state persistence, screenshots, and status reporting |
 | GNOME Shell extension | Read/write settings, spawn and stop renderer, reconnect after crashes, issue control commands, expose user affordances inside GNOME Shell |
 | Preferences UI | Present settings using GTK/Adwaita-side APIs rather than Shell-side UI classes, with no Shell imports in prefs code.[cite:16] |
 
@@ -26,7 +26,7 @@ The split isolates failure domains. If the renderer crashes, the extension can r
 The renderer process contains at least three behavioral domains:
 
 - **Audio thread**: fed by PipeWire callbacks; writes stereo float samples into the lock-free ring buffer.
-- **Render/UI thread**: GTK main thread; owns `GtkGLArea`, drains audio, feeds projectM, switches presets, and draws a frame.
+- **Render/UI thread**: GTK main thread; owns the SDL2 GL context, drains audio, feeds projectM, switches presets, renders into the offscreen FBO, and publishes frames into `GtkPicture`.
 - **Control thread**: blocks on the Unix socket and updates shared state through atomics or main-thread-safe handoff.
 
 The rule is strict: only the GTK render path may perform OpenGL/projectM rendering calls; the control thread must never issue GL calls directly.
@@ -37,11 +37,13 @@ A single frame follows this logical pipeline:
 
 1. PipeWire callback receives audio.
 2. Audio callback pushes interleaved stereo floats into the ring.
-3. GTK render callback drains available samples.
+3. Render pulse drains available samples.
 4. Samples are passed to `projectm_pcm_add_float(...)`.
 5. Any pending preset change is consumed from an atomic handoff.
-6. `projectm_render_frame(...)` draws into the currently bound GL target.
-7. GTK-sensitive GL state is restored if necessary.
+6. `projectm_opengl_render_frame_fbo(...)` draws into the renderer-owned FBO.
+7. GL state is restored and `glFinish()` synchronizes multi-pass blur output.
+8. `glReadPixels()` copies the RGBA frame into CPU memory.
+9. GTK4 displays the frame through `GdkMemoryTexture` and `GtkPicture`.
 
 This flow minimizes per-frame IPC and keeps the hot path inside one process, which reduces latency and synchronization complexity.
 
@@ -55,7 +57,7 @@ Shared state must be partitioned into three categories:
 
 - **Realtime-owned state**: audio write indices and sample storage.
 - **Render-owned state**: current projectM handle, frame timing, GTK window state.
-- **Control-owned state**: incoming command parsing, pending preset path, status request handling.
+- **Control-owned state**: incoming command parsing, pending config/state requests, and socket response handling.
 
 Any shared field crossing domains should use atomics or a main-loop handoff strategy. Mutexes must not be introduced in the realtime path.
 
